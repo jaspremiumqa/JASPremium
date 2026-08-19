@@ -1,0 +1,480 @@
+:root {
+  --color-primary: #2d1014;
+  --color-secondary: #c9a227 ;
+  --color-tertiary: #f3ebdf;
+}
+
+
+.brand-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Language Switcher Button ── */
+.lang-switcher {
+  /* display: flex; */
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: inherit;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.lang-item a {
+  text-decoration: none !important;
+}
+
+.lang-switcher :hover {
+  color: var(--color-primary);
+}
+
+.rd-navbar-fixed .rd-navbar-nav li .lang-switcher {
+  color: #000;
+}
+
+.lang-switcher .lang-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ── RTL / Arabic overrides ── */
+html[lang="ar"] {
+  font-family: 'Cairo', sans-serif;
+}
+
+html[lang="ar"] body,
+html[lang="ar"] p,
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4,
+html[lang="ar"] a,
+html[lang="ar"] button,
+html[lang="ar"] label,
+html[lang="ar"] input,
+html[lang="ar"] dt,
+html[lang="ar"] dd {
+  font-family: 'Cairo', sans-serif !important;
+}
+
+/* ── Logo font: immune to the broad Cairo override above ── */
+html[lang="ar"] .logo-name,
+html[lang="ar"] .logo-name .logo-glow,
+html[lang="ar"] .logo-name .logo-and,
+html[lang="ar"] .logo-name .logo-glam,
+html[lang="ar"] .logo-name .logo-by,
+html[lang="ar"] a .logo-name,
+html[lang="ar"] a .logo-glow,
+html[lang="ar"] a .logo-and,
+html[lang="ar"] a .logo-glam,
+html[lang="ar"] a .logo-by {
+  font-family: 'Telma-Medium' !important;
+}
+
+html[lang="ar"] .rd-navbar-nav {
+  flex-direction: row-reverse;
+}
+
+html[lang="ar"] .box-contacts-terms-list dt {
+  text-align: right;
+}
+
+html[lang="ar"] .box-contacts-terms-list dd {
+  text-align: right;
+}
+
+html[lang="ar"] .range-md-reverse {
+  flex-direction: row;
+}
+
+/* Flip image layout for RTL naturally */
+html[lang="ar"] .image-wrap-left,
+html[lang="ar"] .image-wrap-right {
+  text-align: right;
+}
+
+html[lang="ar"] .inline-list {
+  flex-direction: row-reverse;
+}
+
+html[lang="ar"] .form-group label {
+  text-align: right;
+  display: block;
+}
+
+/* Smooth transition when switching */
+body {
+  transition: opacity 0.15s ease;
+}
+
+body.lang-transitioning {
+  opacity: 0;
+}
+
+html[lang="ar"] .rd-navbar-fullwidth .rd-navbar-nav>li+li {
+  margin-right: 36px;
+  margin-left: 0px;
+}
+
+html[lang="ar"] .rd-navbar-fullwidth .rd-navbar-nav>li:nth-child(5) {
+  margin-right: 36px;
+  margin-left: 10px;
+}
+
+html[lang="ar"] .rd-navbar-fullwidth .rd-navbar-nav>li:nth-child(4) {
+  margin-right: 275px;
+}
+
+html[lang="ar"] .rd-navbar-fullwidth .rd-navbar-nav>li:nth-child(1) {
+  margin-right: 100px;
+}
+
+html[lang="ar"] .rd-navbar-fullwidth.rd-navbar--is-clone .rd-navbar-nav>li+li,
+html[lang="ar"] .rd-navbar-fullwidth.rd-navbar--is-stuck .rd-navbar-nav>li+li {
+  margin-right: 50px;
+  margin-left: 0px;
+}
+
+html[lang="ar"] dd {
+  margin-right: 0px;
+  margin-left: 20px;
+}
+
+html[lang="ar"] .box-contacts {
+  text-align: right;
+}
+
+.logo-name,
+.logo-glow,
+.logo-and,
+.logo-glam,
+.logo-by {
+  font-family: 'Telma-Bold';
+}
+
+.logo-glow {
+  color: var(--color-primary);
+  font-size: 28px;
+}
+
+.logo-and {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.logo-glam {
+  color: var(--color-primary);
+  font-size: 28px;
+}
+
+.logo-by {
+  color: var(--color-primary);
+  font-size: 18px;
+}
+
+
+/* ── RTL mobile menu: slide from right instead of left ── */
+html[lang="ar"] .rd-navbar-fixed .rd-navbar-nav-wrap {
+  left: auto !important;
+  right: 1px !important;
+  border-left: 1px solid #eff3f1 !important;
+  border-right: none !important;
+  -webkit-transform: translateX(100%) !important;
+  transform: translateX(100%) !important;
+}
+
+html[lang="ar"] .rd-navbar-fixed .rd-navbar-nav-wrap.active {
+  -webkit-transform: translateX(0) !important;
+  transform: translateX(0) !important;
+}
+
+html[lang="ar"] .perspective-menu-text {
+  margin-left: 15px;
+}
+
+html[lang="ar"] .rd-navbar-sidebar .rd-navbar-nav-inner {
+  align-items: flex-start;
+}
+
+li#langToggle {
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.phone-number {
+  font-weight: bold;
+  direction: ltr;
+  /* keep numbers left-to-right */
+  unicode-bidi: embed;
+}
+
+.phone-number a {
+  color: var(--color-primary) !important;
+}
+
+
+html[lang="ar"].rd-navbar-sidebar-linked .page-header-left>*+*,
+html[lang="ar"].rd-navbar-sidebar-linked .page-header-center>*+*,
+html[lang="ar"].rd-navbar-sidebar-linked .page-header-right>*+* {
+  margin-right: 30px;
+  margin-left: 0px;
+}
+
+@media (min-width: 480px) {
+  html[lang="ar"] .box-contacts-horizontal .box-contacts-col+.box-contacts-col {
+    border-right: 1px solid #d0dbd7;
+    border-left: none;
+  }
+}
+
+/* Hide lang switcher from header on mobile — it's already in the navbar */
+@media (max-width: 768px) {
+  .twoitems {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .twoitems>[class*="cell-"] {
+    width: 50% !important;
+    max-width: 50% !important;
+    flex: 0 0 50% !important;
+    box-sizing: border-box;
+  }
+
+  .page-header-perspective .lang-switcher {
+    display: none !important;
+  }
+
+  .page-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .page-header-perspective .lang-switcher {
+    font-size: 13px;
+    padding: 4px 10px;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(odd) .box-icon,
+  html[lang="ar"] .range-inner-bordered>.cell-sm-6:nth-child(odd) .box-icon {
+    padding: 30px 0px 30px 30px;
+  }
+}
+
+@media (min-width: 768px) {
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 1),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 1) {
+    border-width: 0 0 0 1px;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 4),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 4) {
+    border-width: 1px 0 0 0;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 3),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 3) {
+    border-width: 1px 0 0 1px;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(odd) .box-icon,
+  .range-inner-bordered>.cell-sm-6:nth-child(odd) .box-icon {
+    padding: 30px 0 30px 30px;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(even) .box-icon,
+  .range-inner-bordered>.cell-sm-6:nth-child(even) .box-icon {
+    padding: 30px 30px 30px 0;
+  }
+}
+
+@media (min-width: 480px) {
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 1),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 1) {
+    border-width: 0 0 0 1px;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 4),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 4) {
+    border-width: 1px 0 0 0;
+  }
+
+  html[lang="ar"] .range-inner-bordered>.cell-xs-6:nth-child(2n + 3),
+  .range-inner-bordered>.cell-sm-6:nth-child(2n + 3) {
+    border-width: 1px 0 0 1px;
+  }
+}
+
+div#date-picker-container {
+  margin-top: 20px;
+}
+
+/* RTL fix for RD Material Tabs time slots */
+[dir="rtl"] .rd-material-tabs__container .rd-material-tab {
+  float: right;
+}
+
+[dir="rtl"] .rd-material-tabs__stage {
+  direction: ltr;
+  /* keep the slider's internal transform math correct */
+}
+
+[dir="rtl"] .rd-material-tabs__list .rd-material-tab {
+  float: right;
+}
+
+
+/* ── Step 2: Selected time slot highlight ─────────────────────────── */
+.date-picker-list a.selected-slot {
+  background-color: var(--color-primary, #1a3a6b);
+  color: #fff !important;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+/* ── Step 2: Date tab indicator — dot on tabs that have a selection ── */
+.rd-material-tab.has-selection .date-picker-date-number::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary, #1a3a6b);
+  margin: 4px auto 0;
+}
+
+/* If the tab itself is the active+selected one, use white dot */
+.rd-material-tab-active.has-selection .date-picker-date-number::after {
+  background: #fff;
+}
+
+/* ── Step 3: Date list in booking summary ─────────────────────────── */
+.box-contacts-block ul li {
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  font-size: 13px;
+}
+
+.box-contacts-block ul li:last-child {
+  border-bottom: none;
+}
+
+[dir="rtl"] .page .link-return {
+  padding-left: 5px;
+  padding-right: 0px;
+}
+
+[dir="rtl"] #selection-summary {
+  text-align: right !important;
+}
+
+.service-name , .voucher-name {
+  font-size: 16px !important;
+  font-weight: bold;
+}
+
+.white-border {
+  border-right: 2px solid white;
+}
+
+[dir="rtl"] .white-border {
+  border-left: 2px solid white;
+  border-right: none
+}
+
+#ourServices span {
+  color: #FFFFFF;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+#ourServices .box-icon-text {
+  color: var(--color-secondary);
+  font-weight: bolder;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.7);
+}
+
+#ourServices .box-icon-header {
+  font-weight: bold;
+}
+
+
+.ourServicesP2.image-wrap-inner {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 20px;
+  height: 100%;
+}
+
+#services-grid:has(> .cell-xs-6:nth-child(2):last-child) {
+  gap: 40px;
+  justify-content: center;
+}
+
+#services-grid:has(> .cell-xs-6:nth-child(2):last-child)>.cell-xs-6:first-child {
+  border: none;
+}
+
+/* Vouchers */
+.vouchers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.voucher-card {
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.voucher-card:hover {
+  transform: translateY(-5px);
+}
+
+.voucher-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+/* Tablet */
+@media (max-width: 991px) {
+  .vouchers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  .vouchers-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.box-contacts-block form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* optional spacing between elements */
+}
+
+/* CRM-managed social visibility: inactive channels must not occupy layout space. */
+.site-social-hidden { display: none !important; }

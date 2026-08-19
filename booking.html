@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html class="wide wow-animation" lang="en">
+<head>
+  <title>Book an Appointment</title>
+
+  <!-- Prevent browser fallback requests to /favicon.ico; CRM/Supabase favicon is applied after settings load. -->
+  <link rel="icon" href="data:," data-favicon-bootstrap="true">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Roboto+Mono:300,300italic,400,700%7CArvo:400,700">
+  <link rel="stylesheet" href="assets/fonts/telma/css/telma.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/custom.css">
+  <link rel="stylesheet" href="assets/css/booking-modern.css">
+  <script>
+    (function () {
+      var lang = localStorage.getItem('siteLang') || 'en';
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.write('<style id="anti-flash">body{opacity:0!important;}</style>');
+    })();
+  </script>
+</head>
+<body class="booking-modern-page">
+  <div class="page">
+    <main class="page-content" id="perspective">
+      <div class="content-wrapper">
+        <div id="page-header"></div>
+
+        <main class="booking-app" id="booking-app" aria-live="polite">
+          <div class="booking-shell">
+            <div class="booking-flow-indicator" id="booking-flow-indicator" aria-label="Booking progress">
+              <div class="booking-flow-step is-current" data-flow-step="1"><span>1</span><small>Services</small></div>
+              <i></i>
+              <div class="booking-flow-step" data-flow-step="2"><span>2</span><small>Date &amp; time</small></div>
+              <i></i>
+              <div class="booking-flow-step" data-flow-step="3"><span>3</span><small>Review</small></div>
+              <i></i>
+              <div class="booking-flow-step" data-flow-step="4"><span>4</span><small>Details</small></div>
+            </div>
+            <div class="booking-topbar">
+              
+              <div class="booking-step-label" id="booking-step-label">Step 1 of 4</div>
+            </div>
+
+            <div class="booking-progress" aria-hidden="true">
+              <span class="is-active"></span><span></span><span></span><span></span>
+            </div>
+
+            <section class="booking-step is-active" data-step="1">
+              <div class="booking-heading">
+                <span class="booking-eyebrow" data-i18n="booking.eyebrow">YOUR APPOINTMENT</span>
+                <h1 data-i18n="booking.servicesTitle">What would you like to book?</h1>
+                <p data-i18n="booking.servicesDescription">Choose one or more services. We’ll build the appointment time for you.</p>
+              </div>
+              <div id="booking-service-categories" class="booking-categories"></div>
+              <div class="booking-bottom">
+                <div class="booking-mini-total">
+                  <span id="selected-count">0 services</span>
+                  <strong id="selected-total">—</strong>
+                </div>
+                <button class="booking-primary" id="continue-services" type="button" data-i18n="booking.continue">Continue</button>
+              </div>
+            </section>
+
+            <section class="booking-step" data-step="2">
+              <div class="booking-heading">
+                <span class="booking-eyebrow" data-i18n="booking.eyebrow">YOUR APPOINTMENT</span>
+                <h1 data-i18n="booking.dateTitle">When would you like to come?</h1>
+                <p data-i18n="booking.dateDescription">Pick a date, then choose a start time that fits all your selected services.</p>
+              </div>
+              <div class="booking-summary-pill" id="date-service-summary"></div>
+              <div class="booking-selected-services" id="date-selected-services"></div>
+              <div class="booking-calendar-head">
+                <button class="calendar-arrow" id="prev-month" aria-label="Previous month">‹</button>
+                <strong id="calendar-month"></strong>
+                <button class="calendar-arrow" id="next-month" aria-label="Next month">›</button>
+              </div>
+              <div class="booking-calendar" id="booking-calendar"></div>
+              <div class="booking-times-title">
+                <span data-i18n="booking.availableTimes">Available times</span>
+                <small id="selected-date-label"></small>
+              </div>
+              <div class="booking-times" id="booking-times"></div>
+              <div class="booking-bottom">
+                <button class="booking-secondary" id="back-to-services" data-i18n="booking.back">Back</button>
+                <button class="booking-primary" id="continue-date" type="button" data-i18n="booking.continue">Continue</button>
+              </div>
+            </section>
+
+            <section class="booking-step" data-step="3">
+              <div class="booking-heading">
+                <span class="booking-eyebrow" data-i18n="booking.eyebrow">YOUR APPOINTMENT</span>
+                <h1 data-i18n="booking.reviewTitle">Review your appointment</h1>
+                <p data-i18n="booking.reviewDescription">Everything looks good? You can go back and change anything before confirming.</p>
+              </div>
+              <div class="booking-review-grid">
+                <div class="booking-review-card">
+                  <div class="review-card-heading"><span data-i18n="booking.schedule">Your schedule</span><button id="edit-date" class="text-button" data-i18n="booking.edit">Edit</button></div>
+                  <div id="review-timeline" class="booking-timeline"></div>
+                </div>
+                <div class="booking-review-card">
+                  <div class="review-card-heading"><span data-i18n="booking.services">Services</span><button id="edit-services" class="text-button" data-i18n="booking.edit">Edit</button></div>
+                  <div id="review-services"></div>
+                  <div class="review-total-row"><span data-i18n="booking.total">Total</span><strong id="review-total"></strong></div>
+                </div>
+              </div>
+              <div class="booking-payment-note"><span>✓</span><div><strong data-i18n="booking.payAtSalon">Pay at the salon</strong><p data-i18n="booking.payDescription">No online payment is required. We’ll contact you to confirm your appointment.</p></div></div>
+              <div class="booking-bottom">
+                <button class="booking-secondary" id="back-to-date" data-i18n="booking.back">Back</button>
+                <button class="booking-primary" id="continue-review" data-i18n="booking.continue">Continue</button>
+              </div>
+            </section>
+
+            <section class="booking-step" data-step="4">
+              <div class="booking-heading">
+                <span class="booking-eyebrow" data-i18n="booking.eyebrow">YOUR APPOINTMENT</span>
+                <h1 data-i18n="booking.detailsTitle">How can we contact you?</h1>
+                <p data-i18n="booking.detailsDescription">We only need a few details to confirm your appointment.</p>
+              </div>
+              <div class="booking-selected-services" id="details-selected-services"></div>
+              <form id="booking-form" class="booking-form" novalidate data-notification-provider="formspree">
+                <div class="booking-form-grid">
+                  <label><span data-i18n="booking.name">Full name</span><input id="customer-name" required autocomplete="name"></label>
+                  <label><span data-i18n="booking.phone">WhatsApp / mobile</span><input id="customer-phone" required inputmode="tel" autocomplete="tel" dir="ltr"></label>
+                  <label><span data-i18n="booking.email">Email <em data-i18n="booking.optional">(optional)</em></span><input id="customer-email" type="email" autocomplete="email" dir="ltr"></label>
+                  <label class="full"><span data-i18n="booking.notes">Notes <em data-i18n="booking.optional">(optional)</em></span><textarea id="customer-notes" rows="4"></textarea></label>
+                </div>
+                <div class="booking-final-summary" id="final-summary"></div>
+                <button class="booking-primary booking-submit" type="submit" data-i18n="booking.confirm">Request appointment</button>
+                <p class="booking-form-error" id="booking-error" role="alert"></p>
+              </form>
+            </section>
+
+            <section class="booking-step" data-step="5">
+              <div class="booking-success">
+                <div class="success-icon">✓</div>
+                <span class="booking-eyebrow" data-i18n="booking.doneEyebrow">ALL SET</span>
+                <h1 data-i18n="booking.doneTitle">Booking request received</h1>
+                <p data-i18n="booking.doneDescription">Thank you. We’ll contact you to confirm your appointment.</p>
+                <div class="success-reference"><small data-i18n="booking.reference">Booking reference</small><strong id="success-reference">SAL-0001</strong></div>
+                <div id="success-summary" class="booking-success-summary"></div>
+                <a class="booking-primary success-home" href="index.html" data-i18n="booking.doneButton">Back to home</a>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <footer class="page-footer page-footer-default" id="footer-placeholder"></footer>
+      </div>
+      <div class="rd-navbar-wrap" id="rdNavBar"></div>
+    </main>
+  </div>
+  <div class="snackbars" id="form-output-global"></div>
+  <iframe
+    name="booking-formspree-frame"
+    id="booking-formspree-frame"
+    title="Formspree notification target"
+    aria-hidden="true"
+    tabindex="-1"
+    style="position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none;">
+  </iframe>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script src="assets/js/config/application-settings.js?v=branding-v19"></script>
+  <script src="assets/js/database-test.js"></script>
+  <script src="assets/js/site-loader.js?v=booking-session-cleanup-1"></script>
+  <script src="assets/js/core.min.js"></script>
+  <script src="assets/js/site-ui.js"></script>
+  <script src="assets/js/booking-flow.js?v=booking-session-cleanup-1"></script>
+  <script src="assets/js/language.js?v=weekly-hours-phone-1?v=weekly-hours-phone-1"></script>
+</body>
+</html>

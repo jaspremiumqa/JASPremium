@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html class="wide wow-animation" lang="en">
+
+<head>
+  <title>FAQ</title>
+
+  <!-- Prevent browser fallback requests to /favicon.ico; CRM/Supabase favicon is applied after settings load. -->
+  <link rel="icon" href="data:," data-favicon-bootstrap="true">
+
+  <!-- Stylesheets-->
+  <link rel="stylesheet" type="text/css"
+    href="//fonts.googleapis.com/css?family=Roboto+Mono:300,300italic,400,700%7CArvo:400,700">
+  <link rel="stylesheet" href="assets/fonts/telma/css/telma.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/custom.css">
+<script>
+    (function () {
+      var lang = localStorage.getItem('siteLang') || 'en';
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.write('<style id="anti-flash">body{opacity:0!important;}</style>');
+    })();
+  </script>
+</head>
+
+<body>
+  <div class="page">
+    <main class="page-content" id="perspective">
+      <div class="content-wrapper">
+        <div id="page-header"></div>
+        <div id="wrapper">
+          <div class="page-title">
+            <div class="page-title-content">
+              <div class="shell">
+                <p class="page-title-header" data-i18n="nav.faq"></p>
+              </div>
+            </div>
+          </div>
+          <section class="section-xl bg-periglacial-blue text-center">
+            <div class="shell">
+              <div class="range range-sm-center range-50">
+                <div class="cell-xs-12">
+                  <h2 data-i18n="nav.faq"></h2>
+                  <div class="p text-width-medium">
+                    <p class="big" id="faq-description"></p>
+                  </div>
+                </div>
+                <div class="cell-lg-10">
+                  <article class="box-spacer">
+                    <dl class="terms-list" id="faq-list">
+                    </dl>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </section>
+          <footer class="page-footer page-footer-default" id="footer-placeholder"></footer>
+        </div>
+        <div id="perspective-content-overlay"></div>
+      </div>
+      <!-- RD Navbar-->
+      <div class="rd-navbar-wrap" id="rdNavBar"></div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script src="assets/js/config/application-settings.js?v=branding-v19"></script>
+  <script src="assets/js/database-test.js"></script>
+  <script src="assets/js/site-loader.js?v=booking-session-cleanup-1"></script>
+  <script src="assets/js/core.min.js"></script>
+  <script src="assets/js/site-ui.js"></script>
+  <script src="assets/js/faq-page.js?v=faq-supabase-2"></script>
+  <script src="assets/js/language.js?v=weekly-hours-phone-1"></script>
+</body>
+
+</html>
