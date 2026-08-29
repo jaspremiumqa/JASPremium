@@ -900,7 +900,7 @@
     // Unlike fetch(), it is not affected by browser CORS handling.
     const fields = {
       // '_subject': `New salon booking ${id}`,
-      'booking_reference': id,
+      // 'booking_reference': id,
       'name': name,
       'phone': phone,
       'email': email || '',
@@ -945,7 +945,7 @@
 
     const payload = new URLSearchParams();
     // payload.set('_subject', `New salon booking ${id}`);
-    payload.set('booking_reference', id);
+    // payload.set('booking_reference', id);
     payload.set('name', name);
     payload.set('phone', phone);
     if(email) {
