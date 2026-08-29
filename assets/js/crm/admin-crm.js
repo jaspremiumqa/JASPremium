@@ -2,7 +2,7 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], editingMappingId:null, accountingPeriods:[], editingPeriodId:null, contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
@@ -116,11 +116,11 @@
     return false;
   }
   var ROLE_PERMISSION_SECTIONS = [
-    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['financial-statements','Financial Statements'],
+    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],
     ['bookings','Bookings'],['booking-config','Booking Setup'],['contact-messages','Contact Us'],['customers','Customers'],
     ['settings','Settings'],['translations','Translation'],['users','Users & Access'],['roles','Roles & Permissions']
   ];
-  var ROLE_ACTIONS = ['read','create','update','delete'];
+  var ROLE_ACTIONS = ['read','create','update','delete','post'];
 
   // CRM table lists use descending order by default: newest/highest first.
   function crmDesc(a, b) {
@@ -2975,6 +2975,144 @@
     else showView('dashboard', true);
   }
 
+
+  // ---------------- Finance module ----------------
+  function financeMoney(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function financeToday(){ return new Date().toISOString().slice(0,10); }
+  function financeAccountLabel(a){ return (a.account_code||'')+' — '+(a.account_name||a.major_account||''); }
+
+  async function loadFinanceAccounts(){
+    if(!state.chartOfAccounts.length) await loadChartOfAccounts();
+    var opts='<option value="">Select account</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'">'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');
+    ['map-account'].forEach(function(id){var el=$(id);if(el){var v=el.value;el.innerHTML=opts; if(v)el.value=v;}});
+  }
+
+  function journalLineHtml(line){
+    var opts='<option value="">Select account</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'" '+(String(a.account_code)===String(line&&line.account_code||'')?'selected':'')+'>'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');
+    return '<tr data-journal-line><td><select data-line-account required>'+opts+'</select></td><td><input data-line-description maxlength="255" value="'+escapeHtml(line&&line.description||'')+'"></td><td><input data-line-debit type="number" min="0" step="0.01" value="'+(line&&line.debit||'')+'"></td><td><input data-line-credit type="number" min="0" step="0.01" value="'+(line&&line.credit||'')+'"></td><td><button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-remove-journal-line>×</button></td></tr>';
+  }
+  function addJournalLine(line){ var b=$('journal-lines-body');if(b){b.insertAdjacentHTML('beforeend',journalLineHtml(line||{}));updateJournalBalance();} }
+  function updateJournalBalance(){
+    var d=0,c=0; document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function(r){d+=Number(r.querySelector('[data-line-debit]')?.value||0);c+=Number(r.querySelector('[data-line-credit]')?.value||0);});
+    var el=$('journal-balance-summary');if(el)el.textContent='Debits: '+financeMoney(d)+' · Credits: '+financeMoney(c)+' · Difference: '+financeMoney(Math.abs(d-c));
+    var post=$('journal-entry-post');if(post)post.disabled=d<=0||Math.abs(d-c)>0.005;
+  }
+  function resetJournalForm(){
+    state.editingJournalEntryId=null; var f=$('journal-entry-form');if(f)f.reset();
+    if($('journal-entry-date'))$('journal-entry-date').value=financeToday();
+    if($('journal-lines-body'))$('journal-lines-body').innerHTML='';
+    addJournalLine({});addJournalLine({});
+    if($('journal-entry-form-card'))$('journal-entry-form-card').classList.add('crm-hidden');
+  }
+  async function openJournalForm(id){
+    if(!requirePermission('journal-entries',id?'update':'create'))return;
+    await loadFinanceAccounts();
+    state.editingJournalEntryId=id||null;
+    if($('journal-entry-form-title'))$('journal-entry-form-title').textContent=id?'Edit draft':'New journal entry';
+    if(id){
+      var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status').eq('id',id).single();
+      if(r.error){message(r.error.message,'error');return;}
+      if(r.data.status!=='draft'){message('Only draft journal entries can be edited.','error');return;}
+      var l=await window.salonSupabase.from('journal_entry_lines').select('account_code,description,debit,credit').eq('journal_entry_id',id).order('line_no',{ascending:true});
+      if(l.error){message(l.error.message,'error');return;}
+      $('journal-entry-date').value=r.data.entry_date||financeToday();$('journal-entry-reference').value=r.data.reference||'';$('journal-entry-description').value=r.data.description||'';
+      $('journal-lines-body').innerHTML='';(l.data||[]).forEach(addJournalLine);
+    }else resetJournalForm();
+    $('journal-entry-form-card').classList.remove('crm-hidden');
+  }
+  function journalFormData(){
+    var lines=[];document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function(r,i){lines.push({line_no:i+1,account_code:r.querySelector('[data-line-account]').value,description:r.querySelector('[data-line-description]').value.trim()||null,debit:Number(r.querySelector('[data-line-debit]').value||0),credit:Number(r.querySelector('[data-line-credit]').value||0)});});
+    return {entry_date:$('journal-entry-date').value,reference:$('journal-entry-reference').value.trim()||null,description:$('journal-entry-description').value.trim(),lines:lines};
+  }
+  async function saveJournalEntry(e,postIt){
+    e&&e.preventDefault(); if(!requirePermission('journal-entries',state.editingJournalEntryId?'update':'create'))return;
+    var data=journalFormData(), totalD=data.lines.reduce(function(x,l){return x+l.debit;},0),totalC=data.lines.reduce(function(x,l){return x+l.credit;},0);
+    if(!data.entry_date||!data.description||data.lines.length<2||data.lines.some(function(l){return !l.account_code||l.debit<0||l.credit<0||l.debit>0&&l.credit>0;})||totalD<=0||Math.abs(totalD-totalC)>0.005){message('A journal entry needs at least two valid lines and balanced debits and credits.','error');return;}
+    var entryId=state.editingJournalEntryId;
+    if(entryId){
+      var up=await window.salonSupabase.from('journal_entries').update({entry_date:data.entry_date,reference:data.reference,description:data.description}).eq('id',entryId).eq('status','draft');
+      if(up.error){message(up.error.message,'error');return;}
+      var dl=await window.salonSupabase.from('journal_entry_lines').delete().eq('journal_entry_id',entryId);if(dl.error){message(dl.error.message,'error');return;}
+    }else{
+      var ins=await window.salonSupabase.from('journal_entries').insert({entry_date:data.entry_date,reference:data.reference,description:data.description,status:'draft'}).select('id').single();
+      if(ins.error){message(ins.error.message,'error');return;} entryId=ins.data.id;
+    }
+    var li=await window.salonSupabase.from('journal_entry_lines').insert(data.lines.map(function(l){return Object.assign({},l,{journal_entry_id:entryId});}));
+    if(li.error){message(li.error.message,'error');return;}
+    if(postIt){
+      var posted=await window.salonSupabase.rpc('post_journal_entry',{p_entry_id:entryId});
+      if(posted.error){message(posted.error.message,'error');return;}
+    }
+    resetJournalForm();await loadJournalEntries();message(postIt?'Journal entry posted.':'Journal draft saved.','success');
+  }
+  async function loadJournalEntries(){
+    if(!can('journal-entries','read'))return;
+    var q=String(($('journal-search')&&$('journal-search').value)||'').trim().toLowerCase(), st=($('journal-status-filter')||{}).value||'all', from=($('journal-date-from')||{}).value||'', to=($('journal-date-to')||{}).value||'';
+    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit').order('id',{ascending:false});
+    if(r.error){message(r.error.message,'error');return;}
+    var rows=(r.data||[]).filter(function(x){var h=[x.entry_no,x.reference,x.description].join(' ').toLowerCase();return(!q||h.includes(q))&&(st==='all'||x.status===st)&&(!from||x.entry_date>=from)&&(!to||x.entry_date<=to);});
+    var body=$('journal-entries-body');if(!body)return;
+    body.innerHTML=rows.map(function(x){var acts='';if(x.status==='draft'&&can('journal-entries','update'))acts+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="'+x.id+'">Edit</button> ';if(x.status==='draft'&&can('journal-entries','delete'))acts+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="'+x.id+'">Delete</button> ';if(x.status==='draft'&&can('journal-entries','post'))acts+='<button class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="'+x.id+'">Post</button>';return '<tr><td><strong>'+escapeHtml(x.entry_no||('JE-'+x.id))+'</strong></td><td>'+escapeHtml(x.entry_date||'')+'</td><td>'+escapeHtml(x.reference||'—')+'</td><td>'+escapeHtml(x.description||'')+'</td><td>'+financeMoney(x.total_debit)+'</td><td>'+escapeHtml(x.status||'')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
+  }
+  async function deleteJournal(id){if(!requirePermission('journal-entries','delete'))return;if(!confirm('Delete this draft journal entry?'))return;var r=await window.salonSupabase.from('journal_entries').delete().eq('id',id).eq('status','draft');if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Draft deleted.','success');}}
+  async function postJournal(id){if(!requirePermission('journal-entries','post'))return;if(!confirm('Post this journal entry? Posted entries cannot be edited.'))return;var r=await window.salonSupabase.rpc('post_journal_entry',{p_entry_id:id});if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Journal entry posted.','success');}}
+
+  async function loadGeneralLedger(){
+    if(!can('general-ledger','read'))return;
+    var r=await window.salonSupabase.from('journal_entry_lines').select('id,journal_entry_id,line_no,account_code,description,debit,credit,journal_entries!inner(entry_no,entry_date,description,status)').eq('journal_entries.status','posted').order('journal_entry_id',{ascending:false}).order('line_no',{ascending:true});
+    if(r.error){message(r.error.message,'error');return;}
+    var q=String(($('ledger-search')||{}).value||'').toLowerCase(), acc=($('ledger-account-filter')||{}).value||'all', from=($('ledger-date-from')||{}).value||'',to=($('ledger-date-to')||{}).value||'', balance={};
+    var af=$('ledger-account-filter'); if(af){var cur=acc; af.innerHTML='<option value="all">All accounts</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'">'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');af.value=state.chartOfAccounts.some(function(a){return a.account_code===cur;})?cur:'all';}
+    var rows=(r.data||[]).filter(function(x){var je=x.journal_entries||{};var h=[x.account_code,x.description,je.entry_no,je.description].join(' ').toLowerCase();return(!q||h.includes(q))&&(acc==='all'||x.account_code===acc)&&(!from||je.entry_date>=from)&&(!to||je.entry_date<=to);}).sort(function(a,b){return String((b.journal_entries||{}).entry_date||'').localeCompare(String((a.journal_entries||{}).entry_date||''))||Number(b.journal_entry_id)-Number(a.journal_entry_id);});
+    var body=$('general-ledger-body');if(!body)return;
+    body.innerHTML=rows.map(function(x){var prev=balance[x.account_code]||0;var net=prev+Number(x.debit||0)-Number(x.credit||0);balance[x.account_code]=net;var a=state.chartOfAccounts.find(function(y){return y.account_code===x.account_code;});return '<tr><td>'+escapeHtml(x.journal_entries.entry_date||'')+'</td><td>'+escapeHtml(x.journal_entries.entry_no||'')+'</td><td>'+escapeHtml(x.account_code+' — '+(a?(a.account_name||a.major_account||''):'Unknown'))+'</td><td>'+escapeHtml(x.description||x.journal_entries.description||'')+'</td><td>'+financeMoney(x.debit)+'</td><td>'+financeMoney(x.credit)+'</td><td>'+financeMoney(net)+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No posted transactions found.</td></tr>';
+  }
+  async function loadTrialBalance(){
+    if(!can('trial-balance','read'))return;
+    var from=($('trial-date-from')||{}).value||'',to=($('trial-date-to')||{}).value||'';
+    var r=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');if(r.error){message(r.error.message,'error');return;}
+    var sums={};(r.data||[]).filter(function(x){var d=x.journal_entries.entry_date;return(!from||d>=from)&&(!to||d<=to);}).forEach(function(x){sums[x.account_code]=sums[x.account_code]||{d:0,c:0};sums[x.account_code].d+=Number(x.debit||0);sums[x.account_code].c+=Number(x.credit||0);});
+    var rows=state.chartOfAccounts.filter(function(a){return sums[a.account_code];}).map(function(a){var s=sums[a.account_code];return {a:a,d:s.d,c:s.c,n:s.d-s.c};}).sort(function(x,y){return crmDesc(x.a.account_code,y.a.account_code);});
+    var td=rows.reduce(function(n,x){return n+x.d;},0),tc=rows.reduce(function(n,x){return n+x.c;},0);var st=$('trial-balance-status');if(st)st.textContent='Total debits: '+financeMoney(td)+' · Total credits: '+financeMoney(tc)+' · '+(Math.abs(td-tc)<0.005?'Balanced ✓':'Difference: '+financeMoney(Math.abs(td-tc)));
+    var body=$('trial-balance-body');if(body)body.innerHTML=rows.map(function(x){return '<tr><td>'+escapeHtml(x.a.account_code)+'</td><td>'+escapeHtml(x.a.account_name||x.a.major_account||'')+'</td><td>'+escapeHtml(x.a.account_type||'')+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No posted transactions in this period.</td></tr>';
+  }
+
+  async function loadStatementMappings(){
+    if(!can('statement-mapping','read'))return;
+    var r=await window.salonSupabase.from('financial_statement_mappings').select('id,statement,account_code,section_line,display_order,active').order('statement').order('display_order').order('account_code',{ascending:false});if(r.error){message(r.message||r.error.message,'error');return;}
+    state.statementMappings=r.data||[];renderStatementMappings();
+    await loadFinanceAccounts();
+  }
+  function renderStatementMappings(){
+    var body=$('statement-map-body');if(!body)return;var q=String(($('statement-map-search')||{}).value||'').toLowerCase(),st=($('statement-map-filter')||{}).value||'all';
+    var rows=state.statementMappings.filter(function(x){var h=[x.statement,x.account_code,x.section_line].join(' ').toLowerCase();return(!q||h.includes(q))&&(st==='all'||x.statement===st);});
+    var fs=$('statement-map-filter');if(fs){var vals=[...new Set(state.statementMappings.map(function(x){return x.statement;}).filter(Boolean))];var cur=st;fs.innerHTML='<option value="all">All statements</option>'+vals.map(function(x){return '<option>'+escapeHtml(x)+'</option>';}).join('');fs.value=vals.includes(cur)?cur:'all';}
+    body.innerHTML=rows.map(function(x){var acts='';if(can('statement-mapping','update'))acts+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-map="'+x.id+'">Edit</button> ';if(can('statement-mapping','delete'))acts+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-map="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.statement)+'</td><td>'+escapeHtml(x.account_code)+'</td><td>'+escapeHtml(x.section_line)+'</td><td>'+x.display_order+'</td><td>'+(x.active?'Yes':'No')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No mappings found.</td></tr>';
+  }
+  function openMappingForm(id){
+    var x=id&&state.statementMappings.find(function(y){return String(y.id)===String(id);});state.editingMappingId=x?x.id:null;
+    $('statement-map-form-card').classList.remove('crm-hidden');$('map-statement').value=x?x.statement:'Profit & Loss';$('map-account').value=x?x.account_code:'';$('map-section').value=x?x.section_line:'';$('map-order').value=x?x.display_order:1;$('map-active').checked=x?x.active:true;
+  }
+  async function saveMapping(e){e.preventDefault();var id=state.editingMappingId;if(!requirePermission('statement-mapping',id?'update':'create'))return;var payload={statement:$('map-statement').value,account_code:$('map-account').value,section_line:$('map-section').value.trim(),display_order:Number($('map-order').value||1),active:$('map-active').checked};var r=id?await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id',id):await window.salonSupabase.from('financial_statement_mappings').insert(payload);if(r.error){message(r.error.message,'error');return;}$('statement-map-form-card').classList.add('crm-hidden');await loadStatementMappings();message('Statement mapping saved.','success');}
+  async function deleteMapping(id){if(!requirePermission('statement-mapping','delete'))return;if(!confirm('Delete this statement mapping?'))return;var r=await window.salonSupabase.from('financial_statement_mappings').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadStatementMappings();message('Mapping deleted.','success');}}
+
+  async function loadFinancialReport(){
+    if(!can('financial-statements','read'))return;
+    var statement=($('report-statement-select')||{}).value||'Profit & Loss',from=($('report-date-from')||{}).value||'',to=($('report-date-to')||{}).value||'';
+    var q=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');if(q.error){message(q.error.message,'error');return;}
+    var sums={};(q.data||[]).filter(function(x){var d=x.journal_entries.entry_date;return(!from||d>=from)&&(!to||d<=to);}).forEach(function(x){sums[x.account_code]=sums[x.account_code]||{d:0,c:0};sums[x.account_code].d+=Number(x.debit||0);sums[x.account_code].c+=Number(x.credit||0);});
+    var m=await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement',statement).eq('active',true).order('display_order');if(m.error){message(m.error.message,'error');return;}
+    var rows=(m.data||[]).map(function(x){var a=state.chartOfAccounts.find(function(y){return y.account_code===x.account_code;})||{};var ss=sums[x.account_code]||{d:0,c:0};return {m:x,a:a,d:ss.d,c:ss.c,n:ss.d-ss.c};});
+    var total=rows.reduce(function(n,x){return n+x.n;},0);var sum=$('financial-report-summary');if(sum)sum.textContent=statement+' · '+(from||'Beginning')+' to '+(to||'Today')+' · Net '+financeMoney(total);
+    var body=$('financial-report-body');if(body)body.innerHTML=rows.map(function(x){return '<tr><td><strong>'+escapeHtml(x.m.section_line)+'</strong></td><td>'+escapeHtml(x.a.account_code||x.m.account_code)+' — '+escapeHtml(x.a.account_name||x.a.major_account||'')+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No mapped accounts or posted transactions found.</td></tr>';
+  }
+
+  async function loadAccountingPeriods(){
+    if(!can('accounting-periods','read'))return;var r=await window.salonSupabase.from('accounting_periods').select('id,name,start_date,end_date,status').order('start_date',{ascending:false});if(r.error){message(r.error.message,'error');return;}state.accountingPeriods=r.data||[];var b=$('periods-body');if(b)b.innerHTML=state.accountingPeriods.map(function(x){var a='';if(can('accounting-periods','update'))a+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-period="'+x.id+'">Edit</button> ';if(can('accounting-periods','delete'))a+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-period="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.start_date+'</td><td>'+x.end_date+'</td><td>'+escapeHtml(x.status)+'</td><td>'+a+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounting periods configured.</td></tr>';}
+  function openPeriodForm(id){var x=id&&state.accountingPeriods.find(function(y){return String(y.id)===String(id);});state.editingPeriodId=x?x.id:null;$('period-form-card').classList.remove('crm-hidden');$('period-name').value=x?x.name:'';$('period-start').value=x?x.start_date:financeToday();$('period-end').value=x?x.end_date:financeToday();$('period-status').value=x?x.status:'open';}
+  async function savePeriod(e){e.preventDefault();var id=state.editingPeriodId;if(!requirePermission('accounting-periods',id?'update':'create'))return;var payload={name:$('period-name').value.trim(),start_date:$('period-start').value,end_date:$('period-end').value,status:$('period-status').value};if(payload.end_date<payload.start_date){message('End date must be after start date.','error');return;}var r=id?await window.salonSupabase.from('accounting_periods').update(payload).eq('id',id):await window.salonSupabase.from('accounting_periods').insert(payload);if(r.error){message(r.error.message,'error');return;}$('period-form-card').classList.add('crm-hidden');await loadAccountingPeriods();message('Accounting period saved.','success');}
+  async function deletePeriod(id){if(!requirePermission('accounting-periods','delete'))return;if(!confirm('Delete this accounting period?'))return;var r=await window.salonSupabase.from('accounting_periods').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadAccountingPeriods();message('Period deleted.','success');}}
+
   function showView(view, restoring){
     if(view!=='dashboard' && !can(view,'read')){
       message('You do not have permission to view this section.','error');
@@ -2985,7 +3123,7 @@
     document.querySelectorAll('.crm-view').forEach(function(el){el.classList.add('crm-hidden');});
     var target=$('view-'+view); if(target)target.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
-    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'financial-statements':['Finance','Financial Statements']};
+    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods']};
     var t=titles[view]||titles.dashboard;
     var eyebrow=$('view-eyebrow');
     var title=$('view-title');
@@ -2994,7 +3132,12 @@
     if(view==='users') loadUsers().catch(function(e){message(e.message,'error');});
     if(view==='roles') loadRoles().catch(function(e){message(e.message,'error');});
     if(view==='chart-of-accounts') loadChartOfAccounts().catch(function(e){console.error('Chart of Accounts load failed:',e);message(e.message||'Could not load chart of accounts.','error');});
-    if(view==='financial-statements') loadFinancialStatements().catch(function(e){console.error('Financial Statements load failed:',e);message(e.message||'Could not load financial statements.','error');});
+    if(view==='financial-statements') loadFinancialReport().catch(function(e){console.error('Financial Statements load failed:',e);message(e.message||'Could not load financial statements.','error');});
+    if(view==='journal-entries') { loadFinanceAccounts().then(loadJournalEntries).catch(function(e){message(e.message||'Could not load journal entries.','error');}); }
+    if(view==='general-ledger') { loadFinanceAccounts().then(loadGeneralLedger).catch(function(e){message(e.message||'Could not load general ledger.','error');}); }
+    if(view==='trial-balance') { loadFinanceAccounts().then(loadTrialBalance).catch(function(e){message(e.message||'Could not load trial balance.','error');}); }
+    if(view==='statement-mapping') loadStatementMappings().catch(function(e){message(e.message||'Could not load statement mappings.','error');});
+    if(view==='accounting-periods') loadAccountingPeriods().catch(function(e){message(e.message||'Could not load accounting periods.','error');});
     if(view==='settings') loadApplicationSettings().catch(function(e){message(e.message,'error');});
     if(view==='vouchers') loadVouchers().catch(function(e){message(e.message,'error');});
     if(view==='bookings') loadBookings().catch(function(e){message(e.message,'error');});
@@ -3444,7 +3587,7 @@
       'invite-user-btn':['users','create'],'new-role-top':['roles','create'],
       'service-save':['services',state.editingServiceId?'update':'create'],'category-save':['services',state.editingCategoryId?'update':'create'],
       'voucher-save':['vouchers',state.editingVoucherId?'update':'create'],'faq-save':['faqs',state.editingFaqId?'update':'create'],
-      'role-save':['roles',state.editingRoleId?'update':'create'],'application-settings-save':['settings','update']
+      'role-save':['roles',state.editingRoleId?'update':'create'],'application-settings-save':['settings','update'],'journal-entry-save':['journal-entries','create'],'journal-entry-post':['journal-entries','post'],'statement-map-add':['statement-mapping','create'],'period-add':['accounting-periods','create']
     };
     Object.keys(actionMap).forEach(function(id){var el=$(id),rule=actionMap[id];if(el)el.disabled=!can(rule[0],rule[1]);});
   }
@@ -3493,7 +3636,6 @@
     if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});
     if($('chart-type-filter')) $('chart-type-filter').addEventListener('change',function(e){state.chartTypeFilter=e.target.value;renderChartOfAccounts();});
     if($('chart-account-add')) $('chart-account-add').addEventListener('click',function(){openChartAccountForm(null);});
-    if($('chart-account-cancel')) $('chart-account-cancel').addEventListener('click',resetChartAccountForm);
     if($('chart-account-cancel-2')) $('chart-account-cancel-2').addEventListener('click',resetChartAccountForm);
     if($('chart-account-form')) $('chart-account-form').addEventListener('submit',saveChartAccount);
     if($('chart-of-accounts-table-body')) $('chart-of-accounts-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-chart-account]'); if(edit){openChartAccountForm(edit.getAttribute('data-edit-chart-account'));return;} var del=e.target.closest('[data-delete-chart-account]'); if(del) deleteChartAccount(del.getAttribute('data-delete-chart-account'));});
@@ -3789,6 +3931,33 @@
       });
     }
     document.querySelectorAll('[data-view="booking-config"]').forEach(function(btn){btn.addEventListener('click',function(){loadBookingConfig().catch(function(e){console.error(e);message(e.message||'Could not load booking configuration.','error');});});});
+    if($('journal-entry-add')) $('journal-entry-add').addEventListener('click',function(){openJournalForm(null);});
+    if($('journal-entry-cancel')) $('journal-entry-cancel').addEventListener('click',resetJournalForm);
+    if($('journal-line-add')) $('journal-line-add').addEventListener('click',function(){addJournalLine({});});
+    if($('journal-entry-form')) $('journal-entry-form').addEventListener('submit',function(e){saveJournalEntry(e,false);});
+    if($('journal-entry-post')) $('journal-entry-post').addEventListener('click',function(e){saveJournalEntry(e,true);});
+    if($('journal-lines-body')) $('journal-lines-body').addEventListener('input',updateJournalBalance);
+    if($('journal-lines-body')) $('journal-lines-body').addEventListener('click',function(e){var b=e.target.closest('[data-remove-journal-line]');if(b){b.closest('[data-journal-line]').remove();updateJournalBalance();}});
+    if($('journal-entries-body')) $('journal-entries-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-journal]');if(x)openJournalForm(x.dataset.editJournal);var d=e.target.closest('[data-delete-journal]');if(d)deleteJournal(d.dataset.deleteJournal);var p=e.target.closest('[data-post-journal]');if(p)postJournal(p.dataset.postJournal);});
+    ['journal-search','journal-status-filter','journal-date-from','journal-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadJournalEntries);});
+    ['ledger-search','ledger-account-filter','ledger-date-from','ledger-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadGeneralLedger);});
+    ['trial-date-from','trial-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener('change',loadTrialBalance);});
+    if($('trial-refresh')) $('trial-refresh').addEventListener('click',loadTrialBalance);
+    if($('statement-map-add')) $('statement-map-add').addEventListener('click',function(){openMappingForm(null);});
+    if($('statement-map-cancel')) $('statement-map-cancel').addEventListener('click',function(){$('statement-map-form-card').classList.add('crm-hidden');});
+    if($('statement-map-form')) $('statement-map-form').addEventListener('submit',saveMapping);
+    if($('statement-map-search')) $('statement-map-search').addEventListener('input',renderStatementMappings);
+    if($('statement-map-filter')) $('statement-map-filter').addEventListener('change',renderStatementMappings);
+    if($('statement-map-body')) $('statement-map-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-map]');if(x)openMappingForm(x.dataset.editMap);var d=e.target.closest('[data-delete-map]');if(d)deleteMapping(d.dataset.deleteMap);});
+    if($('report-refresh')) $('report-refresh').addEventListener('click',loadFinancialReport);
+    if($('report-statement-select')) $('report-statement-select').addEventListener('change',loadFinancialReport);
+    if($('report-date-from')) $('report-date-from').addEventListener('change',loadFinancialReport);
+    if($('report-date-to')) $('report-date-to').addEventListener('change',loadFinancialReport);
+    if($('period-add')) $('period-add').addEventListener('click',function(){openPeriodForm(null);});
+    if($('period-cancel')) $('period-cancel').addEventListener('click',function(){$('period-form-card').classList.add('crm-hidden');});
+    if($('period-form')) $('period-form').addEventListener('submit',savePeriod);
+    if($('periods-body')) $('periods-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-period]');if(x)openPeriodForm(x.dataset.editPeriod);var d=e.target.closest('[data-delete-period]');if(d)deletePeriod(d.dataset.deletePeriod);});
+
   });
 
 })();

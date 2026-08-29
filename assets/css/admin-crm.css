@@ -154,7 +154,7 @@ body.crm-page{margin:0;background:linear-gradient(135deg,#faf8f6 0%,#f4eee9 100%
 @media(max-width:760px){.crm-sidebar{transform:translateX(-100%);transition:.22s ease;box-shadow:20px 0 50px rgba(0,0,0,.15)}.crm-sidebar.open{transform:translateX(0)}.crm-main{margin-left:0;width:100%;padding:0 16px 50px}.crm-mobile-menu{display:block;border:1px solid var(--crm-line);background:#fff;border-radius:10px;width:38px;height:38px;font-size:18px}.crm-topbar{height:78px}.crm-user-pill{max-width:180px;overflow:hidden}.crm-user-pill span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.crm-welcome{align-items:flex-start;flex-direction:column;padding:25px}.crm-stats{grid-template-columns:1fr 1fr}.crm-quick-grid{grid-template-columns:1fr}.crm-page-heading{align-items:flex-start;flex-direction:column}.crm-page-heading .crm-btn{width:100%}}
 @media(max-width:480px){.crm-stats{grid-template-columns:1fr}.crm-topbar h1{font-size:21px}}
 
-.crm-actions-inline{display:flex;gap:7px;flex-wrap:wrap}.crm-btn-small{padding:7px 10px;font-size:12px;border-radius:9px}
+.crm-actions-inline{display:flex;justify-content:flex-end;align-items:center;gap:7px;flex-wrap:wrap}.crm-btn-small{padding:7px 10px;font-size:12px;border-radius:9px}
 #crm-password-setup{max-width:460px}
 #crm-password-setup .crm-field{margin-top:12px}
 
@@ -660,3 +660,10 @@ html.crm-auth-pending #crm-password-setup {
 @media(max-width:900px){.crm-chart-filters .crm-search-box{min-width:0;flex:1}.crm-chart-filters .crm-filter-select{min-width:150px}}
 
 .crm-account-header-row td{font-weight:700;background:#faf6f3}.crm-chart-filters{margin-bottom:14px}.crm-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}.crm-check{display:flex;align-items:center;gap:8px}.crm-check input{width:auto}.crm-field.full{grid-column:1/-1}
+
+.crm-nav-group-label{padding:16px 18px 6px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.55;font-weight:700}
+.crm-card-inner{padding:18px;border:1px solid rgba(0,0,0,.06);border-radius:12px;margin-top:16px}
+.crm-finance-balance,.crm-finance-summary{padding:13px 16px;margin:12px 0 16px;border-radius:10px;background:rgba(0,0,0,.035);font-size:13px;font-weight:600}
+.crm-date-filter{min-height:40px;border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:0 10px;background:#fff}
+.crm-actions-inline{display:flex;gap:6px;flex-wrap:wrap}
+.crm-btn-small{padding:6px 9px;font-size:12px}

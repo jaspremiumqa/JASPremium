@@ -60,8 +60,14 @@
 <button type="button" class="crm-nav-item" data-view="settings" data-admin-only><span class="crm-nav-icon">⚙</span><span>Settings</span></button>
           <button class="crm-nav-item" data-view="users"><span>♙</span> Users & Access</button>
           <button class="crm-nav-item" data-view="roles"><span>♙</span> Roles & Permissions</button>
+          <div class="crm-nav-group-label">Finance</div>
           <button class="crm-nav-item" data-view="chart-of-accounts" data-admin-only><span>▦</span> Chart of Accounts</button>
-          <button class="crm-nav-item" data-view="financial-statements" data-admin-only><span>▤</span> Financial Statements</button>
+          <button class="crm-nav-item" data-view="journal-entries" data-admin-only><span>↔</span> Journal Entries</button>
+          <button class="crm-nav-item" data-view="general-ledger" data-admin-only><span>▤</span> General Ledger</button>
+          <button class="crm-nav-item" data-view="trial-balance" data-admin-only><span>∑</span> Trial Balance</button>
+          <button class="crm-nav-item" data-view="financial-statements" data-admin-only><span>▥</span> Financial Statements</button>
+          <button class="crm-nav-item" data-view="statement-mapping" data-admin-only><span>⌘</span> Statement Mapping</button>
+          <button class="crm-nav-item" data-view="accounting-periods" data-admin-only><span>◷</span> Accounting Periods</button>
         </nav>
         <div class="crm-side-bottom">
           <a href="index.html" class="crm-nav-link">↗ View website</a>
@@ -554,8 +560,8 @@
                   <div class="crm-field"><label for="translation-ar">Arabic</label><textarea id="translation-ar" rows="3" required dir="rtl"></textarea></div>
                 </div>
                 <div class="crm-actions-inline">
-                  <button id="translation-save" type="submit" class="crm-btn crm-btn-primary">Save translation</button>
                   <button id="translation-cancel-btn" type="button" class="crm-btn crm-btn-secondary">Cancel</button>
+                  <button id="translation-save" type="submit" class="crm-btn crm-btn-primary">Save translation</button>
                 </div>
               </form>
             </div>
@@ -872,7 +878,7 @@
     <button type="button" id="chart-account-add" class="crm-btn crm-btn-primary">+ Add account</button>
   </div>
   <div id="chart-account-form-card" class="crm-card crm-hidden">
-    <div class="crm-card-header"><div><div class="crm-eyebrow">Account</div><h3 id="chart-account-form-title">Add account</h3></div><button type="button" id="chart-account-cancel" class="crm-btn crm-btn-secondary">Cancel</button></div>
+    <div class="crm-card-header"><div><div class="crm-eyebrow">Account</div><h3 id="chart-account-form-title">Add account</h3></div></div>
     <form id="chart-account-form" class="crm-standard-form">
       <div class="crm-form-grid">
         <div class="crm-field"><label for="chart-account-code">Account code</label><input id="chart-account-code" required maxlength="50"></div>
@@ -884,7 +890,7 @@
         <div class="crm-field full"><label for="chart-account-notes">Notes</label><textarea id="chart-account-notes" rows="3"></textarea></div>
         <div class="crm-field"><label class="crm-check"><input id="chart-account-active" type="checkbox" checked> Active</label></div>
       </div>
-      <div class="crm-form-actions"><button type="submit" id="chart-account-save" class="crm-btn crm-btn-primary">Add account</button><button type="button" id="chart-account-cancel-2" class="crm-btn crm-btn-secondary">Cancel</button></div>
+      <div class="crm-form-actions"><button type="button" id="chart-account-cancel-2" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" id="chart-account-save" class="crm-btn crm-btn-primary">Add account</button></div>
     </form>
   </div>
   <div class="crm-card">
@@ -903,19 +909,54 @@
 </section>
 
 <section id="view-financial-statements" class="crm-view crm-hidden" data-admin-only>
-  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Financial Statements</h2><p>Statement layouts and account classifications from the salon's accounting structure.</p></div></div>
-  <div class="crm-card">
-    <div class="crm-list-filters">
-      <div class="crm-search-box"><span>⌕</span><input id="financial-statement-search" type="search" placeholder="Search statement, account code, classification or notes" aria-label="Search financial statements"></div>
-      <select id="financial-statement-filter" class="crm-filter-select" aria-label="Filter by statement"><option value="all">All statements</option></select>
-    </div>
-    <div class="crm-table-wrap">
-      <table class="crm-table">
-        <thead><tr><th>Statement</th><th>Account code</th><th>Account name</th><th>Classification / Line</th><th>Normal balance</th><th>Notes</th></tr></thead>
-        <tbody id="financial-statements-table-body"><tr><td colspan="6" class="crm-empty">Loading financial statements…</td></tr></tbody>
-      </table>
-    </div>
+  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Financial Statements</h2><p>Generated from posted journal entries and your statement mappings.</p></div></div>
+  <div class="crm-card"><div class="crm-list-filters"><select id="report-statement-select" class="crm-filter-select"><option value="Profit & Loss">Profit & Loss</option><option value="Balance Sheet">Balance Sheet</option><option value="Cash Flow">Cash Flow</option><option value="Statement of Changes in Equity">Statement of Changes in Equity</option></select><input id="report-date-from" class="crm-date-filter" type="date"><input id="report-date-to" class="crm-date-filter" type="date"><button id="report-refresh" class="crm-btn crm-btn-secondary">Generate</button></div><div id="financial-report-summary" class="crm-finance-summary"></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Section</th><th>Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="financial-report-body"></tbody></table></div></div>
+</section>
+
+
+<section id="view-journal-entries" class="crm-view crm-hidden" data-admin-only>
+  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Journal Entries</h2><p>Record and post balanced accounting transactions.</p></div><button id="journal-entry-add" class="crm-btn crm-btn-primary">+ New journal entry</button></div>
+  <div id="journal-entry-form-card" class="crm-card crm-hidden">
+    <div class="crm-card-header"><div><div class="crm-eyebrow">Accounting transaction</div><h3 id="journal-entry-form-title">New journal entry</h3></div></div>
+    <form id="journal-entry-form" class="crm-standard-form">
+      <div class="crm-form-grid">
+        <div class="crm-field"><label for="journal-entry-date">Date</label><input id="journal-entry-date" type="date" required></div>
+        <div class="crm-field"><label for="journal-entry-reference">Reference</label><input id="journal-entry-reference" maxlength="100" placeholder="INV-001 / Receipt"></div>
+        <div class="crm-field full"><label for="journal-entry-description">Description</label><input id="journal-entry-description" required maxlength="255" placeholder="Describe the transaction"></div>
+      </div>
+      <div class="crm-card-inner"><div class="crm-card-header"><h3>Lines</h3><button type="button" id="journal-line-add" class="crm-btn crm-btn-secondary">+ Add line</button></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th><th></th></tr></thead><tbody id="journal-lines-body"></tbody></table></div><div id="journal-balance-summary" class="crm-finance-balance">Debits: 0.00 · Credits: 0.00 · Difference: 0.00</div></div>
+      <div class="crm-form-actions"><button type="button" id="journal-entry-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" id="journal-entry-save" class="crm-btn crm-btn-primary">Save draft</button><button type="button" id="journal-entry-post" class="crm-btn crm-btn-primary">Save & post</button></div>
+    </form>
   </div>
+  <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="journal-search" type="search" placeholder="Search entry number, reference or description"></div><select id="journal-status-filter" class="crm-filter-select"><option value="all">All statuses</option><option value="draft">Draft</option><option value="posted">Posted</option><option value="void">Void</option></select><input id="journal-date-from" class="crm-date-filter" type="date"><input id="journal-date-to" class="crm-date-filter" type="date"></div>
+    <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Entry</th><th>Date</th><th>Reference</th><th>Description</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="journal-entries-body"></tbody></table></div></div>
+</section>
+
+<section id="view-general-ledger" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>General Ledger</h2><p>Account-by-account activity from posted journal entries.</p></div></div>
+ <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="ledger-search" type="search" placeholder="Search account, entry or description"></div><select id="ledger-account-filter" class="crm-filter-select"><option value="all">All accounts</option></select><input id="ledger-date-from" class="crm-date-filter" type="date"><input id="ledger-date-to" class="crm-date-filter" type="date"></div>
+ <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Date</th><th>Entry</th><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="general-ledger-body"></tbody></table></div></div>
+</section>
+
+<section id="view-trial-balance" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Trial Balance</h2><p>Verify that posted debits equal posted credits.</p></div></div>
+ <div class="crm-card"><div class="crm-list-filters"><input id="trial-date-from" class="crm-date-filter" type="date"><input id="trial-date-to" class="crm-date-filter" type="date"><button id="trial-refresh" class="crm-btn crm-btn-secondary">Refresh</button></div><div id="trial-balance-status" class="crm-finance-balance">Loading…</div>
+ <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Code</th><th>Account</th><th>Type</th><th>Debit</th><th>Credit</th><th>Net balance</th></tr></thead><tbody id="trial-balance-body"></tbody></table></div></div>
+</section>
+
+<section id="view-statement-mapping" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Statement Mapping</h2><p>Control where accounts appear in generated financial statements.</p></div><button id="statement-map-add" class="crm-btn crm-btn-primary">+ Add mapping</button></div>
+ <div id="statement-map-form-card" class="crm-card crm-hidden"><form id="statement-map-form" class="crm-standard-form"><div class="crm-form-grid">
+ <div class="crm-field"><label>Statement</label><select id="map-statement"><option>Balance Sheet</option><option>Profit & Loss</option><option>Cash Flow</option><option>Statement of Changes in Equity</option></select></div>
+ <div class="crm-field"><label>Account</label><select id="map-account"></select></div><div class="crm-field"><label>Section / line</label><input id="map-section" required></div><div class="crm-field"><label>Display order</label><input id="map-order" type="number" min="1" value="1"></div><div class="crm-field"><label class="crm-check"><input id="map-active" type="checkbox" checked> Active</label></div>
+ </div><div class="crm-form-actions"><button type="button" id="statement-map-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button class="crm-btn crm-btn-primary">Save mapping</button></div></form></div>
+ <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="statement-map-search" type="search" placeholder="Search mapping"></div><select id="statement-map-filter" class="crm-filter-select"><option value="all">All statements</option></select></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Statement</th><th>Account</th><th>Section / line</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead><tbody id="statement-map-body"></tbody></table></div></div>
+</section>
+
+<section id="view-accounting-periods" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Accounting Periods</h2><p>Open and close reporting periods to protect finalized accounts.</p></div><button id="period-add" class="crm-btn crm-btn-primary">+ Add period</button></div>
+ <div id="period-form-card" class="crm-card crm-hidden"><form id="period-form" class="crm-standard-form"><div class="crm-form-grid"><div class="crm-field"><label>Period name</label><input id="period-name" required placeholder="August 2026"></div><div class="crm-field"><label>Start date</label><input id="period-start" type="date" required></div><div class="crm-field"><label>End date</label><input id="period-end" type="date" required></div><div class="crm-field"><label>Status</label><select id="period-status"><option value="open">Open</option><option value="closed">Closed</option></select></div></div><div class="crm-form-actions"><button type="button" id="period-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button class="crm-btn crm-btn-primary">Save period</button></div></form></div>
+ <div class="crm-card"><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Period</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead><tbody id="periods-body"></tbody></table></div></div>
 </section>
 
 <section id="view-contact-messages" class="crm-view crm-hidden">
@@ -965,8 +1006,8 @@
         <div class="crm-field full"><label for="customer-notes">Internal CRM notes</label><textarea id="customer-notes" rows="3" placeholder="Internal notes for CRM staff only"></textarea></div>
       </div>
       <div class="crm-actions-inline">
-        <button type="submit" class="crm-btn crm-btn-primary">Save customer</button>
         <button type="button" id="customer-cancel" class="crm-btn crm-btn-secondary">Cancel</button>
+        <button type="submit" class="crm-btn crm-btn-primary">Save customer</button>
       </div>
     </form>
   </div>
@@ -1042,6 +1083,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v34"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v38"></script>
 </body>
 </html>
