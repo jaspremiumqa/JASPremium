@@ -884,7 +884,7 @@
   // Keep the new booking flow/local test booking AND the previous Formspree
   // notification. The booking is stored first so an email provider problem
   // never loses the customer's appointment request.
-  const BOOKING_FORMSPREE_ENDPOINT = 'https://formspree.io/f/xnjkdndz';
+  const BOOKING_FORMSPREE_ENDPOINT = 'https://formspree.io/f/xppzwzda';
 
   function submitBookingToFormspreeFallback({id,name,phone,email,notes,items}){
     const form = document.getElementById('booking-form');
@@ -899,19 +899,19 @@
     // Native form submission is deliberately used as a fallback.
     // Unlike fetch(), it is not affected by browser CORS handling.
     const fields = {
-      '_subject': `New salon booking ${id}`,
+      // '_subject': `New salon booking ${id}`,
       'booking_reference': id,
       'name': name,
       'phone': phone,
       'email': email || '',
-      '_replyto': email || '',
+      // '_replyto': email || '',
       'notes': notes || '',
       'appointment_date': state.date,
       'appointment_time': `${formatTime(start)} - ${formatTime(end)}`,
       'services': serviceNames,
       'total': `${total()} ${state.currency}`,
       'duration': `${totalMinutes()} minutes`,
-      'status': 'Booking request received'
+      // 'status': 'Booking request received'
     };
 
     Object.keys(fields).forEach(function(key){
@@ -944,13 +944,13 @@
     const end = minutesToTime(toMin(start) + totalMinutes());
 
     const payload = new URLSearchParams();
-    payload.set('_subject', `New salon booking ${id}`);
+    // payload.set('_subject', `New salon booking ${id}`);
     payload.set('booking_reference', id);
     payload.set('name', name);
     payload.set('phone', phone);
     if(email) {
       payload.set('email', email);
-      payload.set('_replyto', email);
+      // payload.set('_replyto', email);
     }
     if(notes) payload.set('notes', notes);
     payload.set('appointment_date', state.date);
@@ -958,7 +958,7 @@
     payload.set('services', serviceNames);
     payload.set('total', `${total()} ${state.currency}`);
     payload.set('duration', `${totalMinutes()} minutes`);
-    payload.set('status', 'Booking request received');
+    // payload.set('status', 'Booking request received');
 
     try {
       const response = await fetch(BOOKING_FORMSPREE_ENDPOINT, {
