@@ -5,7 +5,7 @@
 --
 -- Rules:
 --   * Service SKU is required for new/updated services.
---   * Service SKU is unique (case-insensitive, trimmed).
+--   * Service SKU is unique within each category (case-insensitive, trimmed).
 --   * At least one of USD or QAR price must be supplied.
 --   * Services can be deleted only when they are not referenced by bookings.
 --   * Categories can be deleted only after all services in them are deleted.
@@ -40,11 +40,12 @@ on public.services
 for each row
 execute function public.validate_crm_service_row();
 
--- 2) Unique service SKU, ignoring case and surrounding whitespace.
--- This intentionally fails if existing duplicate non-empty SKUs exist;
--- resolve those duplicates first rather than silently renaming live services.
-create unique index if not exists services_sku_unique_ci
-on public.services (lower(trim(sku)))
+-- 2) Unique service SKU within each category, ignoring case and whitespace.
+-- This allows the same generated sequence to exist in different categories.
+drop index if exists public.services_sku_unique_ci;
+
+create unique index if not exists services_category_sku_unique_ci
+on public.services (category_id, lower(trim(sku)))
 where sku is not null and trim(sku) <> '';
 
 -- 3) Enforce the price rule for future inserts/updates at the database level.

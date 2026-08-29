@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Prevent browser fallback requests to /favicon.ico; CRM/Supabase favicon is applied after settings load. -->
+  <!-- Prevent browser fallback requests to /favicon.ico. -->
   <link rel="icon" href="data:," data-favicon-bootstrap="true">
   <title>CRM</title>
   <link rel="stylesheet" href="assets/css/style.css">
@@ -55,10 +55,13 @@
           <button class="crm-nav-item" data-view="faqs" data-admin-only><span>?</span> FAQs</button>
           <button class="crm-nav-item" data-view="bookings"><span>◷</span> Bookings</button>
           <button class="crm-nav-item" data-view="booking-config" data-admin-only><span>⚙</span> Booking Setup</button>           <button class="crm-nav-item" data-view="translations" data-admin-only><span>文</span> Translation</button>
+          <button class="crm-nav-item" data-view="contact-messages"><span>✉</span> Contact Us</button>
           <button class="crm-nav-item" data-view="customers"><span>♙</span> Customers</button>
 <button type="button" class="crm-nav-item" data-view="settings" data-admin-only><span class="crm-nav-icon">⚙</span><span>Settings</span></button>
           <button class="crm-nav-item" data-view="users"><span>♙</span> Users & Access</button>
           <button class="crm-nav-item" data-view="roles"><span>♙</span> Roles & Permissions</button>
+          <button class="crm-nav-item" data-view="chart-of-accounts" data-admin-only><span>▦</span> Chart of Accounts</button>
+          <button class="crm-nav-item" data-view="financial-statements" data-admin-only><span>▤</span> Financial Statements</button>
         </nav>
         <div class="crm-side-bottom">
           <a href="index.html" class="crm-nav-link">↗ View website</a>
@@ -69,7 +72,6 @@
       <div class="crm-main">
         <header class="crm-topbar">
           <button id="mobile-menu" class="crm-mobile-menu" aria-label="Open menu">☰</button>
-          <div><div id="view-eyebrow" class="crm-section-label">Overview</div><h1 id="view-title">Dashboard</h1></div>
           <div class="crm-user-pill"><span class="crm-user-dot"></span><span id="current-user-email">Admin</span></div>
         </header>
         <div id="app-message" class="crm-message"></div>
@@ -84,14 +86,13 @@
           </div>
           <div class="crm-dashboard-grid">
             <div class="crm-card"><div class="crm-card-head"><div><div class="crm-section-label">Quick access</div><h2>Manage your salon</h2></div></div>
-              <div class="crm-quick-grid">
+              <div class="crm-quick-grid crm-quick-grid-full">
                 <button class="crm-quick" data-view-target="services"><b>Services</b><span>Edit categories, prices, durations and visibility →</span></button>
                 <button class="crm-quick" data-view-target="users"><b>Users & Access</b><span>Invite staff and control CRM roles →</span></button>
                 <button class="crm-quick" data-view-target="vouchers"><b>Vouchers</b><span>Manage customer offers and promotions →</span></button>
-                <button class="crm-quick" data-view-target="bookings"><b>Bookings</b><span>Appointment management is coming next →</span></button>
+                <button class="crm-quick" data-view-target="bookings"><b>Bookings</b><span>Review and manage customer appointments →</span></button>
               </div>
             </div>
-            <div class="crm-card crm-next-card"><div class="crm-section-label">Next modules</div><h2>Your CRM grows with you</h2><p>We can add bookings, customers, vouchers, working hours and reports without changing this dashboard.</p><div class="crm-progress"><span style="width:22%"></span></div><small>Services & access foundation</small></div>
           </div>
         </section>
 
@@ -109,7 +110,7 @@
                     <div class="crm-category-image-preview" id="category-image-preview-wrap"><img id="category-image-preview" alt="Category image preview" hidden></div>
                     <div class="crm-category-image-controls">
                       <input id="category-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-                      <small>Choose an image. It will be uploaded to Supabase Storage when you save the category. Maximum 5 MB.</small>
+                      <small>Choose an image. Maximum 5 MB.</small>
                     </div>
                   </div>
                 </div>
@@ -120,7 +121,7 @@
             <div class="crm-card">
               <div class="crm-section-label">Service</div><h2 id="service-form-title">Add Service</h2><p class="crm-small">Use real USD/QAR prices. Duration can stay empty.</p>
               <form id="service-form" class="crm-standard-form"><div class="crm-form-grid">
-                <div class="crm-field"><label>Category</label><select id="service-category" required></select></div><div class="crm-field"><label>SKU</label><input id="service-sku" placeholder="HS-001" required></div>
+                <div class="crm-field"><label>Category</label><select id="service-category" required></select></div><div class="crm-field"><label>SKU</label><input id="service-sku" placeholder="HS-001" required readonly aria-readonly="true"><small>Generated from the category name and next number in that category.</small></div>
                 <div class="crm-field"><label>English name</label><input id="service-name-en" required></div><div class="crm-field"><label>Arabic name</label><input id="service-name-ar" required dir="rtl"></div>
                 <div class="crm-field"><label>English description</label><textarea id="service-description-en"></textarea></div><div class="crm-field"><label>Arabic description</label><textarea id="service-description-ar" dir="rtl"></textarea></div>
                 <div class="crm-field"><label>USD price</label><input id="service-price-usd" type="number" min="0" step="0.01"></div><div class="crm-field"><label>QAR price</label><input id="service-price-qar" type="number" min="0" step="0.01"></div>
@@ -129,14 +130,44 @@
               </div><div class="crm-form-actions"><button id="service-reset" type="button" class="crm-btn crm-btn-secondary">Clear</button><button id="service-save" type="submit" class="crm-btn crm-btn-primary">Add Service</button></div></form>
             </div>
           </div>
-          <div class="crm-card"><div class="crm-toolbar"><div><div class="crm-section-label">Categories</div><h2>Service categories</h2></div></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Category</th><th>Image</th><th>Size</th><th>Status</th><th></th></tr></thead><tbody id="category-table-body"></tbody></table></div></div>
-          <div class="crm-card"><div class="crm-toolbar"><div><div class="crm-section-label">Services</div><h2>All services</h2></div></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>SKU</th><th>Service</th><th>Category</th><th>Prices</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody id="service-table-body"></tbody></table></div></div>
+          <div class="crm-card">
+  <div class="crm-toolbar">
+    <div><div class="crm-section-label">Categories</div><h2>Service categories</h2></div>
+    <div class="crm-list-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="category-search" type="search" placeholder="Search categories" aria-label="Search service categories"></div>
+      <select id="category-status-filter" class="crm-filter-select" aria-label="Filter categories by status">
+        <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+  <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Category</th><th>Image</th><th>Size</th><th>Status</th><th></th></tr></thead><tbody id="category-table-body"></tbody></table></div>
+</div>
+          <div class="crm-card">
+  <div class="crm-toolbar">
+    <div><div class="crm-section-label">Services</div><h2>All services</h2></div>
+    <div class="crm-list-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="service-search" type="search" placeholder="Search service, SKU or category" aria-label="Search services"></div>
+      <select id="service-category-filter" class="crm-filter-select" aria-label="Filter services by category"><option value="all">All categories</option></select>
+      <select id="service-status-filter" class="crm-filter-select" aria-label="Filter services by status">
+        <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+  <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>SKU</th><th>Service</th><th>Category</th><th>Prices</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody id="service-table-body"></tbody></table></div>
+</div>
         </section>
 
         <section id="view-users" class="crm-view crm-hidden" data-admin-only>
           <div class="crm-page-heading"><div><div class="crm-section-label">Access control</div><h2>Users & access</h2><p>Invite people who need access to the salon CRM.</p></div><button id="invite-user-btn" class="crm-btn crm-btn-primary">+ Invite user</button></div>
-          <div class="crm-card"><div class="crm-info-banner"><b>Secure invitations</b><span>New users receive a Supabase email invitation. Their login account is created securely by Supabase; passwords are never stored in your salon tables.</span></div></div>
-          <div class="crm-card"><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status & sign-in</th><th>Created</th><th>Actions</th></tr></thead><tbody id="users-table-body"></tbody></table></div></div>
+          <div class="crm-card"><div class="crm-info-banner"><b>Secure invitations</b><span>New users receive a secure email invitation. Passwords are never stored in your salon profile records.</span></div></div>
+          <div class="crm-card">
+            <div class="crm-list-filters crm-users-filters">
+              <div class="crm-search-box"><span>⌕</span><input id="user-search" type="search" placeholder="Search name or email" aria-label="Search users"></div>
+              <select id="user-role-filter" class="crm-filter-select" aria-label="Filter users by role"><option value="all">All roles</option></select>
+              <select id="user-status-filter" class="crm-filter-select" aria-label="Filter users by status"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+            </div>
+            <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status & sign-in</th><th>Created</th><th>Actions</th></tr></thead><tbody id="users-table-body"></tbody></table></div>
+          </div>
           <div id="user-form-card" class="crm-card crm-hidden">
             <div class="crm-section-label">New CRM user</div><h2>Invite a team member</h2><p class="crm-small">They will receive an email to finish setting up their account.</p>
             <form id="user-form"><div class="crm-form-grid">
@@ -173,7 +204,7 @@
     <div>
       <div class="crm-section-label">Marketing</div>
       <h2>Vouchers</h2>
-      <p>Manage the offers shown on the website. Images are stored in Supabase Storage.</p>
+      <p>Manage the offers shown on the website.</p>
     </div>
     <button id="new-voucher-top" class="crm-btn crm-btn-primary" type="button">+ Add voucher</button>
   </div>
@@ -188,7 +219,7 @@
         <div class="crm-form-grid">
           <div class="crm-field">
             <label for="voucher-sku">SKU</label>
-            <input id="voucher-sku" placeholder="V-001" required>
+            <input id="voucher-sku" placeholder="V-001" required readonly aria-readonly="true"><small>Generated automatically.</small>
           </div>
           <div class="crm-field">
             <label for="voucher-title-en">English title</label>
@@ -246,6 +277,12 @@
       </div>
       <button id="vouchers-refresh" type="button" class="crm-btn crm-btn-secondary crm-btn-small">↻ Refresh</button>
     </div>
+    <div class="crm-list-filters crm-list-filters-vouchers">
+      <div class="crm-search-box"><span>⌕</span><input id="voucher-search" type="search" placeholder="Search voucher or SKU" aria-label="Search vouchers"></div>
+      <select id="voucher-status-filter" class="crm-filter-select" aria-label="Filter vouchers by status">
+        <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+      </select>
+    </div>
     <div class="crm-table-wrap">
       <table class="crm-table crm-vouchers-table">
         <thead>
@@ -262,42 +299,9 @@
     <div>
       <div class="crm-section-label">Website content</div>
       <h2>FAQs</h2>
-      <p>Manage the frequently asked questions shown on the website. Content is stored in Supabase.</p>
+      <p>Manage the frequently asked questions shown on the website.</p>
     </div>
     <button id="new-faq-top" class="crm-btn crm-btn-primary" type="button">+ Add FAQ</button>
-  </div>
-
-  <div class="crm-card">
-    <div class="crm-section-label">FAQ page</div>
-    <h3>Page settings</h3>
-    <p class="crm-small">Set the title and introduction visitors see above the FAQ list.</p>
-    <form id="faq-settings-form" class="crm-standard-form">
-      <div class="crm-form-grid">
-        <div class="crm-field">
-          <label for="faq-settings-title-en">English title</label>
-          <input id="faq-settings-title-en" required>
-        </div>
-        <div class="crm-field">
-          <label for="faq-settings-title-ar">Arabic title</label>
-          <input id="faq-settings-title-ar" dir="rtl">
-        </div>
-        <div class="crm-field full">
-          <label for="faq-settings-description-en">English description</label>
-          <textarea id="faq-settings-description-en" rows="3"></textarea>
-        </div>
-        <div class="crm-field full">
-          <label for="faq-settings-description-ar">Arabic description</label>
-          <textarea id="faq-settings-description-ar" rows="3" dir="rtl"></textarea>
-        </div>
-        <label class="crm-check">
-          <input id="faq-settings-active" type="checkbox" checked>
-          <span>Show FAQ page content on website</span>
-        </label>
-      </div>
-      <div class="crm-form-actions">
-        <button type="submit" class="crm-btn crm-btn-primary">Save page settings</button>
-      </div>
-    </form>
   </div>
 
   <div id="faq-form-card" class="crm-card crm-hidden">
@@ -370,6 +374,9 @@
           <div class="crm-card crm-bookings-card">
             <div class="crm-bookings-toolbar">
               <div class="crm-search-box"><span>⌕</span><input id="booking-search" type="search" placeholder="Search customer, phone, email or booking reference"></div>
+              <select id="booking-status-filter" class="crm-booking-filter" aria-label="Filter bookings by status">
+                <option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+              </select>
               <select id="booking-date-filter" class="crm-booking-filter"><option value="all">All dates</option><option value="today">Today</option><option value="upcoming">Upcoming</option><option value="past">Past</option></select>
               <div class="crm-view-toggle" role="group" aria-label="Booking view">
                 <button type="button" data-booking-view="schedule">Schedule</button>
@@ -524,7 +531,7 @@
             <div>
               <div class="crm-section-label">Content</div>
               <h2>Translation</h2>
-              <p>Manage the English and Arabic text used by the public website and booking flow. Changes are stored in Supabase.</p>
+              <p>Manage all website English and Arabic copy from one catalogue.</p>
             </div>
           </div>
           <div class="crm-card">
@@ -534,26 +541,17 @@
                 <h2>Website translations</h2>
               </div>
               <div class="crm-toolbar-actions">
-                <input id="translation-search" class="crm-input" type="search" placeholder="Search key or text">
+                <input id="translation-search" class="crm-input" type="search" placeholder="Search key, English or Arabic">
                 <button id="translation-add-btn" type="button" class="crm-btn crm-btn-secondary">+ Add key</button>
               </div>
             </div>
-            <p class="crm-small">The HTML remains unchanged. The public site reads these values from Supabase at runtime.</p>
+            <p class="crm-small">FAQ page title and description are managed here using the <code>faq.pageTitle</code> and <code>faq.pageDescription</code> keys.</p>
             <div id="translation-form-card" class="crm-subcard crm-hidden" style="margin-top:16px">
               <form id="translation-form" class="crm-standard-form">
                 <div class="crm-form-grid">
-                  <div class="crm-field">
-                    <label for="translation-key">Key</label>
-                    <input id="translation-key" required placeholder="booking.confirm">
-                  </div>
-                  <div class="crm-field">
-                    <label for="translation-en">English</label>
-                    <textarea id="translation-en" rows="3" required></textarea>
-                  </div>
-                  <div class="crm-field">
-                    <label for="translation-ar">Arabic</label>
-                    <textarea id="translation-ar" rows="3" required dir="rtl"></textarea>
-                  </div>
+                  <div class="crm-field"><label for="translation-key">Key</label><input id="translation-key" required placeholder="booking.confirm"></div>
+                  <div class="crm-field"><label for="translation-en">English</label><textarea id="translation-en" rows="3" required></textarea></div>
+                  <div class="crm-field"><label for="translation-ar">Arabic</label><textarea id="translation-ar" rows="3" required dir="rtl"></textarea></div>
                 </div>
                 <div class="crm-actions-inline">
                   <button id="translation-save" type="submit" class="crm-btn crm-btn-primary">Save translation</button>
@@ -576,7 +574,7 @@
       <div>
         <div class="crm-section-label">Configuration</div>
         <h2>Application Settings</h2>
-        <p>Control the website defaults from one place. Changes are saved directly to Supabase.</p>
+        <p>Control the website defaults from one place.</p>
       </div>
       <div class="crm-settings-status" id="app-settings-status">Live configuration</div>
     </div>
@@ -666,7 +664,7 @@
             <div>
               <div class="crm-settings-kicker">Website media</div>
               <h3>Website images</h3>
-              <p>Upload the images used by the public website. Changes are saved to Supabase Storage immediately.</p>
+              <p>Upload the images used by the public website. Changes are applied immediately.</p>
             </div>
           </div>
           <div class="crm-website-images-grid">
@@ -845,6 +843,10 @@
   </div>
 
   <div class="crm-card">
+    <div class="crm-list-filters crm-roles-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="role-search" type="search" placeholder="Search role or description" aria-label="Search roles"></div>
+      <select id="role-type-filter" class="crm-filter-select" aria-label="Filter roles by type"><option value="all">All types</option><option value="system">System</option><option value="custom">Custom</option></select>
+    </div>
     <div class="crm-table-wrap">
       <table class="crm-table">
         <thead>
@@ -858,20 +860,97 @@
   </div>
 </section>
 
-<section id="view-customers" class="crm-view crm-hidden">
-  <div class="crm-toolbar">
+
+
+<section id="view-chart-of-accounts" class="crm-view crm-hidden" data-admin-only>
+  <div class="crm-page-heading">
     <div>
-      <div class="crm-eyebrow">Customer management</div>
-      <h2>Customers</h2>
-      <p class="crm-small">Manage customer details and see their booking history.</p>
+      <div class="crm-section-label">Finance</div>
+      <h2>Chart of Accounts</h2>
+      <p>Manage account codes and classifications stored in Supabase.</p>
     </div>
-    <div class="crm-bookings-toolbar crm-customers-toolbar">
-      <div class="crm-search-box">
-        <span aria-hidden="true">⌕</span>
-        <input id="customer-search" type="search" placeholder="Search customer, phone or email" aria-label="Search customers">
+    <button type="button" id="chart-account-add" class="crm-btn crm-btn-primary">+ Add account</button>
+  </div>
+  <div id="chart-account-form-card" class="crm-card crm-hidden">
+    <div class="crm-card-header"><div><div class="crm-eyebrow">Account</div><h3 id="chart-account-form-title">Add account</h3></div><button type="button" id="chart-account-cancel" class="crm-btn crm-btn-secondary">Cancel</button></div>
+    <form id="chart-account-form" class="crm-standard-form">
+      <div class="crm-form-grid">
+        <div class="crm-field"><label for="chart-account-code">Account code</label><input id="chart-account-code" required maxlength="50"></div>
+        <div class="crm-field"><label for="chart-account-type">Account type</label><input id="chart-account-type" required maxlength="100"></div>
+        <div class="crm-field"><label for="chart-account-major">Major account</label><input id="chart-account-major" maxlength="200"></div>
+        <div class="crm-field"><label for="chart-account-name">Account name</label><input id="chart-account-name" maxlength="255"></div>
+        <div class="crm-field"><label for="chart-account-financial-statement">Financial statement</label><input id="chart-account-financial-statement" required maxlength="100"></div>
+        <div class="crm-field"><label for="chart-account-balance">Typical balance</label><input id="chart-account-balance" maxlength="100"></div>
+        <div class="crm-field full"><label for="chart-account-notes">Notes</label><textarea id="chart-account-notes" rows="3"></textarea></div>
+        <div class="crm-field"><label class="crm-check"><input id="chart-account-active" type="checkbox" checked> Active</label></div>
       </div>
-      <button type="button" class="crm-btn crm-btn-primary" onclick="startCustomerCreate()">+ Add customer</button>
+      <div class="crm-form-actions"><button type="submit" id="chart-account-save" class="crm-btn crm-btn-primary">Add account</button><button type="button" id="chart-account-cancel-2" class="crm-btn crm-btn-secondary">Cancel</button></div>
+    </form>
+  </div>
+  <div class="crm-card">
+    <div class="crm-list-filters crm-chart-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="chart-account-search" type="search" placeholder="Search account code, name or notes" aria-label="Search chart of accounts"></div>
+      <select id="chart-statement-filter" class="crm-filter-select" aria-label="Filter by financial statement"><option value="all">All statements</option></select>
+      <select id="chart-type-filter" class="crm-filter-select" aria-label="Filter by account type"><option value="all">All account types</option></select>
     </div>
+    <div class="crm-table-wrap">
+      <table class="crm-table">
+        <thead><tr><th>Code</th><th>Account name</th><th>Type</th><th>Statement</th><th>Balance</th><th>Notes</th><th>Actions</th></tr></thead>
+        <tbody id="chart-of-accounts-table-body"><tr><td colspan="7" class="crm-empty">Loading chart of accounts…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="view-financial-statements" class="crm-view crm-hidden" data-admin-only>
+  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Financial Statements</h2><p>Statement layouts and account classifications from the salon's accounting structure.</p></div></div>
+  <div class="crm-card">
+    <div class="crm-list-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="financial-statement-search" type="search" placeholder="Search statement, account code, classification or notes" aria-label="Search financial statements"></div>
+      <select id="financial-statement-filter" class="crm-filter-select" aria-label="Filter by statement"><option value="all">All statements</option></select>
+    </div>
+    <div class="crm-table-wrap">
+      <table class="crm-table">
+        <thead><tr><th>Statement</th><th>Account code</th><th>Account name</th><th>Classification / Line</th><th>Normal balance</th><th>Notes</th></tr></thead>
+        <tbody id="financial-statements-table-body"><tr><td colspan="6" class="crm-empty">Loading financial statements…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="view-contact-messages" class="crm-view crm-hidden">
+  <div class="crm-page-heading">
+    <div>
+      <div class="crm-section-label">Website enquiries</div>
+      <h2>Contact Us</h2>
+      <p>View the contact requests submitted through the website.</p>
+    </div>
+    <button id="contact-messages-refresh" type="button" class="crm-btn crm-btn-secondary">↻ Refresh</button>
+  </div>
+  <div class="crm-card">
+    <div class="crm-list-filters">
+      <div class="crm-search-box"><span>⌕</span><input id="contact-message-search" type="search" placeholder="Search name or phone" aria-label="Search contact messages"></div>
+      <select id="contact-message-status-filter" class="crm-filter-select" aria-label="Filter contact messages by status">
+        <option value="all">All statuses</option><option value="new">New</option><option value="contacted">Contacted</option>
+      </select>
+    </div>
+    <div class="crm-table-wrap">
+      <table class="crm-table">
+        <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+        <tbody id="contact-messages-table-body"><tr><td colspan="5" class="crm-empty">Loading contact requests…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="view-customers" class="crm-view crm-hidden">
+  <div class="crm-page-heading">
+    <div>
+      <div class="crm-section-label">Customer management</div>
+      <h2>Customers</h2>
+      <p>Manage customer details and see their booking history.</p>
+    </div>
+    <button type="button" class="crm-btn crm-btn-primary" onclick="startCustomerCreate()">+ Add customer</button>
   </div>
 
   <div id="customer-form-card" class="crm-card crm-hidden">
@@ -893,6 +972,19 @@
   </div>
 
   <div class="crm-card">
+    <div class="crm-list-filters crm-customers-filters">
+      <div class="crm-search-box">
+        <span aria-hidden="true">⌕</span>
+        <input id="customer-search" type="search" placeholder="Search customer, phone or email" aria-label="Search customers">
+      </div>
+      <select id="customer-loyalty-filter" class="crm-filter-select" aria-label="Filter customers by loyalty tier">
+        <option value="all">All loyalty tiers</option>
+        <option value="Member">Member</option>
+        <option value="Silver">Silver</option>
+        <option value="Gold">Gold</option>
+        <option value="Platinum">Platinum</option>
+      </select>
+    </div>
     <div class="crm-table-wrap">
       <table class="crm-table">
         <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Loyalty</th><th>Internal CRM notes</th><th></th></tr></thead>
@@ -950,6 +1042,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v23"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v34"></script>
 </body>
 </html>

@@ -182,7 +182,7 @@
                       <!-- <a href="tel:+1234567890" data-i18n="common.phone"></a> -->
                       <a data-i18n="common.phone" data-i18n-attr="href-tel:"></a>
                     </p>
-                    <form class="rd-mailform" action="https://formspree.io/f/xaeynyqp" method="POST">
+                    <form id="contact-form" class="rd-mailform" action="https://formspree.io/f/xaeynyqp" method="POST">
                       <div class="form-group">
                         <label class="form-label-outside" for="contact-full-name"
                           data-i18n="contactSection.namePlaceholder"></label>
@@ -198,6 +198,7 @@
                       <button class="btn btn-sm btn-primary btn-block btn-circle" type="submit"
                         data-i18n="common.submitButton"></button>
                     </form>
+                    <iframe name="contact-formspree-frame" id="contact-formspree-frame" title="Contact form submission" style="display:none" aria-hidden="true"></iframe>
                   </div>
                 </div>
                 <div class="box-contacts-col box-contacts-right">

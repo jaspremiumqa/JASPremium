@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    var faqSettings = null;
     var faqItems = [];
   var uiTranslations = {};
 
@@ -20,12 +19,13 @@
   function renderFaq(lang) {
         lang = (String(lang).toLowerCase() === 'ar') ? 'ar' : 'en';
 
+        var title = uiText('faq.pageTitle', lang);
+        var titleEls = document.querySelectorAll('[data-faq-page-title]');
+        titleEls.forEach(function (el) { el.textContent = title || uiText('nav.faq', lang); });
+
         var descEl = document.getElementById('faq-description');
-        if (descEl && faqSettings) {
-            descEl.textContent =
-                faqSettings['description_' + lang] ||
-                faqSettings.description_en ||
-                '';
+        if (descEl) {
+            descEl.textContent = uiText('faq.pageDescription', lang);
         }
 
         var faqList = document.getElementById('faq-list');
@@ -61,16 +61,23 @@
 
     async function loadFaq() {
         if (!window.salonDatabase || !window.salonDatabase.isConfigured) {
-            throw new Error('Supabase is not configured.');
+            throw new Error('The website data service is not configured.');
         }
 
-        var results = await Promise.all([
-            window.salonDatabase.getFaqSettings(),
-            window.salonDatabase.getFaqs()
-        ]);
+        faqItems = await window.salonDatabase.getFaqs();
 
-        faqSettings = results[0];
-        faqItems = results[1] || [];
+        // Compatibility for installations that have not run the FAQ-to-
+        // translations migration yet. Once the new keys exist, the FAQ page
+        // uses only the unified translation catalogue.
+        if (!uiTranslations['faq.pageTitle'] || !uiTranslations['faq.pageDescription']) {
+            try {
+                var legacy = await window.salonDatabase.getFaqSettings();
+                if (legacy) {
+                    if (!uiTranslations['faq.pageTitle']) uiTranslations['faq.pageTitle'] = { en: legacy.title_en || '', ar: legacy.title_ar || '' };
+                    if (!uiTranslations['faq.pageDescription']) uiTranslations['faq.pageDescription'] = { en: legacy.description_en || '', ar: legacy.description_ar || '' };
+                }
+            } catch (_) {}
+        }
 
         renderFaq(currentLang());
     }
@@ -86,7 +93,7 @@
             });
             return loadFaq();
         }).catch(function (err) {
-            console.error('[FAQ] Could not load FAQ from Supabase:', err);
+            console.error('[FAQ] Could not load FAQ:', err);
 
             var faqList = document.getElementById('faq-list');
             if (faqList) {

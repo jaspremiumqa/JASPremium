@@ -137,6 +137,8 @@ insert into public.site_translations (key,en,ar) values ('contactSection.phonePl
 insert into public.site_translations (key,en,ar) values ('contactSection.title','Get In Touch','تواصل معنا') on conflict (key) do nothing;
 insert into public.site_translations (key,en,ar) values ('faq.empty','No frequently asked questions are available at the moment.','لا توجد أسئلة شائعة متاحة حالياً.') on conflict (key) do nothing;
 insert into public.site_translations (key,en,ar) values ('faq.error','Unable to load the FAQ right now.','تعذر تحميل الأسئلة الشائعة حالياً.') on conflict (key) do nothing;
+insert into public.site_translations (key,en,ar) values ('faq.pageTitle','Frequently Asked Questions','الأسئلة الشائعة') on conflict (key) do nothing;
+insert into public.site_translations (key,en,ar) values ('faq.pageDescription','Find answers to the most common questions about our services and bookings.','اعثري على إجابات لأكثر الأسئلة شيوعاً حول خدماتنا والحجوزات.') on conflict (key) do nothing;
 insert into public.site_translations (key,en,ar) values ('mainSection.description','Establish your new amazing look with Barbershop services! From haircuts to hot shaves, you can experience the best level of barbering in the area.','أنشئ إطلالتك الجديدة الرائعة مع خدمات الحلاقة! من قصات الشعر إلى الحلاقة الساخنة، استمتع بأعلى مستوى من الحرفية في المنطقة.') on conflict (key) do nothing;
 insert into public.site_translations (key,en,ar) values ('mainSection.title','Enjoy our barber services','استمتع بخدمات حلاقتنا') on conflict (key) do nothing;
 insert into public.site_translations (key,en,ar) values ('nav.about','About','من نحن') on conflict (key) do nothing;

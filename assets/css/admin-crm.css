@@ -446,7 +446,7 @@ html.crm-auth-pending #crm-password-setup {
   #view-translations .crm-toolbar-actions { width: 100%; }
 }
 
-.crm-brand-mark-image{overflow:hidden;background:#fff;padding:6px;}
+.crm-brand-mark-image{width:58px;height:58px;overflow:hidden;background:#fff;padding:6px;flex:0 0 58px;}
 .crm-brand-mark-image img{display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;}
 
 
@@ -539,3 +539,124 @@ html.crm-auth-pending #crm-password-setup {
   .crm-loyalty-header{flex-direction:column;align-items:stretch}
   #customer-detail-close{align-self:flex-start}
 }
+
+/* Catalog filters */
+.crm-list-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.crm-list-filters .crm-search-box{min-width:240px}
+.crm-filter-select{min-height:44px;border:1px solid #ded5ce;border-radius:11px;padding:10px 34px 10px 12px;background:#fff;color:var(--crm-ink);font:inherit;outline:none}
+.crm-filter-select:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
+.crm-list-filters-vouchers{margin:0 0 16px}
+.crm-quick-grid-full{grid-template-columns:repeat(4,1fr)}
+.crm-settings-shell{max-width:none;width:100%}
+@media(max-width:1100px){.crm-quick-grid-full{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.crm-list-filters{width:100%}.crm-list-filters .crm-search-box{min-width:0;flex:1}.crm-filter-select{flex:1;min-width:150px}}
+@media(max-width:620px){.crm-quick-grid-full{grid-template-columns:1fr}.crm-list-filters{flex-direction:column;align-items:stretch}.crm-list-filters .crm-search-box,.crm-filter-select{width:100%;flex:none}}
+
+/* v25: keep one page title per CRM section; the content heading is authoritative. */
+.crm-topbar > div:not(.crm-user-pill) { display:none; }
+
+/* v25: use the full logo artwork in the sidebar instead of shrinking it inside a small box. */
+.crm-side-brand .crm-brand-mark-image {
+  width:64px;
+  height:64px;
+  flex:0 0 64px;
+  padding:2px;
+  border-radius:16px;
+  background:#fff;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+.crm-side-brand .crm-brand-mark-image img {
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  object-fit:cover;
+  border-radius:13px;
+}
+
+/* v25: shared filter bars for Customers, Users and Roles. */
+.crm-users-filters,
+.crm-roles-filters,
+.crm-customers-toolbar {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.crm-users-filters .crm-search-box,
+.crm-roles-filters .crm-search-box,
+.crm-customers-toolbar .crm-search-box {
+  flex:1 1 280px;
+  min-width:220px;
+}
+.crm-users-filters .crm-filter-select,
+.crm-roles-filters .crm-filter-select,
+.crm-customers-toolbar .crm-filter-select {
+  min-width:150px;
+}
+.crm-filter-select {
+  min-height:44px;
+  border:1px solid #ded5ce;
+  border-radius:11px;
+  padding:10px 34px 10px 12px;
+  background:#fff;
+  color:var(--crm-ink);
+  font:inherit;
+}
+@media(max-width:760px){
+  .crm-users-filters,
+  .crm-roles-filters,
+  .crm-customers-toolbar { width:100%; }
+  .crm-users-filters .crm-search-box,
+  .crm-roles-filters .crm-search-box,
+  .crm-customers-toolbar .crm-search-box { min-width:0; flex-basis:100%; }
+  .crm-users-filters .crm-filter-select,
+  .crm-roles-filters .crm-filter-select,
+  .crm-customers-toolbar .crm-filter-select { flex:1; min-width:0; }
+}
+
+/* v26: keep the signed-in email pinned to the far right of the CRM top bar. */
+.crm-topbar .crm-user-pill { margin-left:auto; }
+
+/* v26: the dashboard now has one full-width quick-access card. */
+.crm-dashboard-grid { grid-template-columns:1fr; }
+
+/* v26: CRM sidebar logo uses the complete artwork without shrinking/cropping. */
+.crm-side-brand .crm-brand-mark-image {
+  width:66px;
+  height:66px;
+  flex:0 0 66px;
+  padding:0;
+  border-radius:16px;
+  background:#fff;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+.crm-side-brand .crm-brand-mark-image img {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:15px;
+}
+
+/* v26: customer filters live inside the catalogue/table card like other lists. */
+.crm-customers-filters { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.crm-customers-filters .crm-search-box { flex:1 1 auto; min-width:240px; }
+.crm-customers-filters .crm-filter-select { min-width:180px; }
+@media(max-width:760px){
+  .crm-customers-filters { flex-direction:column; align-items:stretch; }
+  .crm-customers-filters .crm-search-box,
+  .crm-customers-filters .crm-filter-select { width:100%; min-width:0; }
+}
+
+/* v28: consistent breathing room between list filters and their tables. */
+.crm-list-filters-vouchers,.crm-customers-filters,.crm-roles-filters,.crm-users-filters,.crm-chart-filters{margin-bottom:16px}
+.crm-chart-filters .crm-search-box{flex:1 1 auto;min-width:280px}
+.crm-chart-filters .crm-filter-select{min-width:190px}
+.crm-account-header-row td{background:#faf6f2;font-weight:700;border-top:1px solid #dfd4cc}
+@media(max-width:900px){.crm-chart-filters .crm-search-box{min-width:0;flex:1}.crm-chart-filters .crm-filter-select{min-width:150px}}
+
+.crm-account-header-row td{font-weight:700;background:#faf6f3}.crm-chart-filters{margin-bottom:14px}.crm-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}.crm-check{display:flex;align-items:center;gap:8px}.crm-check input{width:auto}.crm-field.full{grid-column:1/-1}

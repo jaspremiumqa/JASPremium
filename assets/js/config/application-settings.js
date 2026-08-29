@@ -10,13 +10,13 @@
   function requireImage(value, key) {
     var result = parseValue(value);
     if (!result || typeof result !== 'object' || Array.isArray(result)) {
-      throw new Error('Supabase application setting "' + key + '" is missing or invalid.');
+      throw new Error('Application setting "' + key + '" is missing or invalid.');
     }
     if (!result.url || typeof result.url !== 'string') {
-      throw new Error('Supabase application setting "' + key + '" has no image URL.');
+      throw new Error('Application setting "' + key + '" has no image URL.');
     }
     if (!result.width || !result.height) {
-      throw new Error('Supabase application setting "' + key + '" is missing image dimensions.');
+      throw new Error('Application setting "' + key + '" is missing image dimensions.');
     }
     return {
       path: String(result.path || ''),
@@ -42,12 +42,12 @@
     var contactPhone = raw.contact_phone || raw.contactPhone;
 
     if (!currencyOptions || typeof currencyOptions !== 'object') {
-      throw new Error('Supabase application setting "currency_options" is missing or invalid.');
+      throw new Error('Application setting "currency_options" is missing or invalid.');
     }
-    if (!displayCurrency) throw new Error('Supabase application setting "display_currency" is missing.');
-    if (!defaultLanguage) throw new Error('Supabase application setting "default_language" is missing.');
-    if (!websiteName || typeof websiteName !== 'string' || !websiteName.trim()) throw new Error('Supabase application setting "website_name" is missing.');
-    if (!contactPhone) throw new Error('Supabase application setting "contact_phone" is missing.');
+    if (!displayCurrency) throw new Error('Application setting "display_currency" is missing.');
+    if (!defaultLanguage) throw new Error('Application setting "default_language" is missing.');
+    if (!websiteName || typeof websiteName !== 'string' || !websiteName.trim()) throw new Error('Application setting "website_name" is missing.');
+    if (!contactPhone) throw new Error('Application setting "contact_phone" is missing.');
 
     return {
       display_currency: String(displayCurrency).toUpperCase(),
@@ -68,7 +68,7 @@
   }
 
   async function loadFromSupabase() {
-    if (!window.salonSupabase) throw new Error('Supabase client is not available.');
+    if (!window.salonSupabase) throw new Error('Application data service is not available.');
     var result = await window.salonSupabase
       .from('application_settings')
       .select('setting_key, setting_value')
@@ -94,7 +94,7 @@
   }
 
   function clearBranding() {
-    document.querySelectorAll('.brand-desktop img, .rd-navbar-brand img').forEach(function (img) {
+    document.querySelectorAll('.brand-desktop img, .rd-navbar-brand img, .site-brand-logo').forEach(function (img) {
       img.removeAttribute('src');
       img.hidden = true;
     });
@@ -236,7 +236,7 @@
     var header = settings.header_image;
     var bannerImage = settings.banner_image;
 
-    document.querySelectorAll('.brand-desktop img, .rd-navbar-brand img').forEach(function (img) {
+    document.querySelectorAll('.brand-desktop img, .rd-navbar-brand img, .site-brand-logo').forEach(function (img) {
       img.src = header.url;
       img.width = parseInt(header.width, 10) || 0;
       img.height = parseInt(header.height, 10) || 0;
@@ -265,12 +265,12 @@
       applyWebsiteImages(settings);
       applySocialLinks(settings.__social || {});
       document.dispatchEvent(new CustomEvent('applicationSettingsLoaded', { detail: settings }));
-      console.info('[Application settings] Loaded from Supabase.', settings.website_name, settings.header_image.url, settings.banner_image.url);
+      console.info('[Application settings] Loaded.', settings.website_name, settings.header_image.url, settings.banner_image.url);
       return settings;
     } catch (error) {
       clearBranding();
       document.dispatchEvent(new CustomEvent('applicationSettingsError', { detail: error }));
-      console.error('[Application settings] Supabase branding load failed. No local image fallback is used.', error);
+      console.error('[Application settings] Branding load failed. No local image fallback is used.', error);
       throw error;
     }
   })();

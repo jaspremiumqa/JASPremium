@@ -2,7 +2,7 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], faqSettings: null, translations: [], editingTranslationKey: null, currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
@@ -104,6 +104,10 @@
     applyRoleVisibility();
   }
   function can(section, action) {
+    // Chart of Accounts is a read-only reference catalogue for administrators.
+    // Keep it visible to administrators even on deployments that predate its
+    // permission rows; the migration still adds the full permission set for roles.
+    if (['chart-of-accounts','financial-statements'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
     return !!state.access[section + '.' + action];
   }
   function requirePermission(section, action, messageText) {
@@ -112,16 +116,33 @@
     return false;
   }
   var ROLE_PERMISSION_SECTIONS = [
-    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],
-    ['bookings','Bookings'],['booking-config','Booking Setup'],['customers','Customers'],
+    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['financial-statements','Financial Statements'],
+    ['bookings','Bookings'],['booking-config','Booking Setup'],['contact-messages','Contact Us'],['customers','Customers'],
     ['settings','Settings'],['translations','Translation'],['users','Users & Access'],['roles','Roles & Permissions']
   ];
   var ROLE_ACTIONS = ['read','create','update','delete'];
 
+  // CRM table lists use descending order by default: newest/highest first.
+  function crmDesc(a, b) {
+    var av = a == null ? '' : String(a);
+    var bv = b == null ? '' : String(b);
+    return bv.localeCompare(av, undefined, {numeric:true, sensitivity:'base'});
+  }
+  function crmIdDesc(a, b) { return Number(b || 0) - Number(a || 0); }
+  function crmDateDesc(a, b) { return String(b || '').localeCompare(String(a || '')); }
+  function crmSkuDesc(a, b) {
+    var am = String(a && a.sku || '').match(/-(\d+)$/);
+    var bm = String(b && b.sku || '').match(/-(\d+)$/);
+    var an = am ? Number(am[1]) : -1;
+    var bn = bm ? Number(bm[1]) : -1;
+    if (bn !== an) return bn - an;
+    return crmDesc(a && a.sku, b && b.sku);
+  }
+
   async function loadRoles() {
     if (!can('roles','read')) { state.roles=[]; state.permissions=[]; state.rolePermissions=[]; return; }
     var results = await Promise.all([
-      window.salonSupabase.from('crm_roles').select('id,name,description,is_system,created_at,updated_at').order('is_system',{ascending:false}).order('name',{ascending:true}),
+      window.salonSupabase.from('crm_roles').select('id,name,description,is_system,created_at,updated_at').order('created_at',{ascending:false}).order('name',{ascending:false}),
       window.salonSupabase.from('crm_permissions').select('id,section,action,description').order('section',{ascending:true}).order('action',{ascending:true}),
       window.salonSupabase.from('crm_role_permissions').select('role_id,permission_id')
     ]);
@@ -131,6 +152,7 @@
     state.roles=results[0].data||[];
     state.permissions=results[1].data||[];
     state.rolePermissions=results[2].data||[];
+    syncUserRoleFilter();
     renderRoles();
     renderRolePermissionEditor();
     populateRoleSelects();
@@ -164,7 +186,14 @@
 
   function renderRoles(){
     var body=$('roles-table-body'); if(!body)return;
-    body.innerHTML=state.roles.map(function(r){
+    var q=String(($('role-search')&&$('role-search').value)||state.roleSearch||'').trim().toLowerCase();
+    var type=String(($('role-type-filter')&&$('role-type-filter').value)||state.roleTypeFilter||'all');
+    var rows=state.roles.filter(function(r){
+      var matchesQuery=!q || [r.name,r.description].join(' ').toLowerCase().indexOf(q)!==-1;
+      var matchesType=type==='all' || (type==='system' ? !!r.is_system : !r.is_system);
+      return matchesQuery && matchesType;
+    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmDesc(a.name,b.name); });
+    body.innerHTML=rows.map(function(r){
       var count=state.rolePermissions.filter(function(x){return String(x.role_id)===String(r.id);}).length;
       return '<tr><td><strong>'+escapeHtml(r.name)+'</strong></td>'+
         '<td>'+escapeHtml(r.description||'—')+'</td>'+
@@ -241,7 +270,7 @@
     }
     if(result.error){message(result.error.message,'error');return;}
     var role=result.data;
-    if(!role){message('The role was not returned by Supabase.','error');return;}
+    if(!role){message('The role was not returned after saving.','error');return;}
 
     var selected=[];
     document.querySelectorAll('[data-role-permission]:checked').forEach(function(el){
@@ -287,12 +316,15 @@
     var tbody = $('customers-table-body');
     if (!tbody) return;
     var q = (($('customer-search') && $('customer-search').value) || '').trim().toLowerCase();
+    var loyalty = String(($('customer-loyalty-filter') && $('customer-loyalty-filter').value) || state.customerLoyaltyFilter || 'all');
     var rows = state.customers.filter(function(c) {
-      return !q ||
+      var matchesQuery=!q ||
         String(c.name||'').toLowerCase().includes(q) ||
         String(c.phone||'').toLowerCase().includes(q) ||
         String(c.email||'').toLowerCase().includes(q);
-    });
+      var tier=String(c.loyalty_tier||'Member');
+      return matchesQuery && (loyalty==='all' || tier===loyalty);
+    }).sort(function(a,b){ return crmIdDesc(a.id,b.id); });
 
     tbody.innerHTML = rows.map(function(c) {
       return '<tr>' +
@@ -523,7 +555,7 @@
       try { result = JSON.parse(result); } catch (e) { result = null; }
     }
     if (!result || typeof result !== 'object' || Array.isArray(result) || !result.url || !result.width || !result.height) {
-      throw new Error('Supabase application setting "' + key + '" is missing or invalid.');
+      throw new Error('Application setting "' + key + '" is missing or invalid.');
     }
     return {
       path: String(result.path || ''),
@@ -621,7 +653,7 @@
   function brandingDefaultPayload(key) {
     var defaultKey = key + '_default';
     var row = state.appSettings.find(function(x){ return x.setting_key === defaultKey; });
-    if (!row) throw new Error('Supabase application setting "' + defaultKey + '" is missing.');
+    if (!row) throw new Error('Application setting "' + defaultKey + '" is missing.');
     return normalizeBrandingImage(row.setting_value, defaultKey);
   }
 
@@ -892,7 +924,7 @@
     var result = await window.salonSupabase
       .from('application_settings')
       .select('id,setting_key,setting_value,description,active,created_at,updated_at')
-      .order('setting_key', {ascending:true});
+      .order('setting_key', {ascending:false});
     if (result.error) throw result.error;
     state.appSettings = result.data || [];
     deactivateLegacySocialSettings();
@@ -1004,7 +1036,7 @@
       rewards.push({points:points,reward:reward});
     });
     if (!rewards.length) throw new Error('Add at least one loyalty reward, or keep the default rewards.');
-    rewards.sort(function(a,b){ return a.points-b.points; });
+    rewards.sort(function(a,b){ return b.points-a.points; });
     return rewards;
   }
 
@@ -1053,7 +1085,7 @@
     renderLoyaltyRewardSettings();
 
     var status = $('app-settings-status');
-    if (status) status.textContent = 'Synced with Supabase';
+    if (status) status.textContent = 'Settings synced';
   }
 
   async function saveApplicationSettings(e) {
@@ -1186,41 +1218,24 @@
   async function loadFaqs() {
     if (!can('faqs','read')) {
       state.faqs = [];
-      state.faqSettings = null;
       return;
     }
-    var settingsResult = await window.salonSupabase
-      .from('faq_settings')
-      .select('*')
-      .eq('id', 1)
-      .maybeSingle();
-    if (settingsResult.error) throw settingsResult.error;
     var faqResult = await window.salonSupabase
       .from('faqs')
       .select('*')
-      .order('sort_order', {ascending:true})
-      .order('id', {ascending:true});
+      .order('sort_order', {ascending:false})
+      .order('id', {ascending:false});
     if (faqResult.error) throw faqResult.error;
 
-    state.faqSettings = settingsResult.data || null;
     state.faqs = faqResult.data || [];
-    renderFaqSettings();
     renderFaqs();
-  }
-
-  function renderFaqSettings() {
-    var s = state.faqSettings || {};
-    if ($('faq-settings-title-en')) $('faq-settings-title-en').value = s.title_en || '';
-    if ($('faq-settings-title-ar')) $('faq-settings-title-ar').value = s.title_ar || '';
-    if ($('faq-settings-description-en')) $('faq-settings-description-en').value = s.description_en || '';
-    if ($('faq-settings-description-ar')) $('faq-settings-description-ar').value = s.description_ar || '';
-    if ($('faq-settings-active')) $('faq-settings-active').checked = s.active !== false;
   }
 
   function renderFaqs() {
     var tbody = $('faq-table-body');
     if (!tbody) return;
-    tbody.innerHTML = state.faqs.map(function(f) {
+    var rows = state.faqs.slice().sort(function(a,b){ return Number(b.sort_order||0)-Number(a.sort_order||0) || crmIdDesc(a.id,b.id); });
+    tbody.innerHTML = rows.map(function(f) {
       var answer = String(f.answer_en || '');
       if (answer.length > 150) answer = answer.slice(0,147) + '…';
       return '<tr>' +
@@ -1309,38 +1324,6 @@
     await loadFaqs();
   }
 
-  async function saveFaqSettings(e) {
-    if(!requirePermission('faqs','update')) return;
-    e.preventDefault();
-    clearMessage();
-    var payload = {
-      id: 1,
-      title_en: $('faq-settings-title-en').value.trim(),
-      title_ar: $('faq-settings-title-ar').value.trim() || null,
-      description_en: $('faq-settings-description-en').value.trim() || null,
-      description_ar: $('faq-settings-description-ar').value.trim() || null,
-      active: $('faq-settings-active').checked
-    };
-    if (!payload.title_en) {
-      message('Please enter the English FAQ title.','error');
-      return;
-    }
-    var result = await window.salonSupabase.from('faq_settings')
-      .upsert(payload, {onConflict:'id'})
-      .select()
-      .maybeSingle();
-    if (result.error) {
-      message(result.error.message,'error');
-      return;
-    }
-    if (!result.data) {
-      message('FAQ page settings could not be saved. Check FAQ settings RLS.','error');
-      return;
-    }
-    message('FAQ page settings saved.','success');
-    await loadFaqs();
-  }
-
   async function deleteFaq(id) {
     if(!requirePermission('faqs','delete')) return;
     var f = state.faqs.find(function(x){ return String(x.id) === String(id); });
@@ -1356,19 +1339,24 @@
 
   async function loadData() {
     if (can('services','read')) {
-      var cats = await window.salonSupabase.from('service_categories').select('*').order('sort_order',{ascending:true});
+      var cats = await window.salonSupabase.from('service_categories').select('*').order('sort_order',{ascending:false}).order('id',{ascending:false});
       if (cats.error) throw cats.error;
-      var services = await window.salonSupabase.from('services').select('*').order('sort_order',{ascending:true});
+      var services = await window.salonSupabase.from('services').select('*').order('sort_order',{ascending:false}).order('id',{ascending:false});
       if (services.error) throw services.error;
       state.categories=cats.data||[]; state.services=services.data||[];
     } else { state.categories=[]; state.services=[]; }
     if (can('vouchers','read')) {
       var vouchers = await window.salonSupabase.from('vouchers').select('*');
       if (vouchers.error) throw vouchers.error;
-      state.vouchers=(vouchers.data||[]).slice().sort(function(a,b){return String(a.created_at||'').localeCompare(String(b.created_at||''));}).reverse();
+      state.vouchers=(vouchers.data||[]).slice().sort(function(a,b){
+        var am=String(a.sku||'').match(/-(\d+)$/), bm=String(b.sku||'').match(/-(\d+)$/);
+        var an=am?Number(am[1]):-1, bn=bm?Number(bm[1]):-1;
+        if(an!==bn) return bn-an;
+        return String(b.sku||'').localeCompare(String(a.sku||''));
+      });
     } else state.vouchers=[];
     state.bookingVouchers=state.vouchers.slice();
-    renderCategories(); renderServices(); renderVouchers(); populateCategorySelect(); updateDashboard();
+    renderCategories(); renderServices(); renderVouchers(); populateCategorySelect(); syncServiceCategoryFilter(); if(!state.editingServiceId) generateServiceSku(); updateDashboard();
   }
   async function loadUsers() {
     if (!can('users','read')) {
@@ -1376,23 +1364,46 @@
       $('stat-users') && ($('stat-users').textContent='—');
       return;
     }
-    var result = await window.salonSupabase.from('admin_users').select('*').order('created_at',{ascending:true});
+    var result = await window.salonSupabase.from('admin_users').select('*').order('created_at',{ascending:false});
     if (result.error) throw result.error;
     state.users=result.data||[];
+    syncUserRoleFilter();
     state.authStatuses={};
     try {
       var authResult=await window.salonSupabase.functions.invoke('get-crm-user-statuses',{body:{}});
       if(authResult.error) throw new Error((authResult.data&&authResult.data.error)||authResult.error.message||'Could not load authentication status.');
       (authResult.data&&authResult.data.users||[]).forEach(function(item){state.authStatuses[String(item.user_id)]=item;});
-    } catch(statusError) { console.warn('Could not load Supabase authentication statuses:',statusError); }
+    } catch(statusError) { console.warn('Could not load authentication statuses:',statusError); }
     renderUsers();
     $('stat-users') && ($('stat-users').textContent=state.users.length);
     $('stat-bookings') && ($('stat-bookings').textContent=state.bookings.length);
   }
   function categoryName(id) { var c=state.categories.find(function(x){return String(x.id)===String(id);}); return c?c.name_en:'—'; }
 
+  function syncServiceCategoryFilter() {
+    var select = $('service-category-filter');
+    if (!select) return;
+    var current = select.value || 'all';
+    select.innerHTML = '<option value="all">All categories</option>' + state.categories.slice().sort(function(a,b){ return crmDesc(a.name_en,b.name_en); }).map(function(c){
+      return '<option value="'+escapeHtml(c.id)+'">'+escapeHtml(c.name_en)+'</option>';
+    }).join('');
+    if (current !== 'all' && state.categories.some(function(c){return String(c.id)===String(current);})){
+      select.value = current;
+    } else {
+      select.value = 'all';
+    }
+  }
+
   function renderCategories() {
-    $('category-table-body').innerHTML=state.categories.map(function(c){
+    var body=$('category-table-body'); if(!body)return;
+    var query=String(($('category-search')&&$('category-search').value)||'').trim().toLowerCase();
+    var status=String(($('category-status-filter')&&$('category-status-filter').value)||'all');
+    var rows=state.categories.filter(function(c){
+      var matchesQuery=!query || [c.name_en,c.name_ar,c.description_en,c.description_ar].join(' ').toLowerCase().indexOf(query)!==-1;
+      var matchesStatus=status==='all' || (status==='active' ? c.active!==false : c.active===false);
+      return matchesQuery && matchesStatus;
+    }).sort(function(a,b){ return Number(b.sort_order||0)-Number(a.sort_order||0) || crmIdDesc(a.id,b.id); });
+    body.innerHTML=rows.map(function(c){
       var image=c.image_url||'';
       var imageHtml=image?'<div class="crm-category-thumb"><img src="'+escapeHtml(image)+'" alt="'+escapeHtml(c.name_en||'Category')+'" onerror="this.parentNode.style.display=&quot;none&quot;"></div>':'<span class="crm-small">No image</span>';
       return '<tr><td><strong>'+escapeHtml(c.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(c.name_ar)+'</span></td>'+
@@ -1402,10 +1413,21 @@
       (can('services','update')?'<button class="crm-btn crm-btn-secondary" data-edit-category="'+c.id+'">Edit</button>':'')+
       (can('services','delete')?'<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-category="'+c.id+'">Delete</button>':'')+
       '</div></td></tr>';
-    }).join('');
+    }).join('') || '<tr><td colspan="5" class="crm-empty">No categories found.</td></tr>';
   }
+
   function renderServices() {
-    $('service-table-body').innerHTML=state.services.map(function(s){
+    var body=$('service-table-body'); if(!body)return;
+    var query=String(($('service-search')&&$('service-search').value)||'').trim().toLowerCase();
+    var category=String(($('service-category-filter')&&$('service-category-filter').value)||'all');
+    var status=String(($('service-status-filter')&&$('service-status-filter').value)||'all');
+    var rows=state.services.filter(function(s){
+      var matchesQuery=!query || [s.sku,s.name_en,s.name_ar,categoryName(s.category_id)].join(' ').toLowerCase().indexOf(query)!==-1;
+      var matchesCategory=category==='all' || String(s.category_id)===category;
+      var matchesStatus=status==='all' || (status==='active' ? s.active!==false : s.active===false);
+      return matchesQuery && matchesCategory && matchesStatus;
+    }).sort(crmSkuDesc);
+    body.innerHTML=rows.map(function(s){
       return '<tr><td>'+escapeHtml(s.sku||'')+'</td><td><strong>'+escapeHtml(s.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(s.name_ar)+'</span></td>'+
       '<td>'+escapeHtml(categoryName(s.category_id))+'</td><td class="crm-price">$'+escapeHtml(s.price_usd==null?'':s.price_usd)+'<br><span class="crm-price-muted">'+(s.price_qar==null?'—':escapeHtml(s.price_qar)+' QAR')+'</span></td>'+
       '<td>'+(s.duration_minutes==null?'—':escapeHtml(s.duration_minutes)+' min')+'</td><td>'+(s.active?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'</td>'+
@@ -1413,7 +1435,7 @@
       (can('services','update')?'<button class="crm-btn crm-btn-secondary" data-edit-service="'+s.id+'">Edit</button>':'')+
       (can('services','delete')?'<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-service="'+s.id+'">Delete</button>':'')+
       '</div></td></tr>';
-    }).join('');
+    }).join('') || '<tr><td colspan="7" class="crm-empty">No services found.</td></tr>';
   }
   function voucherImageUrl(v) {
     if (!v || !v.image_path) return '';
@@ -1428,7 +1450,21 @@
     var tbody = $('voucher-table-body');
     if (!tbody) return;
 
-    tbody.innerHTML = state.vouchers.map(function(v) {
+    var query = String(($('voucher-search') && $('voucher-search').value) || '').trim().toLowerCase();
+    var status = String(($('voucher-status-filter') && $('voucher-status-filter').value) || 'all');
+    var rows = state.vouchers.filter(function(v) {
+      var title = v.title_en || v.title || '';
+      var matchesQuery = !query || [v.sku, title, v.title_ar].join(' ').toLowerCase().indexOf(query) !== -1;
+      var matchesStatus = status === 'all' || (status === 'active' ? v.active !== false : v.active === false);
+      return matchesQuery && matchesStatus;
+    }).sort(function(a,b){
+      var an = Number((String(a.sku||'').match(/-(\d+)$/)||[])[1] || 0);
+      var bn = Number((String(b.sku||'').match(/-(\d+)$/)||[])[1] || 0);
+      if (bn !== an) return bn - an;
+      return String(b.created_at||'').localeCompare(String(a.created_at||''));
+    });
+
+    tbody.innerHTML = rows.map(function(v) {
       var image = voucherImageUrl(v);
       var title = v.title_en || v.title || 'Voucher';
       var arabic = v.title_ar || '';
@@ -1455,6 +1491,23 @@
     }).join('') || '<tr><td colspan="7" class="crm-empty">No vouchers found.</td></tr>';
   }
 
+  function nextVoucherSequence() {
+    var max=0;
+    state.vouchers.forEach(function(v){
+      var match=String(v.sku||'').match(/-(\d+)$/);
+      if(match) max=Math.max(max,Number(match[1])||0);
+    });
+    return max+1;
+  }
+  function generateVoucherSku() {
+    if(state.editingVoucherId) return;
+    var seq=nextVoucherSequence();
+    var sku='V-'+String(seq).padStart(3,'0');
+    var used=state.vouchers.some(function(v){return String(v.sku||'').toLowerCase()===sku.toLowerCase();});
+    while(used){seq++;sku='V-'+String(seq).padStart(3,'0');used=state.vouchers.some(function(v){return String(v.sku||'').toLowerCase()===sku.toLowerCase();});}
+    $('voucher-sku').value=sku;
+  }
+
   function resetVoucherForm() {
     state.editingVoucherId = null;
     var form = $('voucher-form');
@@ -1463,6 +1516,8 @@
     $('voucher-save').textContent = 'Add Voucher';
     $('voucher-active').checked = true;
     $('voucher-duration').value = 30;
+    $('voucher-sku').readOnly = true;
+    generateVoucherSku();
     $('voucher-current-image').innerHTML = '<div class="crm-image-empty">No image uploaded</div>';
     $('voucher-image-file').value = '';
     $('voucher-image-delete').classList.add('crm-hidden');
@@ -1475,7 +1530,7 @@
     state.editingVoucherId = v.id;
     $('voucher-form-title').textContent = 'Edit Voucher';
     $('voucher-save').textContent = 'Save Changes';
-    $('voucher-sku').value = v.sku || '';
+    $('voucher-sku').value = v.sku || ''; $('voucher-sku').readOnly = true;
     $('voucher-title-en').value = v.title_en || v.title || '';
     $('voucher-title-ar').value = v.title_ar || '';
     $('voucher-price-usd').value = v.price_usd == null ? '' : v.price_usd;
@@ -1647,7 +1702,7 @@
         if (!Array.isArray(imageUpdate.data) || !imageUpdate.data.length || imageUpdate.data[0].image_path !== newPath) {
           try { await deleteVoucherStorageImage(newPath); } catch (_) {}
           throw new Error(
-            'The image uploaded to Supabase Storage, but the voucher record could not be updated with the image path. Check the vouchers UPDATE RLS policy.'
+            'The image was uploaded, but the voucher record could not be updated. Check the voucher permissions.'
           );
         }
 
@@ -1684,14 +1739,7 @@
 
     if (result.error) throw result.error;
 
-    state.vouchers = (result.data || []).slice().sort(function(a,b){
-      var ao = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : 0;
-      var bo = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0;
-      if (ao !== bo) return ao - bo;
-      var ad = a.created_at ? new Date(a.created_at).getTime() : 0;
-      var bd = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return bd - ad;
-    });
+    state.vouchers = (result.data || []).slice().sort(crmSkuDesc);
     state.bookingVouchers = state.vouchers.slice();
     renderVouchers();
     updateDashboard();
@@ -1769,9 +1817,27 @@
     }
   }
 
+  function syncUserRoleFilter(){
+    var select=$('user-role-filter'); if(!select)return;
+    var current=select.value||state.userRoleFilter||'all';
+    select.innerHTML='<option value="all">All roles</option>'+state.roles.slice().sort(function(a,b){ return crmDesc(a.name,b.name); }).map(function(r){return '<option value="'+escapeHtml(r.id)+'">'+escapeHtml(r.name)+'</option>';}).join('');
+    select.value=(current==='all'||state.roles.some(function(r){return String(r.id)===String(current);}))?current:'all';
+  }
   function renderUsers() {
-    $('users-table-body').innerHTML=state.users.map(function(u){
-      var role=roleNameById(u.role_id, u.role);
+    var body=$('users-table-body'); if(!body)return;
+    var q=String(($('user-search')&&$('user-search').value)||state.userSearch||'').trim().toLowerCase();
+    var role=String(($('user-role-filter')&&$('user-role-filter').value)||state.userRoleFilter||'all');
+    var statusFilter=String(($('user-status-filter')&&$('user-status-filter').value)||state.userStatusFilter||'all');
+    var rows=state.users.filter(function(u){
+      var roleName=roleNameById(u.role_id,u.role);
+      var matchesQuery=!q || [u.full_name,u.email,roleName].join(' ').toLowerCase().indexOf(q)!==-1;
+      var matchesRole=role==='all' || String(u.role_id)===role;
+      var active=u.active!==false;
+      var matchesStatus=statusFilter==='all' || (statusFilter==='active'?active:!active);
+      return matchesQuery && matchesRole && matchesStatus;
+    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmDesc(a.full_name,b.full_name); });
+    body.innerHTML=rows.map(function(u){
+      var roleName=roleNameById(u.role_id, u.role);
       var status=u.active!==false;
       var isSelf=state.currentUserId && String(u.user_id)===String(state.currentUserId);
       var auth=state.authStatuses[String(u.user_id)]||{};
@@ -1780,10 +1846,14 @@
       var verificationHtml=verified ? '<span class="crm-badge active">Verified</span>' : '<span class="crm-badge inactive">Not verified</span>';
       var loginHtml=loggedIn ? '<span class="crm-small">Last login: '+escapeHtml(new Date(auth.last_sign_in_at).toLocaleString())+'</span>' : '<span class="crm-small">Never logged in</span>';
       return '<tr><td><strong>'+escapeHtml(u.full_name||'CRM user')+'</strong><br><span class="crm-small">'+(isSelf?'You':'CRM team member')+'</span></td><td>'+escapeHtml(u.email||'—')+'</td>'+
-      '<td><span class="crm-role-badge">'+escapeHtml(role)+'</span></td>'+
+      '<td><span class="crm-role-badge">'+escapeHtml(roleName)+'</span></td>'+
       '<td>'+(status?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'<br>'+verificationHtml+'<br>'+loginHtml+'</td>'+
-      '<td>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleDateString():'—')+'</td>'+      '<td><div class="crm-actions-inline"><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-user="'+escapeHtml(u.user_id)+'">Edit</button>'+      (isSelf?'':'<button type="button" class="crm-btn '+(status?'crm-btn-danger':'crm-btn-secondary')+' crm-btn-small" data-toggle-user="'+escapeHtml(u.user_id)+'">'+(status?'Deactivate':'Activate')+'</button>')+      (!isSelf && can('users','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-reset-password="'+escapeHtml(u.user_id)+'">Reset password</button>' : '')+      (can('users','delete') && !isSelf ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-user="'+escapeHtml(u.user_id)+'">Delete</button>' : '')+      '</div></td></tr>';
-    }).join('') || '<tr><td colspan="6">No CRM users found.</td></tr>';
+      '<td>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleDateString():'—')+'</td><td><div class="crm-actions-inline"><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-user="'+escapeHtml(u.user_id)+'">Edit</button>'+
+      (isSelf?'':'<button type="button" class="crm-btn '+(status?'crm-btn-danger':'crm-btn-secondary')+' crm-btn-small" data-toggle-user="'+escapeHtml(u.user_id)+'">'+(status?'Deactivate':'Activate')+'</button>')+
+      (!isSelf && can('users','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-reset-password="'+escapeHtml(u.user_id)+'">Reset password</button>' : '')+
+      (can('users','delete') && !isSelf ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-user="'+escapeHtml(u.user_id)+'">Delete</button>' : '')+
+      '</div></td></tr>';
+    }).join('') || '<tr><td colspan="6" class="crm-empty">No CRM users found.</td></tr>';
   }
   async function updateDashboard() {
     var active=state.services.filter(function(s){return s.active!==false;}).length;
@@ -1793,9 +1863,8 @@
     $('stat-users') && ($('stat-users').textContent=state.users.length);
     $('stat-bookings') && ($('stat-bookings').textContent=state.bookings.length);
 
-    // Customers are stored in Supabase, so the dashboard must get the
-    // current count from the database instead of relying on the customers
-    // page having been opened first.
+    // Keep the dashboard count independent from whether the customer page
+    // has been opened first.
     var customerStat=$('stat-customers');
     if(customerStat && can('customers','read')){
       try{
@@ -1816,11 +1885,44 @@
   function populateCategorySelect() {
     $('service-category').innerHTML=state.categories.map(function(c){return '<option value="'+c.id+'">'+escapeHtml(c.name_en)+'</option>';}).join('');
   }
+  function serviceSkuPrefix(categoryName) {
+    var words=String(categoryName||'').trim().match(/[A-Za-z0-9]+/g)||[];
+    if(!words.length) return '';
+    if(words.length===1) return words[0].charAt(0).toUpperCase();
+    return words.map(function(word){return word.charAt(0).toUpperCase();}).join('');
+  }
+  function nextServiceSequence(categoryId) {
+    var category=state.categories.find(function(c){return String(c.id)===String(categoryId);});
+    var prefix=serviceSkuPrefix(category && category.name_en);
+    var max=0;
+    state.services.forEach(function(s){
+      if(String(s.category_id)!==String(categoryId)) return;
+      var match=String(s.sku||'').match(/^([A-Z0-9]+)-(\d+)$/i);
+      if(!match || String(match[1]).toUpperCase()!==String(prefix).toUpperCase()) return;
+      max=Math.max(max,Number(match[2])||0);
+    });
+    return max+1;
+  }
+  function generateServiceSku() {
+    if(state.editingServiceId) return;
+    var categoryId=$('service-category').value;
+    var category=state.categories.find(function(c){return String(c.id)===String(categoryId);});
+    var prefix=serviceSkuPrefix(category && category.name_en);
+    if(!categoryId || !prefix){
+      $('service-sku').value='';
+      return;
+    }
+    var sequence=nextServiceSequence(categoryId);
+    var sku=prefix+'-'+String(sequence).padStart(3,'0');
+    var existing=state.services.some(function(s){return String(s.category_id)===String(categoryId) && String(s.sku||'').toLowerCase()===sku.toLowerCase();});
+    while(existing){sequence++;sku=prefix+'-'+String(sequence).padStart(3,'0');existing=state.services.some(function(s){return String(s.category_id)===String(categoryId) && String(s.sku||'').toLowerCase()===sku.toLowerCase();});}
+    $('service-sku').value=sku;
+  }
   function resetServiceForm(){
-    applyRoleVisibility();state.editingServiceId=null;$('service-form').reset();$('service-form-title').textContent='Add Service';$('service-save').textContent='Add Service';populateCategorySelect();}
+    applyRoleVisibility();state.editingServiceId=null;$('service-form').reset();$('service-form-title').textContent='Add Service';$('service-save').textContent='Add Service';populateCategorySelect();$('service-sku').readOnly=true;generateServiceSku();}
   function editService(id){
     var s=state.services.find(function(x){return String(x.id)===String(id);}); if(!s)return;
-    state.editingServiceId=s.id; applyRoleVisibility(); $('service-form-title').textContent='Edit Service';$('service-save').textContent='Save Changes';
+    state.editingServiceId=s.id; applyRoleVisibility(); $('service-form-title').textContent='Edit Service';$('service-save').textContent='Save Changes';$('service-sku').readOnly=true;
     $('service-category').value=s.category_id||'';$('service-sku').value=s.sku||'';$('service-name-en').value=s.name_en||'';$('service-name-ar').value=s.name_ar||'';
     $('service-description-en').value=s.description_en||'';$('service-description-ar').value=s.description_ar||'';
     $('service-price-usd').value=s.price_usd==null?'':s.price_usd;$('service-price-qar').value=s.price_qar==null?'':s.price_qar;
@@ -1831,6 +1933,7 @@
     if(!requirePermission('services', state.editingServiceId?'update':'create')) return;
     e.preventDefault(); clearMessage();
     var usd=$('service-price-usd').value;
+    if(!state.editingServiceId) generateServiceSku();
     var sku=$('service-sku').value.trim();
     var qar=$('service-price-qar').value;
     var payload={category_id:Number($('service-category').value),sku:sku,name_en:$('service-name-en').value.trim(),name_ar:$('service-name-ar').value.trim(),
@@ -1839,12 +1942,12 @@
       duration_minutes:$('service-duration').value===''?30:Number($('service-duration').value),sort_order:Number($('service-sort').value||0),active:$('service-active').checked};
     if(!sku||!payload.name_en||!payload.name_ar||!payload.category_id){message('Please enter the SKU, English name, Arabic name and category.','error');return;}
     if(usd==='' && qar===''){message('Enter at least one price: USD or QAR.','error');return;}
-    var duplicate=state.services.some(function(existing){return String(existing.id)!==String(state.editingServiceId||'') && String(existing.sku||'').trim().toLowerCase()===sku.toLowerCase();});
-    if(duplicate){message('This service SKU already exists. Please use a unique SKU.','error');return;}
+    var duplicate=state.services.some(function(existing){return String(existing.id)!==String(state.editingServiceId||'') && String(existing.category_id)===String(payload.category_id) && String(existing.sku||'').trim().toLowerCase()===sku.toLowerCase();});
+    if(duplicate){message('This service SKU already exists in this category.','error');return;}
     var result=state.editingServiceId?await window.salonSupabase.from('services').update(payload).eq('id',state.editingServiceId):await window.salonSupabase.from('services').insert(payload);
     if(result.error){
       var msg=result.error.message||'Could not save service.';
-      if(result.error.code==='23505') msg='This service SKU already exists. Please use a unique SKU.';
+      if(result.error.code==='23505') msg='This service SKU already exists in this category.';
       if(result.error.code==='23514') msg='Enter at least one price: USD or QAR.';
       message(msg,'error');return;
     } message(state.editingServiceId?'Service updated.':'Service added.','success');resetServiceForm();await loadData();
@@ -1985,14 +2088,13 @@
 
   async function loadBookings() {
     /*
-     * Current Supabase schema:
+     * Current booking schema:
      *   bookings      -> customer_id, total_price, total_duration_minutes
      *   customers     -> name, phone, email, notes
      *   booking_services -> one row per booked item, with either service_id
      *                        or voucher_id
      *
-     * Do not query the old JSON/items/customer_name columns here. Those were
-     * used by an earlier booking schema and cause PostgREST 42703 errors.
+     * Do not query the old JSON/items/customer_name columns here.
      */
     var dbBookings = null;
     try {
@@ -2093,7 +2195,7 @@
         };
       });
     } catch (e) {
-      console.warn('Could not load Supabase bookings; using browser-local cache only.', e);
+      console.warn('Could not load bookings; using browser-local cache only.', e);
       dbBookings = null;
     }
 
@@ -2175,7 +2277,8 @@
 
   function bookingMatches(b) {
     var status = bookingStatus(b);
-    if (state.bookingFilter !== 'all' && status !== state.bookingFilter) return false;
+    var selectedStatus = state.bookingFilter;
+    if (selectedStatus !== 'all' && status !== selectedStatus) return false;
     var now = new Date(); now.setHours(0,0,0,0);
     var d = b.date ? new Date(b.date + 'T12:00:00') : null;
     if (state.bookingDateFilter === 'today' && (!d || d.toDateString() !== now.toDateString())) return false;
@@ -2578,7 +2681,7 @@
     try {
       await updateBookingStatusInDatabase(id,status);
     } catch(e) {
-      message('Could not update the booking in Supabase: '+(e.message||'Unknown error'),'error');
+      message('Could not update the booking: '+(e.message||'Unknown error'),'error');
       return;
     }
 
@@ -2590,10 +2693,207 @@
     message('Booking ' + id + ' marked as ' + statusLabel(status) + '.', 'success');
   }
 
+
+  async function loadChartOfAccounts(){
+    if(!can('chart-of-accounts','read')) { state.chartOfAccounts=[]; renderChartOfAccounts(); return; }
+    var body=$('chart-of-accounts-table-body');
+    if(body) body.innerHTML='<tr><td colspan="7" class="crm-empty">Loading chart of accounts…</td></tr>';
+    try {
+      var result=await window.salonSupabase.from('chart_of_accounts')
+        .select('account_code,major_account,account_name,account_type,financial_statement,typical_balance,notes,active')
+        .order('account_code',{ascending:false});
+      if(result.error) throw result.error;
+      state.chartOfAccounts=result.data||[];
+      syncChartOfAccountsFilters();
+      renderChartOfAccounts();
+    } catch(e) {
+      state.chartOfAccounts=[];
+      if(body) body.innerHTML='<tr><td colspan="7" class="crm-empty">Could not load chart of accounts. Check the Supabase migration and permissions.</td></tr>';
+      throw e;
+    }
+  }
+
+  function syncChartOfAccountsFilters(){
+    var statements={}, types={};
+    state.chartOfAccounts.forEach(function(a){ if(a.financial_statement) statements[a.financial_statement]=true; if(a.account_type) types[a.account_type]=true; });
+    var sf=$('chart-statement-filter'), tf=$('chart-type-filter');
+    if(sf){ var sv=state.chartStatementFilter||'all'; sf.innerHTML='<option value="all">All statements</option>'+Object.keys(statements).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join(''); sf.value=statements[sv]?sv:'all'; }
+    if(tf){ var tv=state.chartTypeFilter||'all'; tf.innerHTML='<option value="all">All account types</option>'+Object.keys(types).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join(''); tf.value=types[tv]?tv:'all'; }
+  }
+
+  function renderChartOfAccounts(){
+    var body=$('chart-of-accounts-table-body'); if(!body)return;
+    var q=String(($('chart-account-search')&&$('chart-account-search').value)||state.chartAccountSearch||'').trim().toLowerCase();
+    var statement=String(($('chart-statement-filter')&&$('chart-statement-filter').value)||state.chartStatementFilter||'all');
+    var type=String(($('chart-type-filter')&&$('chart-type-filter').value)||state.chartTypeFilter||'all');
+    var rows=state.chartOfAccounts.filter(function(a){
+      var hay=[a.account_code,a.major_account,a.account_name,a.account_type,a.financial_statement,a.typical_balance,a.notes].join(' ').toLowerCase();
+      return (!q || hay.indexOf(q)!==-1) && (statement==='all'||a.financial_statement===statement) && (type==='all'||a.account_type===type);
+    }).sort(function(a,b){ return crmDesc(a.account_code,b.account_code); });
+    body.innerHTML=rows.map(function(a){
+      var name=a.account_name || a.major_account || '—';
+      var isHeader=a.account_type==='Header';
+      var actions='';
+      if(can('chart-of-accounts','update')) actions+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-chart-account="'+escapeHtml(a.account_code)+'">Edit</button>';
+      if(can('chart-of-accounts','delete')) actions+='<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-chart-account="'+escapeHtml(a.account_code)+'">Delete</button>';
+      return '<tr class="'+(isHeader?'crm-account-header-row':'')+'"><td><strong>'+escapeHtml(a.account_code||'')+'</strong></td><td><strong>'+escapeHtml(name)+'</strong>'+(a.major_account && a.account_name?'<br><span class="crm-small">'+escapeHtml(a.major_account)+'</span>':'')+'</td><td>'+escapeHtml(a.account_type||'—')+'</td><td>'+escapeHtml(a.financial_statement||'—')+'</td><td>'+escapeHtml(a.typical_balance||'—')+'</td><td>'+escapeHtml(a.notes||'—')+'</td><td><div class="crm-actions-inline">'+actions+'</div></td></tr>';
+    }).join('') || '<tr><td colspan="7" class="crm-empty">No accounts found.</td></tr>';
+  }
+
+  function resetChartAccountForm(){
+    state.editingChartAccountCode=null;
+    var form=$('chart-account-form'); if(form) form.reset();
+    if($('chart-account-form-title')) $('chart-account-form-title').textContent='Add account';
+    if($('chart-account-save')) $('chart-account-save').textContent='Add account';
+    if($('chart-account-active')) $('chart-account-active').checked=true;
+    if($('chart-account-form-card')) $('chart-account-form-card').classList.add('crm-hidden');
+  }
+  function openChartAccountForm(code){
+    if(code && !requirePermission('chart-of-accounts','update')) return;
+    if(!code && !requirePermission('chart-of-accounts','create')) return;
+    var a=code ? state.chartOfAccounts.find(function(x){return String(x.account_code)===String(code);}) : null;
+    if(code && !a) return;
+    state.editingChartAccountCode=a ? a.account_code : null;
+    if($('chart-account-form-title')) $('chart-account-form-title').textContent=a?'Edit account':'Add account';
+    if($('chart-account-save')) $('chart-account-save').textContent=a?'Save changes':'Add account';
+    if($('chart-account-code')) $('chart-account-code').value=a ? (a.account_code||'') : '';
+    if($('chart-account-major')) $('chart-account-major').value=a ? (a.major_account||'') : '';
+    if($('chart-account-name')) $('chart-account-name').value=a ? (a.account_name||'') : '';
+    if($('chart-account-type')) $('chart-account-type').value=a ? (a.account_type||'') : '';
+    if($('chart-account-financial-statement')) $('chart-account-financial-statement').value=a ? (a.financial_statement||'') : '';
+    if($('chart-account-balance')) $('chart-account-balance').value=a ? (a.typical_balance||'') : '';
+    if($('chart-account-notes')) $('chart-account-notes').value=a ? (a.notes||'') : '';
+    if($('chart-account-active')) $('chart-account-active').checked=!a || a.active!==false;
+    if($('chart-account-form-card')) $('chart-account-form-card').classList.remove('crm-hidden');
+    showView('chart-of-accounts');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  async function saveChartAccount(e){
+    e.preventDefault();
+    var editing=state.editingChartAccountCode;
+    if(!requirePermission('chart-of-accounts',editing?'update':'create')) return;
+    var code=$('chart-account-code').value.trim();
+    var payload={account_code:code,major_account:$('chart-account-major').value.trim()||null,account_name:$('chart-account-name').value.trim()||null,account_type:$('chart-account-type').value.trim(),financial_statement:$('chart-account-financial-statement').value.trim(),typical_balance:$('chart-account-balance').value.trim()||null,notes:$('chart-account-notes').value.trim()||null,active:$('chart-account-active').checked};
+    if(!code||!payload.account_type||!payload.financial_statement||( !payload.account_name && !payload.major_account)){message('Enter an account code, type, financial statement, and account name or major account.','error');return;}
+    var result=editing
+      ? await window.salonSupabase.from('chart_of_accounts').update(payload).eq('account_code',editing)
+      : await window.salonSupabase.from('chart_of_accounts').insert(payload);
+    if(result.error){message(result.error.code==='23505'?'That account code already exists.':result.error.message,'error');return;}
+    resetChartAccountForm(); await loadChartOfAccounts(); message(editing?'Account updated.':'Account created.','success');
+  }
+  async function deleteChartAccount(code){
+    if(!requirePermission('chart-of-accounts','delete')) return;
+    var a=state.chartOfAccounts.find(function(x){return String(x.account_code)===String(code);});
+    if(!a || !window.confirm('Delete account '+code+'? This cannot be undone.')) return;
+    var result=await window.salonSupabase.from('chart_of_accounts').delete().eq('account_code',code);
+    if(result.error){message(result.error.message,'error');return;}
+    await loadChartOfAccounts(); message('Account deleted.','success');
+  }
+
+  async function loadFinancialStatements(){
+    if(!can('financial-statements','read')) { state.financialStatements=[]; renderFinancialStatements(); return; }
+    var body=$('financial-statements-table-body');
+    if(body) body.innerHTML='<tr><td colspan="6" class="crm-empty">Loading financial statements…</td></tr>';
+    try{
+      var result=await window.salonSupabase.from('financial_statements').select('id,statement,account_code,account_name,classification_line,normal_balance,notes,active').eq('active',true).order('id',{ascending:false});
+      if(result.error) throw result.error;
+      state.financialStatements=result.data||[];
+      syncFinancialStatementFilter(); renderFinancialStatements();
+    }catch(e){
+      state.financialStatements=[];
+      if(body) body.innerHTML='<tr><td colspan="6" class="crm-empty">Could not load financial statements. Run the finance migration in Supabase.</td></tr>';
+      throw e;
+    }
+  }
+  function syncFinancialStatementFilter(){
+    var values={}; state.financialStatements.forEach(function(x){if(x.statement)values[x.statement]=true;});
+    var select=$('financial-statement-filter'); if(!select)return;
+    var current=state.financialStatementFilter||'all';
+    select.innerHTML='<option value="all">All statements</option>'+Object.keys(values).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join('');
+    select.value=values[current]?current:'all';
+  }
+  function renderFinancialStatements(){
+    var body=$('financial-statements-table-body'); if(!body)return;
+    var q=String(($('financial-statement-search')&&$('financial-statement-search').value)||state.financialStatementSearch||'').trim().toLowerCase();
+    var statement=String(($('financial-statement-filter')&&$('financial-statement-filter').value)||state.financialStatementFilter||'all');
+    var rows=state.financialStatements.filter(function(x){
+      var hay=[x.statement,x.account_code,x.account_name,x.classification_line,x.normal_balance,x.notes].join(' ').toLowerCase();
+      return (!q||hay.indexOf(q)!==-1)&&(statement==='all'||x.statement===statement);
+    }).sort(function(a,b){return crmIdDesc(a.id,b.id);});
+    body.innerHTML=rows.map(function(x){return '<tr><td><strong>'+escapeHtml(x.statement||'—')+'</strong></td><td>'+escapeHtml(x.account_code||'—')+'</td><td>'+escapeHtml(x.account_name||'—')+'</td><td>'+escapeHtml(x.classification_line||'—')+'</td><td>'+escapeHtml(x.normal_balance||'—')+'</td><td>'+escapeHtml(x.notes||'—')+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No financial statement lines found.</td></tr>';
+  }
+
+  async function loadContactMessages() {
+    if(!can('contact-messages','read')) { state.contactMessages=[]; return; }
+    var result=await window.salonSupabase.from('contact_messages')
+      .select('id,name,phone,status,created_at')
+      .order('created_at',{ascending:false});
+    if(result.error) throw result.error;
+    state.contactMessages=result.data||[];
+    renderContactMessages();
+  }
+
+  function renderContactMessages() {
+    var body=$('contact-messages-table-body'); if(!body)return;
+    var query=String(state.contactMessageSearch||'').trim().toLowerCase();
+    var status=String(state.contactMessageStatusFilter||'all');
+    var rows=state.contactMessages.filter(function(item){
+      var matchesQuery=!query || [item.name,item.phone].join(' ').toLowerCase().indexOf(query)!==-1;
+      var matchesStatus=status==='all' || String(item.status||'new')===status;
+      return matchesQuery && matchesStatus;
+    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmIdDesc(a.id,b.id); });
+    body.innerHTML=rows.map(function(item){
+      var itemStatus=String(item.status||'new');
+      var badge=itemStatus==='contacted'?'active':'crm-booking-status-pending';
+      var action=itemStatus==='contacted'
+        ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="new" data-contact-id="'+escapeHtml(item.id)+'">Mark new</button>'
+        : '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="contacted" data-contact-id="'+escapeHtml(item.id)+'">Mark contacted</button>';
+      return '<tr>'+
+        '<td>'+escapeHtml(item.created_at?new Date(item.created_at).toLocaleString():'—')+'</td>'+
+        '<td><strong>'+escapeHtml(item.name||'—')+'</strong></td>'+
+        '<td>'+escapeHtml(item.phone||'—')+'</td>'+
+        '<td><span class="crm-badge '+badge+'">'+escapeHtml(itemStatus==='contacted'?'Contacted':'New')+'</span></td>'+
+        '<td><div class="crm-actions-inline">'+action+
+        (can('contact-messages','delete')?'<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-contact="'+escapeHtml(item.id)+'">Delete</button>':'')+
+        '</div></td></tr>';
+    }).join('') || '<tr><td colspan="5" class="crm-empty">No contact requests found.</td></tr>';
+  }
+
+  async function updateContactMessageStatus(status,id) {
+    if(!requirePermission('contact-messages','update')) return;
+    var result=await window.salonSupabase.from('contact_messages').update({status:status}).eq('id',id);
+    if(result.error){message(result.error.message,'error');return;}
+    var item=state.contactMessages.find(function(x){return String(x.id)===String(id);});
+    if(item)item.status=status;
+    renderContactMessages();
+    message('Contact request updated.','success');
+  }
+
+  async function deleteContactMessage(id) {
+    if(!requirePermission('contact-messages','delete')) return;
+    if(!window.confirm('Delete this contact request? This cannot be undone.')) return;
+    var result=await window.salonSupabase.from('contact_messages').delete().eq('id',id);
+    if(result.error){message(result.error.message,'error');return;}
+    await loadContactMessages();
+    message('Contact request deleted.','success');
+  }
+
   async function loadTranslations() {
     if (!can('translations','read')) { state.translations = []; return; }
     if (!window.salonDatabase || !window.salonDatabase.getTranslations) throw new Error('Translation database is not available.');
     state.translations = await window.salonDatabase.getTranslations();
+    // Backward-compatible fallback: if the legacy FAQ settings table still
+    // contains values and the new translation keys have not been migrated yet,
+    // expose them in the same Key / English / Arabic catalogue.
+    var keys=state.translations.map(function(row){return row.key;});
+    if(keys.indexOf('faq.pageTitle')===-1 || keys.indexOf('faq.pageDescription')===-1){
+      var settingsResult=await window.salonSupabase.from('faq_settings').select('*').eq('id',1).maybeSingle();
+      if(!settingsResult.error && settingsResult.data){
+        var fs=settingsResult.data;
+        if(keys.indexOf('faq.pageTitle')===-1) state.translations.push({key:'faq.pageTitle',en:fs.title_en||'',ar:fs.title_ar||''});
+        if(keys.indexOf('faq.pageDescription')===-1) state.translations.push({key:'faq.pageDescription',en:fs.description_en||'',ar:fs.description_ar||''});
+      }
+    }
     renderTranslations();
   }
 
@@ -2608,6 +2908,7 @@
       });
     });
 
+    rows.sort(function(a,b){ return crmDesc(a.key,b.key); });
     body.innerHTML = rows.map(function(row) {
       return '<tr>' +
         '<td><code>' + escapeHtml(row.key) + '</code></td>' +
@@ -2684,10 +2985,16 @@
     document.querySelectorAll('.crm-view').forEach(function(el){el.classList.add('crm-hidden');});
     var target=$('view-'+view); if(target)target.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
-    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Marketing','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],roles:['Access control','Roles & Permissions']};
-    var t=titles[view]||titles.dashboard;$('view-eyebrow').textContent=t[0];$('view-title').textContent=t[1];
+    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'financial-statements':['Finance','Financial Statements']};
+    var t=titles[view]||titles.dashboard;
+    var eyebrow=$('view-eyebrow');
+    var title=$('view-title');
+    if(eyebrow) eyebrow.textContent=t[0];
+    if(title) title.textContent=t[1];
     if(view==='users') loadUsers().catch(function(e){message(e.message,'error');});
     if(view==='roles') loadRoles().catch(function(e){message(e.message,'error');});
+    if(view==='chart-of-accounts') loadChartOfAccounts().catch(function(e){console.error('Chart of Accounts load failed:',e);message(e.message||'Could not load chart of accounts.','error');});
+    if(view==='financial-statements') loadFinancialStatements().catch(function(e){console.error('Financial Statements load failed:',e);message(e.message||'Could not load financial statements.','error');});
     if(view==='settings') loadApplicationSettings().catch(function(e){message(e.message,'error');});
     if(view==='vouchers') loadVouchers().catch(function(e){message(e.message,'error');});
     if(view==='bookings') loadBookings().catch(function(e){message(e.message,'error');});
@@ -2819,7 +3126,7 @@
     var displayName=u.full_name || u.email || 'this user';
     var confirmed=window.confirm(
       'Delete "'+displayName+'" permanently?\n\n'+
-      'This removes the user from Supabase Authentication and the CRM.'
+      'This permanently removes the user account and CRM access.'
     );
     if(!confirmed) return;
 
@@ -3059,13 +3366,14 @@
       if(can('settings','read')) await loadApplicationSettings();
       if(can('faqs','read')) await loadFaqs();
       if(can('bookings','read')) await loadBookings();
+    if(can('contact-messages','read')) await loadContactMessages();
       message(passwordSetupMode === 'forced' ? 'Password changed successfully. Welcome back to the salon CRM.' : 'Password created. Welcome to the salon CRM.','success');
     } finally {
       if(button){button.disabled=false;button.textContent='Create password →';}
     }
   }
   function clearCrmSessionState() {
-    state.customers=[]; state.categories=[]; state.services=[]; state.vouchers=[]; state.users=[]; state.roles=[]; state.permissions=[]; state.access={}; state.rolePermissions=[]; state.bookings=[]; state.faqs=[]; state.faqSettings=null; state.currentRole=null; state.currentUserId=null; state.currentView='dashboard'; state.mustChangePassword=false;
+    state.customers=[]; state.categories=[]; state.services=[]; state.vouchers=[]; state.users=[]; state.roles=[]; state.permissions=[]; state.access={}; state.rolePermissions=[]; state.bookings=[]; state.faqs=[]; state.translations=[]; state.contactMessages=[]; state.contactMessageSearch=''; state.contactMessageStatusFilter='all'; state.currentRole=null; state.currentUserId=null; state.currentView='dashboard'; state.mustChangePassword=false;
     document.querySelectorAll('.crm-view').forEach(function(el){ el.classList.add('crm-hidden'); });
     var dashboard=$('view-dashboard'); if(dashboard) dashboard.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(el){ el.classList.remove('active'); });
@@ -3110,6 +3418,7 @@
     if(can('settings','read')) await loadApplicationSettings();
     if(can('faqs','read')) await loadFaqs();
     if(can('bookings','read')) await loadBookings();
+    if(can('contact-messages','read')) await loadContactMessages();
     // Restore the user's last authorized view before the app becomes visible.
     restoreLastView();
     showApp();
@@ -3142,13 +3451,18 @@
   function showApp(){$('crm-login').classList.add('crm-hidden');$('crm-app').classList.remove('crm-hidden');applyRoleVisibility();}
 
   document.addEventListener('DOMContentLoaded',async function(){
-    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-settings-form').addEventListener('submit',saveFaqSettings);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);$('customer-detail-close').addEventListener('click',closeCustomerDetails);$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;var rows=document.querySelectorAll('[data-loyalty-reward-row]');if(rows.length<=1){message('Keep at least one loyalty reward.','error');return;}btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-header-image').addEventListener('click',function(){uploadBrandingImage('header_image','header-image-file').catch(function(e){message(e.message,'error');});});$('delete-header-image').addEventListener('click',function(){deleteBrandingImage('header_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
+    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);$('customer-detail-close').addEventListener('click',closeCustomerDetails);$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;var rows=document.querySelectorAll('[data-loyalty-reward-row]');if(rows.length<=1){message('Keep at least one loyalty reward.','error');return;}btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-header-image').addEventListener('click',function(){uploadBrandingImage('header_image','header-image-file').catch(function(e){message(e.message,'error');});});$('delete-header-image').addEventListener('click',function(){deleteBrandingImage('header_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
     WEBSITE_IMAGE_SLOTS.forEach(function(slot){
       var uploadButton = $(slot.uploadId);
       if (uploadButton) uploadButton.addEventListener('click',function(){uploadWebsiteImage(slot).catch(function(e){message(e.message,'error');});});
     });
     $('user-form').addEventListener('submit',inviteUser);$('user-cancel').addEventListener('click',function(){$('user-form-card').classList.add('crm-hidden');});
-    $('user-edit-form').addEventListener('submit',saveUser);$('user-edit-cancel').addEventListener('click',function(){$('user-edit-card').classList.add('crm-hidden');state.editingUserId=null;});
+    $('user-edit-form').addEventListener('submit',saveUser);
+    if($('user-search')) $('user-search').addEventListener('input',function(e){state.userSearch=e.target.value;renderUsers();});
+    if($('user-role-filter')) $('user-role-filter').addEventListener('change',function(e){state.userRoleFilter=e.target.value;renderUsers();});
+    if($('user-status-filter')) $('user-status-filter').addEventListener('change',function(e){state.userStatusFilter=e.target.value;renderUsers();});
+    if($('role-search')) $('role-search').addEventListener('input',function(e){state.roleSearch=e.target.value;renderRoles();});
+    if($('role-type-filter')) $('role-type-filter').addEventListener('change',function(e){state.roleTypeFilter=e.target.value;renderRoles();});$('user-edit-cancel').addEventListener('click',function(){$('user-edit-card').classList.add('crm-hidden');state.editingUserId=null;});
     var tempGenerate=$('generate-temporary-password'); if(tempGenerate) tempGenerate.addEventListener('click',generateTemporaryPassword); var tempSet=$('set-temporary-password'); if(tempSet) tempSet.addEventListener('click',setTemporaryPassword);
     var roleForm=$('role-form'); if(roleForm) roleForm.addEventListener('submit',saveRole); var roleCancel=$('role-cancel'); if(roleCancel) roleCancel.addEventListener('click',function(){$('role-form-card').classList.add('crm-hidden');state.editingRoleId=null;}); var newRoleTop=$('new-role-top'); if(newRoleTop) newRoleTop.addEventListener('click',startRoleCreate); var rolesTableBody=$('roles-table-body'); if(rolesTableBody) rolesTableBody.addEventListener('click',function(e){var edit=e.target.closest('[data-edit-role]');if(edit)editRole(edit.getAttribute('data-edit-role'));var del=e.target.closest('[data-delete-role]');if(del)deleteRole(del.getAttribute('data-delete-role'));}); var roleSelectAll=$('role-select-all'); if(roleSelectAll) roleSelectAll.addEventListener('change',function(e){document.querySelectorAll('[data-role-permission]').forEach(function(c){c.checked=e.target.checked;});});
     $('password-setup-form').addEventListener('submit',finishPasswordSetup);
@@ -3163,12 +3477,43 @@
     });
     $('logout').addEventListener('click',signOut);
     document.querySelectorAll('.crm-nav-item').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view'));});});
+    if($('category-search')) $('category-search').addEventListener('input',renderCategories);
+    if($('category-status-filter')) $('category-status-filter').addEventListener('change',renderCategories);
+    if($('service-search')) $('service-search').addEventListener('input',renderServices);
+    if($('service-category-filter')) $('service-category-filter').addEventListener('change',renderServices);
+    if($('service-status-filter')) $('service-status-filter').addEventListener('change',renderServices);
+    if($('service-category')) $('service-category').addEventListener('change',generateServiceSku);
+    if($('voucher-search')) $('voucher-search').addEventListener('input',renderVouchers);
+    if($('voucher-status-filter')) $('voucher-status-filter').addEventListener('change',renderVouchers);
+
     document.querySelectorAll('[data-view-target]').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view-target'));});});
     $('mobile-menu').addEventListener('click',function(){$('crm-sidebar').classList.toggle('open');});
     $('bookings-refresh').addEventListener('click',function(){loadBookings().catch(function(e){message(e.message,'error');});});
+    if($('chart-account-search')) $('chart-account-search').addEventListener('input',function(e){state.chartAccountSearch=e.target.value;renderChartOfAccounts();});
+    if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});
+    if($('chart-type-filter')) $('chart-type-filter').addEventListener('change',function(e){state.chartTypeFilter=e.target.value;renderChartOfAccounts();});
+    if($('chart-account-add')) $('chart-account-add').addEventListener('click',function(){openChartAccountForm(null);});
+    if($('chart-account-cancel')) $('chart-account-cancel').addEventListener('click',resetChartAccountForm);
+    if($('chart-account-cancel-2')) $('chart-account-cancel-2').addEventListener('click',resetChartAccountForm);
+    if($('chart-account-form')) $('chart-account-form').addEventListener('submit',saveChartAccount);
+    if($('chart-of-accounts-table-body')) $('chart-of-accounts-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-chart-account]'); if(edit){openChartAccountForm(edit.getAttribute('data-edit-chart-account'));return;} var del=e.target.closest('[data-delete-chart-account]'); if(del) deleteChartAccount(del.getAttribute('data-delete-chart-account'));});
+    if($('financial-statement-search')) $('financial-statement-search').addEventListener('input',function(e){state.financialStatementSearch=e.target.value;renderFinancialStatements();});
+    if($('financial-statement-filter')) $('financial-statement-filter').addEventListener('change',function(e){state.financialStatementFilter=e.target.value;renderFinancialStatements();});
+    if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});
+    if($('chart-type-filter')) $('chart-type-filter').addEventListener('change',function(e){state.chartTypeFilter=e.target.value;renderChartOfAccounts();});
+    if($('contact-messages-refresh')) $('contact-messages-refresh').addEventListener('click',function(){loadContactMessages().catch(function(e){message(e.message,'error');});});
+    if($('contact-message-search')) $('contact-message-search').addEventListener('input',function(e){state.contactMessageSearch=e.target.value;renderContactMessages();});
+    if($('contact-message-status-filter')) $('contact-message-status-filter').addEventListener('change',function(e){state.contactMessageStatusFilter=e.target.value;renderContactMessages();});
+    if($('contact-messages-table-body')) $('contact-messages-table-body').addEventListener('click',function(e){
+      var button=e.target.closest('[data-contact-status]');
+      if(button) updateContactMessageStatus(button.getAttribute('data-contact-status'), button.getAttribute('data-contact-id'));
+      var del=e.target.closest('[data-delete-contact]');
+      if(del) deleteContactMessage(del.getAttribute('data-delete-contact'));
+    });
     $('booking-search').addEventListener('input',function(e){state.bookingSearch=e.target.value;renderBookings();});
     $('booking-date-filter').addEventListener('change',function(e){state.bookingDateFilter=e.target.value;renderBookings();});
-    document.querySelectorAll('[data-booking-filter]').forEach(function(b){b.addEventListener('click',function(){state.bookingFilter=b.getAttribute('data-booking-filter');renderBookings();});});
+    if($('booking-status-filter')) $('booking-status-filter').addEventListener('change',function(e){state.bookingFilter=e.target.value;renderBookings();});
+    document.querySelectorAll('[data-booking-filter]').forEach(function(b){b.addEventListener('click',function(){state.bookingFilter=b.getAttribute('data-booking-filter');if($('booking-status-filter'))$('booking-status-filter').value=state.bookingFilter;renderBookings();});});
     $('bookings-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-view-booking]');if(b)renderBookingDetail(b.getAttribute('data-view-booking'));});
     document.querySelectorAll('[data-close-booking]').forEach(function(el){el.addEventListener('click',closeBookingDetail);});
     $('booking-detail-content').addEventListener('click',function(e){
@@ -3248,6 +3593,7 @@
         if(can('settings','read')) await loadApplicationSettings();
         if(can('faqs','read')) await loadFaqs();
         if(can('bookings','read')) await loadBookings();
+    if(can('contact-messages','read')) await loadContactMessages();
         // Restore the user's last authorized view BEFORE revealing the CRM.
         // This prevents a refresh from briefly showing the dashboard.
         restoreLastView();
@@ -3289,7 +3635,7 @@
   function renderBookingRules() {
     var body=$('booking-rules-body'); if(!body)return;
     var rows=bookingConfigState.rules.slice().sort(function(a,b){
-      return String(a.starts_at||'').localeCompare(String(b.starts_at||''));
+      return String(b.starts_at||'').localeCompare(String(a.starts_at||''));
     });
     if(!rows.length){
       body.innerHTML='<tr><td colspan="2" class="crm-empty">No booking blocks configured.</td></tr>';
