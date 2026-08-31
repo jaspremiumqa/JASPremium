@@ -46,7 +46,9 @@
 
   <main id="crm-app" class="crm-hidden">
     <div class="crm-layout">
+      <div class="crm-sidebar-backdrop" id="crm-sidebar-backdrop"></div>
       <aside class="crm-sidebar" id="crm-sidebar">
+        <button type="button" class="crm-sidebar-close" id="crm-sidebar-close" aria-label="Close menu">×</button>
         <div class="crm-side-brand"><div class="crm-brand-mark crm-brand-mark-image"><img id="crm-sidebar-logo" alt="Website logo" hidden></div><div><strong id="crm-sidebar-website-name">Loading…</strong><span>Management</span></div></div>
         <nav class="crm-nav">
           <button class="crm-nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
@@ -551,7 +553,6 @@
                 <button id="translation-add-btn" type="button" class="crm-btn crm-btn-secondary">+ Add key</button>
               </div>
             </div>
-            <p class="crm-small">FAQ page title and description are managed here using the <code>faq.pageTitle</code> and <code>faq.pageDescription</code> keys.</p>
             <div id="translation-form-card" class="crm-subcard crm-hidden" style="margin-top:16px">
               <form id="translation-form" class="crm-standard-form">
                 <div class="crm-form-grid">

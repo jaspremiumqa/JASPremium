@@ -3630,7 +3630,18 @@
     if($('voucher-status-filter')) $('voucher-status-filter').addEventListener('change',renderVouchers);
 
     document.querySelectorAll('[data-view-target]').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view-target'));});});
-    $('mobile-menu').addEventListener('click',function(){$('crm-sidebar').classList.toggle('open');});
+    function setCrmMobileMenu(open){
+      var sidebar=$('crm-sidebar'),backdrop=$('crm-sidebar-backdrop');
+      if(sidebar) sidebar.classList.toggle('open',!!open);
+      if(backdrop) backdrop.classList.toggle('open',!!open);
+      document.body.classList.toggle('crm-menu-open',!!open);
+      if($('mobile-menu')) $('mobile-menu').setAttribute('aria-expanded',open?'true':'false');
+    }
+    $('mobile-menu').addEventListener('click',function(){setCrmMobileMenu(!$('crm-sidebar').classList.contains('open'));});
+    if($('crm-sidebar-close')) $('crm-sidebar-close').addEventListener('click',function(){setCrmMobileMenu(false);});
+    if($('crm-sidebar-backdrop')) $('crm-sidebar-backdrop').addEventListener('click',function(){setCrmMobileMenu(false);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape') setCrmMobileMenu(false);});
+    document.querySelectorAll('.crm-nav-item,.crm-nav-link').forEach(function(item){item.addEventListener('click',function(){if(window.innerWidth<=760) setCrmMobileMenu(false);});});
     $('bookings-refresh').addEventListener('click',function(){loadBookings().catch(function(e){message(e.message,'error');});});
     if($('chart-account-search')) $('chart-account-search').addEventListener('input',function(e){state.chartAccountSearch=e.target.value;renderChartOfAccounts();});
     if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});

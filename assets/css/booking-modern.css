@@ -367,3 +367,112 @@ body.booking-modern-page .booking-app {
     max-width: 62%;
   }
 }
+
+
+/* ------------------------------------------------------------------
+   Mobile-first end-user simplification
+   Keep the booking flow easy to scan and reduce vertical stacking.
+------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  body.booking-modern-page { font-size: 14px; }
+  body.booking-modern-page .booking-app { padding: 12px 10px 92px; }
+  body.booking-modern-page .booking-shell { width: 100%; }
+
+  /* The desktop flow labels are too busy on a phone. Show a compact stepper. */
+  .booking-flow-indicator { gap: 6px; margin: 0 auto 10px; padding: 2px 0; }
+  .booking-flow-step { flex: 0 0 auto; }
+  .booking-flow-step > span { width: 24px; height: 24px; font-size: 11px; }
+  .booking-flow-step small { display: none; }
+  .booking-flow-indicator > i { width: 18px; }
+  .booking-topbar { min-height: 18px; margin: 0 0 6px; justify-content: center; }
+  .booking-step-label { font-size: 10px; color: #888 !important; }
+  .booking-progress { display: none !important; }
+
+  .booking-heading { margin: 0 auto 18px; max-width: 100%; }
+  .booking-eyebrow { font-size: 9px; margin-bottom: 6px; }
+  .booking-heading h1 { font-size: 24px; line-height: 1.2; margin-bottom: 7px; }
+  .booking-heading p { font-size: 13px; line-height: 1.5; }
+
+  /* Services: two compact columns instead of a long one-card-per-row list. */
+  .booking-categories { gap: 10px; }
+  .booking-category { padding: 11px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.035); }
+  .booking-category-head { margin-bottom: 9px; }
+  .booking-category-head > div { min-width: 0; }
+  .category-kicker { display: none; }
+  .booking-category h2 { font-size: 16px; line-height: 1.2; }
+  .category-count { width: 24px; height: 24px; font-size: 10px; flex: 0 0 auto; }
+  .booking-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .booking-service-card,
+  [dir="rtl"] .booking-service-card {
+    min-height: 68px;
+    padding: 10px 9px 10px 34px;
+    border-radius: 11px;
+    gap: 5px;
+  }
+  [dir="rtl"] .booking-service-card { padding: 10px 34px 10px 9px; }
+  .service-check { left: 9px; width: 19px; height: 19px; font-size: 11px; }
+  [dir="rtl"] .service-check { left: auto; right: 9px; }
+  .service-card-content { gap: 2px; min-width: 0; }
+  .service-card-content strong { font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+  .service-card-content small { font-size: 10px; line-height: 1.2; }
+  .service-price { font-size: 11px; line-height: 1.2; }
+
+  /* Keep the action area reachable without consuming half the screen. */
+  .booking-bottom {
+    margin: 12px -10px -92px;
+    padding: 10px;
+    gap: 8px;
+  }
+  .booking-mini-total { font-size: 11px; gap: 1px; }
+  .booking-mini-total strong { font-size: 17px; }
+  .booking-primary, .booking-secondary { min-width: 0; padding: 11px 16px; font-size: 13px; }
+
+  /* Date picker: compact but still comfortable to tap. */
+  .booking-summary-pill { padding: 10px 12px; margin-bottom: 12px; border-radius: 11px; }
+  .booking-selected-services { padding: 9px 12px; margin: -3px 0 12px; border-radius: 11px; }
+  .booking-calendar-head { margin: 10px 0; gap: 12px; }
+  .booking-calendar-head strong { min-width: 125px; font-size: 16px; }
+  .calendar-arrow { width: 34px; height: 34px; font-size: 21px; }
+  .booking-calendar { gap: 3px; padding: 7px; border-radius: 13px; }
+  .calendar-day, .calendar-empty { min-height: 43px; }
+  .calendar-day { border-radius: 8px; font-size: 12px; }
+  .calendar-day small { font-size: 8px; }
+  .calendar-weekday { padding: 3px 1px; font-size: 8px; }
+  .booking-times-title { margin: 18px 0 9px; font-size: 13px; }
+  .booking-times { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+  .time-slot { padding: 9px 4px; border-radius: 10px; }
+  .time-slot strong { font-size: 13px; }
+  .time-slot small { font-size: 9px; }
+
+  /* Review: one compact card flow instead of large desktop panels. */
+  .booking-review-grid { gap: 9px; }
+  .booking-review-card { padding: 14px; border-radius: 14px; }
+  .review-card-heading { padding-bottom: 9px; margin-bottom: 3px; font-size: 13px; }
+  .timeline-item { grid-template-columns: 58px 14px minmax(0,1fr); gap: 7px; min-height: 62px; }
+  .timeline-time { font-size: 11px; }
+  .timeline-time small, .timeline-service small { font-size: 9px; }
+  .timeline-service strong { font-size: 12px; }
+  .timeline-dot:after { height: 54px; }
+  .review-service { padding: 9px 0; font-size: 12px; }
+  .review-total-row { padding-top: 12px; font-size: 15px; }
+  .booking-payment-note { margin-top: 10px; padding: 11px 12px; border-radius: 12px; font-size: 12px; }
+
+  /* Details: comfortable inputs, but no oversized card. */
+  .booking-form { padding: 15px; border-radius: 14px; }
+  .booking-form-grid { gap: 12px; }
+  .booking-form label { gap: 6px; font-size: 12px; }
+  .booking-form input, .booking-form textarea { padding: 11px 12px; border-radius: 10px; font-size: 16px; }
+  .booking-final-summary { margin: 14px 0; padding: 12px; }
+  .booking-final-summary > div { font-size: 12px; padding: 6px 0; }
+  .booking-final-summary .final-total { font-size: 16px; }
+  .booking-submit { margin-top: 0; }
+}
+
+@media (max-width: 389px) {
+  /* Very narrow phones: retain a single column so labels never become cramped. */
+  .booking-service-grid { grid-template-columns: 1fr; }
+  .booking-service-card,
+  [dir="rtl"] .booking-service-card { min-height: 62px; }
+  .booking-times { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .booking-heading h1 { font-size: 22px; }
+}
