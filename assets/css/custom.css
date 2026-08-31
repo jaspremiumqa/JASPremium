@@ -507,3 +507,17 @@ div#date-picker-container {
   max-width: 56px;
   max-height: 40px;
 }
+
+/* Desktop header: hide the site logo/brand mark and let the controls use the full header width. */
+@media (min-width: 992px) {
+  .rd-navbar-sidebar-linked .page-header-perspective .page-header-left {
+    display: none !important;
+  }
+
+  .rd-navbar-sidebar-linked .page-header-perspective .page-header-right {
+    flex-basis: 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+}
