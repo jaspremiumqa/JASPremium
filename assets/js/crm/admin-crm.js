@@ -2,7 +2,7 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], editingMappingId:null, accountingPeriods:[], editingPeriodId:null, contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
@@ -107,7 +107,7 @@
     // Chart of Accounts is a read-only reference catalogue for administrators.
     // Keep it visible to administrators even on deployments that predate its
     // permission rows; the migration still adds the full permission set for roles.
-    if (['chart-of-accounts','financial-statements'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
+    if (['chart-of-accounts','financial-statements','audit-trail'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
     return !!state.access[section + '.' + action];
   }
   function requirePermission(section, action, messageText) {
@@ -116,7 +116,7 @@
     return false;
   }
   var ROLE_PERMISSION_SECTIONS = [
-    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],
+    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],['audit-trail','Audit Trail'],
     ['bookings','Bookings'],['booking-config','Booking Setup'],['contact-messages','Contact Us'],['customers','Customers'],
     ['settings','Settings'],['translations','Translation'],['users','Users & Access'],['roles','Roles & Permissions']
   ];
@@ -3048,9 +3048,14 @@
   async function loadJournalEntries(){
     if(!can('journal-entries','read'))return;
     var q=String(($('journal-search')&&$('journal-search').value)||'').trim().toLowerCase(), st=($('journal-status-filter')||{}).value||'all', from=($('journal-date-from')||{}).value||'', to=($('journal-date-to')||{}).value||'';
-    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit').order('id',{ascending:false});
+    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit,journal_entry_lines(account_code)').order('id',{ascending:false});
     if(r.error){message(r.error.message,'error');return;}
-    var rows=(r.data||[]).filter(function(x){var h=[x.entry_no,x.reference,x.description].join(' ').toLowerCase();return(!q||h.includes(q))&&(st==='all'||x.status===st)&&(!from||x.entry_date>=from)&&(!to||x.entry_date<=to);});
+    var rows=(r.data||[]).filter(function(x){
+      var lineCodes=(x.journal_entry_lines||[]).map(function(l){return l.account_code;});
+      var lineNames=lineCodes.map(function(code){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(code);});return a?financeAccountLabel(a):'';});
+      var h=[x.entry_no,x.reference,x.description].concat(lineCodes,lineNames).join(' ').toLowerCase();
+      return(!q||h.includes(q))&&(st==='all'||x.status===st)&&(!from||x.entry_date>=from)&&(!to||x.entry_date<=to);
+    });
     var body=$('journal-entries-body');if(!body)return;
     body.innerHTML=rows.map(function(x){var acts='';if(x.status==='draft'&&can('journal-entries','update'))acts+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="'+x.id+'">Edit</button> ';if(x.status==='draft'&&can('journal-entries','delete'))acts+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="'+x.id+'">Delete</button> ';if(x.status==='draft'&&can('journal-entries','post'))acts+='<button class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="'+x.id+'">Post</button>';return '<tr><td><strong>'+escapeHtml(x.entry_no||('JE-'+x.id))+'</strong></td><td>'+escapeHtml(x.entry_date||'')+'</td><td>'+escapeHtml(x.reference||'—')+'</td><td>'+escapeHtml(x.description||'')+'</td><td>'+financeMoney(x.total_debit)+'</td><td>'+escapeHtml(x.status||'')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
   }
@@ -3072,7 +3077,7 @@
     var from=($('trial-date-from')||{}).value||'',to=($('trial-date-to')||{}).value||'';
     var r=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');if(r.error){message(r.error.message,'error');return;}
     var sums={};(r.data||[]).filter(function(x){var d=x.journal_entries.entry_date;return(!from||d>=from)&&(!to||d<=to);}).forEach(function(x){sums[x.account_code]=sums[x.account_code]||{d:0,c:0};sums[x.account_code].d+=Number(x.debit||0);sums[x.account_code].c+=Number(x.credit||0);});
-    var rows=state.chartOfAccounts.filter(function(a){return sums[a.account_code];}).map(function(a){var s=sums[a.account_code];return {a:a,d:s.d,c:s.c,n:s.d-s.c};}).sort(function(x,y){return crmDesc(x.a.account_code,y.a.account_code);});
+    var rows=state.chartOfAccounts.filter(function(a){return a.active!==false&&String(a.account_type||'').toLowerCase()!=='header';}).map(function(a){var s=sums[a.account_code]||{d:0,c:0};return {a:a,d:s.d,c:s.c,n:s.d-s.c};}).sort(function(x,y){return crmDesc(x.a.account_code,y.a.account_code);});
     var td=rows.reduce(function(n,x){return n+x.d;},0),tc=rows.reduce(function(n,x){return n+x.c;},0);var st=$('trial-balance-status');if(st)st.textContent='Total debits: '+financeMoney(td)+' · Total credits: '+financeMoney(tc)+' · '+(Math.abs(td-tc)<0.005?'Balanced ✓':'Difference: '+financeMoney(Math.abs(td-tc)));
     var body=$('trial-balance-body');if(body)body.innerHTML=rows.map(function(x){return '<tr><td>'+escapeHtml(x.a.account_code)+'</td><td>'+escapeHtml(x.a.account_name||x.a.major_account||'')+'</td><td>'+escapeHtml(x.a.account_type||'')+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No posted transactions in this period.</td></tr>';
   }
@@ -3096,17 +3101,321 @@
   async function saveMapping(e){e.preventDefault();var id=state.editingMappingId;if(!requirePermission('statement-mapping',id?'update':'create'))return;var payload={statement:$('map-statement').value,account_code:$('map-account').value,section_line:$('map-section').value.trim(),display_order:Number($('map-order').value||1),active:$('map-active').checked};var r=id?await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id',id):await window.salonSupabase.from('financial_statement_mappings').insert(payload);if(r.error){message(r.error.message,'error');return;}$('statement-map-form-card').classList.add('crm-hidden');await loadStatementMappings();message('Statement mapping saved.','success');}
   async function deleteMapping(id){if(!requirePermission('statement-mapping','delete'))return;if(!confirm('Delete this statement mapping?'))return;var r=await window.salonSupabase.from('financial_statement_mappings').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadStatementMappings();message('Mapping deleted.','success');}}
 
+  function financeDateInRange(date,from,to){ return (!from||date>=from)&&(!to||date<=to); }
+  function financeNormalAmount(account,debit,credit){
+    var normal=String(account&&account.typical_balance||'').toLowerCase();
+    if(normal.indexOf('credit')!==-1 && normal.indexOf('debit')===-1) return Number(credit||0)-Number(debit||0);
+    return Number(debit||0)-Number(credit||0);
+  }
+  function financeRowsByAccount(lines,from,to,cumulative){
+    var sums={};
+    (lines||[]).filter(function(x){
+      var d=x.journal_entries&&x.journal_entries.entry_date;
+      return cumulative ? (!to||d<=to) : financeDateInRange(d,from,to);
+    }).forEach(function(x){
+      var code=String(x.account_code||'');
+      sums[code]=sums[code]||{d:0,c:0};
+      sums[code].d+=Number(x.debit||0); sums[code].c+=Number(x.credit||0);
+    });
+    return sums;
+  }
+  function financePlCalculation(mappings,sums){
+    var totals={revenue:0,discounts:0,cogs:0,opex:0,otherIncome:0,financeCost:0,tax:0,otherExpense:0};
+    (mappings||[]).forEach(function(m){
+      var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
+      var ss=sums[m.account_code]||{d:0,c:0};
+      var t=String(a.account_type||'').toLowerCase();
+      var amount=0;
+      if(t==='revenue') totals.revenue += Number(ss.c)-Number(ss.d);
+      else if(t==='contra revenue') totals.discounts += Number(ss.d)-Number(ss.c);
+      else if(t==='cost of sales') totals.cogs += Number(ss.d)-Number(ss.c);
+      else if(t==='operating expense') totals.opex += Number(ss.d)-Number(ss.c);
+      else if(t==='other income') totals.otherIncome += Number(ss.c)-Number(ss.d);
+      else if(t==='finance cost') totals.financeCost += Number(ss.d)-Number(ss.c);
+      else if(t==='tax expense') totals.tax += Number(ss.d)-Number(ss.c);
+      else if(t==='other expense') totals.otherExpense += Number(ss.d)-Number(ss.c);
+      else if(t==='other income/expense') {
+        amount=Number(ss.c)-Number(ss.d);
+        if(amount>=0) totals.otherIncome += amount; else totals.otherExpense += Math.abs(amount);
+      }
+    });
+    totals.grossProfit=totals.revenue-totals.discounts-totals.cogs;
+    totals.operatingProfit=totals.grossProfit-totals.opex;
+    totals.profitBeforeTax=totals.operatingProfit+totals.otherIncome-totals.financeCost-totals.otherExpense;
+    totals.netProfit=totals.profitBeforeTax-totals.tax;
+    return totals;
+  }
+  function financeStatementRow(section,account,amount,kind){
+    return {section:section||'',account:account||'',amount:Number(amount||0),kind:kind||'detail'};
+  }
+  function financeRenderReportRows(rows){
+    return rows.map(function(x){
+      var cls=x.kind==='total'?' class="crm-finance-total-row"':(x.kind==='section'?' class="crm-finance-section-row"':'');
+      var account=x.account||'';
+      return '<tr'+cls+'><td>'+escapeHtml(x.section||'')+'</td><td>'+escapeHtml(account)+'</td><td></td><td></td><td>'+financeMoney(x.amount)+'</td></tr>';
+    }).join('');
+  }
   async function loadFinancialReport(){
     if(!can('financial-statements','read'))return;
     var statement=($('report-statement-select')||{}).value||'Profit & Loss',from=($('report-date-from')||{}).value||'',to=($('report-date-to')||{}).value||'';
-    var q=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');if(q.error){message(q.error.message,'error');return;}
-    var sums={};(q.data||[]).filter(function(x){var d=x.journal_entries.entry_date;return(!from||d>=from)&&(!to||d<=to);}).forEach(function(x){sums[x.account_code]=sums[x.account_code]||{d:0,c:0};sums[x.account_code].d+=Number(x.debit||0);sums[x.account_code].c+=Number(x.credit||0);});
-    var m=await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement',statement).eq('active',true).order('display_order');if(m.error){message(m.error.message,'error');return;}
-    var rows=(m.data||[]).map(function(x){var a=state.chartOfAccounts.find(function(y){return y.account_code===x.account_code;})||{};var ss=sums[x.account_code]||{d:0,c:0};return {m:x,a:a,d:ss.d,c:ss.c,n:ss.d-ss.c};});
-    var total=rows.reduce(function(n,x){return n+x.n;},0);var sum=$('financial-report-summary');if(sum)sum.textContent=statement+' · '+(from||'Beginning')+' to '+(to||'Today')+' · Net '+financeMoney(total);
-    var body=$('financial-report-body');if(body)body.innerHTML=rows.map(function(x){return '<tr><td><strong>'+escapeHtml(x.m.section_line)+'</strong></td><td>'+escapeHtml(x.a.account_code||x.m.account_code)+' — '+escapeHtml(x.a.account_name||x.a.major_account||'')+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No mapped accounts or posted transactions found.</td></tr>';
+    var q=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');
+    if(q.error){message(q.error.message,'error');return;}
+    var m=await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement',statement).eq('active',true).order('display_order').order('account_code');
+    if(m.error){message(m.error.message,'error');return;}
+    var mappings=m.data||[], rows=[], summary='', title=statement;
+
+    if(statement==='Trial Balance'){
+      var sumsTB=financeRowsByAccount(q.data,from,to,false);
+      var tb=state.chartOfAccounts.filter(function(a){return a.active!==false&&String(a.account_type||'').toLowerCase()!=='header';}).map(function(a){
+        var ss=sumsTB[a.account_code]||{d:0,c:0}; return {a:a,d:ss.d,c:ss.c,n:ss.d-ss.c};
+      }).sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);});
+      var td=tb.reduce(function(n,x){return n+x.d;},0),tc=tb.reduce(function(n,x){return n+x.c;},0);
+      summary='Trial Balance · '+(from||'Beginning')+' to '+(to||'Today')+' · Debits '+financeMoney(td)+' · Credits '+financeMoney(tc)+' · '+(Math.abs(td-tc)<0.005?'Balanced ✓':'Difference '+financeMoney(Math.abs(td-tc)));
+      rows=tb.map(function(x){return {section:x.a.account_type,account:x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),d:x.d,c:x.c,n:x.n};});
+      var body=$('financial-report-body'); if(body) body.innerHTML=rows.map(function(x){return '<tr><td>'+escapeHtml(x.section)+'</td><td>'+escapeHtml(x.account)+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounts found.</td></tr>';
+      var sumEl=$('financial-report-summary');if(sumEl)sumEl.textContent=summary;return;
+    }
+
+    var cumulative=statement==='Balance Sheet';
+    var sums=financeRowsByAccount(q.data,from,to,cumulative);
+
+    if(statement==='Profit & Loss'){
+      var pl=financePlCalculation(mappings,sums);
+      function plDetails(type,positive){
+        return mappings.filter(function(m){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};return String(a.account_type||'').toLowerCase()===type;}).sort(function(a,b){return Number(a.display_order||0)-Number(b.display_order||0)||crmDesc(a.account_code,b.account_code);}).map(function(m){
+          var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{},ss=sums[m.account_code]||{d:0,c:0};
+          var amount=positive?Number(ss.c)-Number(ss.d):Number(ss.d)-Number(ss.c);
+          return financeStatementRow('',m.account_code+' — '+(a.account_name||a.major_account||''),positive?amount:-amount,'detail');
+        });
+      }
+      rows=[financeStatementRow('REVENUE','REVENUE',pl.revenue,'section')]
+        .concat(plDetails('revenue',true))
+        .concat([financeStatementRow('','Less: Discounts',-pl.discounts,'detail'),financeStatementRow('','Net Revenue',pl.revenue-pl.discounts,'total'),financeStatementRow('COST OF SALES','COST OF SALES',-pl.cogs,'section')])
+        .concat(plDetails('cost of sales',false))
+        .concat([financeStatementRow('','Gross Profit',pl.grossProfit,'total'),financeStatementRow('OPERATING EXPENSES','OPERATING EXPENSES',-pl.opex,'section')])
+        .concat(plDetails('operating expense',false))
+        .concat([financeStatementRow('','Operating Profit / (Loss)',pl.operatingProfit,'total'),financeStatementRow('OTHER INCOME / EXPENSE','Other Income',pl.otherIncome,'detail'),financeStatementRow('','Finance Costs',-pl.financeCost,'detail'),financeStatementRow('','Other Expenses',-pl.otherExpense,'detail'),financeStatementRow('','Profit Before Tax',pl.profitBeforeTax,'total'),financeStatementRow('','Income Tax Expense',-pl.tax,'detail'),financeStatementRow('','NET PROFIT / (LOSS)',pl.netProfit,'total')]);
+      summary='Profit & Loss · '+(from||'Beginning')+' to '+(to||'Today')+' · Net Profit / (Loss) '+financeMoney(pl.netProfit);
+    } else if(statement==='Balance Sheet'){
+      var bsGroups={};
+      mappings.forEach(function(m){
+        var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
+        var type=String(a.account_type||'').toLowerCase();
+        if(type==='header')return;
+        var ss=sums[m.account_code]||{d:0,c:0};
+        var amount=financeNormalAmount(a,ss.d,ss.c);
+        var key=type.indexOf('asset')>=0?'Assets':(type.indexOf('liability')>=0?'Liabilities':(type==='equity'?'Equity':'Other'));
+        bsGroups[key]=bsGroups[key]||[];bsGroups[key].push({m:m,a:a,amount:amount});
+      });
+      var assets=(bsGroups.Assets||[]).concat(bsGroups.Other||[]).filter(function(x){return String(x.a.account_type||'').toLowerCase().indexOf('asset')>=0;});
+      var liabilities=bsGroups.Liabilities||[], equity=bsGroups.Equity||[];
+      var plMap=mappings; var pl=financePlCalculation((await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement','Profit & Loss').eq('active',true)).data||[],sums);
+      var assetTotal=assets.reduce(function(n,x){return n+x.amount;},0),liabilityTotal=liabilities.reduce(function(n,x){return n+x.amount;},0);
+      var equityRaw=equity.filter(function(x){return String(x.a.account_code)!=='3500';}).reduce(function(n,x){return n+x.amount;},0);
+      var current3500=equity.find(function(x){return String(x.a.account_code)==='3500';});
+      var currentProfit=(current3500&&Math.abs(current3500.amount)>0.005)?current3500.amount:pl.netProfit;
+      var equityTotal=equityRaw+currentProfit;
+      rows.push(financeStatementRow('ASSETS','ASSETS',assetTotal,'section'));
+      assets.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
+      rows.push(financeStatementRow('','Total Assets',assetTotal,'total'));
+      rows.push(financeStatementRow('LIABILITIES','LIABILITIES',liabilityTotal,'section'));
+      liabilities.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
+      rows.push(financeStatementRow('','Total Liabilities',liabilityTotal,'total'));
+      rows.push(financeStatementRow('EQUITY','EQUITY',equityTotal,'section'));
+      equity.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){if(String(x.a.account_code)!=='3500')rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
+      rows.push(financeStatementRow('','Current Period Profit / (Loss)',currentProfit,'detail'));
+      rows.push(financeStatementRow('','Total Equity',equityTotal,'total'));
+      rows.push(financeStatementRow('','LIABILITIES + EQUITY',liabilityTotal+equityTotal,'total'));
+      rows.push(financeStatementRow('','Balance Check (Assets - Liabilities - Equity)',assetTotal-liabilityTotal-equityTotal,'total'));
+      summary='Balance Sheet · through '+(to||'Today')+' · Assets '+financeMoney(assetTotal)+' · Liabilities '+financeMoney(liabilityTotal)+' · Equity '+financeMoney(equityTotal)+' · '+(Math.abs(assetTotal-liabilityTotal-equityTotal)<0.005?'Balanced ✓':'Out of balance '+financeMoney(Math.abs(assetTotal-liabilityTotal-equityTotal)));
+    } else if(statement==='Cash Flow'){
+      var sections={};
+      mappings.forEach(function(m){
+        var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
+        var ss=sums[m.account_code]||{d:0,c:0};
+        var type=String(a.account_type||'').toLowerCase(), line=String(m.section_line||'Unclassified');
+        var amount;
+        if(type.indexOf('asset')>=0) amount=-(Number(ss.d)-Number(ss.c));
+        else if(type.indexOf('liability')>=0||type==='equity') amount=Number(ss.c)-Number(ss.d);
+        else if(type==='revenue'||type==='other income') amount=Number(ss.c)-Number(ss.d);
+        else amount=-(Number(ss.d)-Number(ss.c));
+        sections[line]=sections[line]||0;sections[line]+=amount;
+      });
+      Object.keys(sections).sort().forEach(function(k){rows.push(financeStatementRow(k,k,sections[k],'detail'));});
+      var cfTotal=Object.keys(sections).reduce(function(n,k){return n+sections[k];},0);
+      rows.push(financeStatementRow('','Net Cash Flow (mapped movements)',cfTotal,'total'));
+      summary='Cash Flow · '+(from||'Beginning')+' to '+(to||'Today')+' · Net mapped cash movement '+financeMoney(cfTotal)+' · Note: cash flow is based on the configured statement mappings.';
+    } else if(statement==='Statement of Changes in Equity'){
+      var eqSums=financeRowsByAccount(q.data,from,to,true),eqRows=mappings.filter(function(m){return ['3100','3200','3400','3500','3600'].indexOf(String(m.account_code))>=0;});
+      var vals={};eqRows.forEach(function(m){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};var ss=eqSums[m.account_code]||{d:0,c:0};vals[m.account_code]=financeNormalAmount(a,ss.d,ss.c);});
+      var plMappings=(await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement','Profit & Loss').eq('active',true)).data||[];
+      var pl=financePlCalculation(plMappings,financeRowsByAccount(q.data,from,to,false));
+      var closing=(vals['3100']||0)+(vals['3200']||0)+(vals['3400']||0)+(Math.abs(vals['3500']||0)>0.005?(vals['3500']||0):pl.netProfit)-(vals['3600']||0);
+      rows=[
+        financeStatementRow('EQUITY','Share Capital',vals['3100']||0,'detail'),
+        financeStatementRow('','Additional Paid-in Capital',vals['3200']||0,'detail'),
+        financeStatementRow('','Retained Earnings',vals['3400']||0,'detail'),
+        financeStatementRow('','Current Period Profit / (Loss)',Math.abs(vals['3500']||0)>0.005?(vals['3500']||0):pl.netProfit,'detail'),
+        financeStatementRow('','Dividends / Drawings',-(vals['3600']||0),'detail'),
+        financeStatementRow('','Closing Equity',closing,'total')
+      ];
+      summary='Statement of Changes in Equity · '+(from||'Beginning')+' to '+(to||'Today')+' · Closing Equity '+financeMoney(closing);
+    }
+    var sumEl=$('financial-report-summary');if(sumEl)sumEl.textContent=summary;
+    var body=$('financial-report-body');if(body)body.innerHTML=financeRenderReportRows(rows)||'<tr><td colspan="5" class="crm-empty">No financial data found for this period.</td></tr>';
   }
 
+  async function recordFinanceAudit(action,tableName,recordId,details){
+    try{
+      if(window.salonSupabase && window.salonSupabase.rpc){
+        var r=await window.salonSupabase.rpc('log_finance_audit',{p_action:action,p_table_name:tableName||null,p_record_id:recordId==null?null:String(recordId),p_details:details||{}});
+        if(r.error) console.warn('Audit log failed:',r.error.message);
+      }
+    }catch(e){console.warn('Audit log failed:',e);}
+  }
+  function csvEscape(value){var s=String(value==null?'':value);return '"'+s.replace(/"/g,'""')+'"';}
+  function financeExportTable(tableId,stripLast){
+    var body=$(tableId);if(!body)return null;
+    var table=body.closest('table')||body;
+    var rows=[].map.call(table.querySelectorAll('tr'),function(tr){
+      var cells=[].map.call(tr.querySelectorAll('th,td'),function(cell){return cell.innerText.replace(/\s+/g,' ').trim();});
+      if(stripLast&&cells.length)cells.pop();
+      return cells;
+    }).filter(function(r){return r.length;});
+    return {table:table,rows:rows};
+  }
+  function exportTableCsv(tableId,filename,stripLast,context){
+    var data=financeExportTable(tableId,stripLast);if(!data||!data.rows.length){message('Nothing to export.','error');return;}
+    var rows=data.rows.map(function(r){return r.map(csvEscape).join(',');});
+    var blob=new Blob(['\ufeff'+rows.join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    recordFinanceAudit('EXPORT_CSV',context||tableId,null,{filename:filename});
+    message('CSV downloaded.','success');
+  }
+  function pdfEscape(s){
+    return String(s==null?'':s)
+      .replace(/\\/g,'\\\\')
+      .replace(/\(/g,'\\(')
+      .replace(/\)/g,'\\)')
+      .replace(/[\r\n]+/g,' ')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ');
+  }
+  function pdfAscii(s){return String(s==null?'':s).replace(/[^\x20-\x7E]/g,'?');}
+  function wrapPdfText(text,maxChars){
+    text=pdfAscii(text);var words=text.split(/\s+/),out=[],line='';
+    words.forEach(function(w){if(!w)return;if((line+' '+w).trim().length>maxChars){if(line)out.push(line);line=w;}else line=(line+' '+w).trim();});
+    if(line)out.push(line);return out.length?out:[''];
+  }
+  function buildFinancePdf(title,summary,rows){
+    var headers=rows[0]||[], dataRows=rows.slice(1), pageW=842,pageH=595,margin=34,rowH=22,bottom=34;
+    var colCount=headers.length||1, weights=Array(colCount).fill(1);
+    if(colCount===7)weights=[1.0,1.0,1.5,2.2,1.0,0.9,1.0];
+    else if(colCount===6)weights=[1.2,1.8,1.2,1.1,1.1,2.4];
+    else if(colCount===5)weights=[1.4,2.5,1.1,1.1,1.1];
+    var totalW=pageW-margin*2,ws=weights.reduce(function(a,b){return a+b;},0),widths=weights.map(function(w){return totalW*w/ws;});
+    var pages=[],ops=[],y=0,pageNumber=0;
+    function addText(x,yy,text,size,bold){ops.push('BT /F'+(bold?'2':'1')+' '+size+' Tf 1 0 0 1 '+x.toFixed(2)+' '+yy.toFixed(2)+' Tm ('+pdfEscape(pdfAscii(text))+') Tj ET');}
+    function drawLine(x1,y1,x2,y2){ops.push(x1.toFixed(2)+' '+y1.toFixed(2)+' m '+x2.toFixed(2)+' '+y2.toFixed(2)+' l S');}
+    function header(){
+      var brandY=pageH-34,metaY=pageH-50,summaryY=pageH-66,tableY=pageH-92;
+      addText(margin,brandY,'JAS PREMIUM',12,true);
+      addText(pageW-margin-170,brandY,pdfAscii(title).slice(0,28),10,true);
+      addText(margin,metaY,'Accountant report',7,false);
+      addText(pageW-margin-175,metaY,'Generated: '+pdfAscii(new Date().toLocaleString()),7,false);
+      if(summary) addText(margin,summaryY,pdfAscii(summary).slice(0,135),7,false);
+      var x=margin;
+      ops.push('0.92 g '+margin+' '+(tableY-4)+' '+totalW+' '+rowH+' re f 0 g');
+      headers.forEach(function(h,i){addText(x+4,tableY+4,h,7,true);x+=widths[i];});
+      drawLine(margin,tableY-4,pageW-margin,tableY-4);
+      return tableY-rowH;
+    }
+    function newPage(){
+      if(ops.length){addText(pageW-margin-55,bottom-10,'Page '+pageNumber,7,false);pages.push(ops.join('\n'));}
+      ops=[];pageNumber++;y=header();
+    }
+    newPage();
+    dataRows.forEach(function(row){
+      var cellLines=row.map(function(v,i){return wrapPdfText(v,Math.max(8,Math.floor(widths[i]/4.7))).slice(0,3);});
+      var lines=Math.max.apply(null,cellLines.map(function(x){return x.length;}));
+      var h=Math.max(rowH,lines*10+8);
+      if(y-h<bottom)newPage();
+      var x=margin;
+      cellLines.forEach(function(linesArr,i){linesArr.forEach(function(txt,j){addText(x+4,y-j*10-11,txt,7,false);});x+=widths[i];});
+      drawLine(margin,y-h,pageW-margin,y-h);
+      x=margin;for(var i=0;i<widths.length;i++){drawLine(x,y,x,y-h);x+=widths[i];}
+      drawLine(pageW-margin,y,pageW-margin,y-h);y-=h;
+    });
+    if(ops.length){addText(pageW-margin-55,bottom-10,'Page '+pageNumber,7,false);pages.push(ops.join('\n'));}
+
+    // Build a strict ASCII PDF with explicitly declared fonts and exact byte offsets.
+    // Acrobat requires every font resource referenced by a page to exist in the PDF.
+    var objs=[];
+    function obj(body){objs.push(body);return objs.length;}
+    var catalog=obj('<< /Type /Catalog /Pages 2 0 R /PageMode /UseNone >>');
+    var pagesObj=2;
+    var font1=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    var font2=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    // Keep these references immutable; do not assume object numbers elsewhere.
+    var fontResources='<< /F1 '+font1+' 0 R /F2 '+font2+' 0 R >>';
+    var kids=[];
+    pages.forEach(function(content){
+      var stream=content+'\n';
+      // PDF stream length MUST be the encoded byte length, not a JavaScript character count.
+      // Use TextEncoder so Acrobat receives an exact /Length even if a future report contains
+      // non-ASCII characters or the runtime normalizes text differently.
+      var streamBytes=new TextEncoder().encode(stream);
+      var contentObj=obj('<< /Length '+streamBytes.length+' >>\nstream\n'+stream+'endstream');
+      var pageObj=obj('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pageW+' '+pageH+'] /Resources << /ProcSet [/PDF /Text] /Font '+fontResources+' >> /Contents '+contentObj+' 0 R >>');
+      kids.push(pageObj+' 0 R');
+    });
+    objs[1]='<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+kids.length+' >>';
+    var info=obj('<< /Title ('+pdfEscape(pdfAscii(title))+') /Author (JAS Premium) /Subject (Accountant report) /Producer (JAS Premium CRM) >>');
+
+    // Build the PDF from encoded bytes. Acrobat is strict about byte offsets and stream lengths.
+    var encoder=new TextEncoder();
+    var headerBytes=encoder.encode('%PDF-1.4\n%JASPremium\n');
+    var chunks=[headerBytes],offsets=[0],byteOffset=headerBytes.length;
+    objs.forEach(function(o,i){
+      var chunk=(i+1)+' 0 obj\n'+o+'\nendobj\n';
+      var bytes=encoder.encode(chunk);
+      offsets.push(byteOffset);
+      chunks.push(bytes);
+      byteOffset+=bytes.length;
+    });
+    var xrefOffset=byteOffset;
+    var xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
+    for(var j=1;j<offsets.length;j++)xref+=String(offsets[j]).padStart(10,'0')+' 00000 n \n';
+    var trailer='trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R /Info '+info+' 0 R >>\nstartxref\n'+xrefOffset+'\n%%EOF\n';
+    chunks.push(encoder.encode(xref+trailer));
+    // Concatenate exact bytes into one Blob. No browser print pipeline is involved.
+    // PDF version is intentionally kept at 1.4 for maximum Acrobat compatibility.
+    var total=chunks.reduce(function(sum,part){return sum+part.length;},0);
+    var pdfBytes=new Uint8Array(total),cursor=0;
+    chunks.forEach(function(part){pdfBytes.set(part,cursor);cursor+=part.length;});
+    return new Blob([pdfBytes],{type:'application/pdf'});
+  }
+  function downloadFinancePdf(tableId,title,summary,stripLast,context){
+    var data=financeExportTable(tableId,stripLast);if(!data||!data.rows.length){message('Nothing to export.','error');return;}
+    var rows=data.rows,blob=buildFinancePdf(title,summary,rows),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='JASPremium_'+title.replace(/[^A-Za-z0-9]+/g,'_')+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    recordFinanceAudit('EXPORT_PDF',context||tableId,null,{title:title,filename:a.download});
+    message('PDF downloaded.','success');
+  }
+  async function loadAuditTrail(){
+    if(!can('audit-trail','read'))return;
+    var body=$('audit-trail-body');if(body)body.innerHTML='<tr><td colspan="6" class="crm-empty">Loading audit trail…</td></tr>';
+    var r=await window.salonSupabase.from('finance_audit_trail').select('id,created_at,actor_id,actor_email,action,table_name,record_id,details').order('created_at',{ascending:false}).limit(1000);
+    if(r.error){if(body)body.innerHTML='<tr><td colspan="6" class="crm-empty">Could not load audit trail.</td></tr>';message(r.error.message,'error');return;}
+    state.auditTrail=r.data||[];renderAuditTrail();
+  }
+  function renderAuditTrail(){
+    var body=$('audit-trail-body');if(!body)return;
+    var q=String(($('audit-search')||{}).value||'').trim().toLowerCase(),action=($('audit-action-filter')||{}).value||'all',from=($('audit-date-from')||{}).value||'',to=($('audit-date-to')||{}).value||'';
+    var actions=[...new Set(state.auditTrail.map(function(x){return x.action;}).filter(Boolean))].sort();
+    var af=$('audit-action-filter');if(af){var cur=action;af.innerHTML='<option value="all">All actions</option>'+actions.map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x.replace(/_/g,' '))+'</option>';}).join('');af.value=actions.indexOf(cur)>=0?cur:'all';}
+    var rows=state.auditTrail.filter(function(x){var date=String(x.created_at||'').slice(0,10),details=typeof x.details==='string'?x.details:JSON.stringify(x.details||{});var hay=[x.actor_email,x.action,x.table_name,x.record_id,details].join(' ').toLowerCase();return(!q||hay.includes(q))&&(action==='all'||x.action===action)&&(!from||date>=from)&&(!to||date<=to);});
+    body.innerHTML=rows.map(function(x){var d=typeof x.details==='string'?x.details:JSON.stringify(x.details||{});return '<tr><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString():'—')+'</td><td>'+escapeHtml(x.actor_email||x.actor_id||'System')+'</td><td><span class="crm-badge active">'+escapeHtml(String(x.action||'').replace(/_/g,' '))+'</span></td><td>'+escapeHtml(x.table_name||'—')+'</td><td>'+escapeHtml(x.record_id||'—')+'</td><td><code class="crm-audit-details">'+escapeHtml(d)+'</code></td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No audit events found.</td></tr>';
+  }
   async function loadAccountingPeriods(){
     if(!can('accounting-periods','read'))return;var r=await window.salonSupabase.from('accounting_periods').select('id,name,start_date,end_date,status').order('start_date',{ascending:false});if(r.error){message(r.error.message,'error');return;}state.accountingPeriods=r.data||[];var b=$('periods-body');if(b)b.innerHTML=state.accountingPeriods.map(function(x){var a='';if(can('accounting-periods','update'))a+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-period="'+x.id+'">Edit</button> ';if(can('accounting-periods','delete'))a+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-period="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.start_date+'</td><td>'+x.end_date+'</td><td>'+escapeHtml(x.status)+'</td><td>'+a+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounting periods configured.</td></tr>';}
   function openPeriodForm(id){var x=id&&state.accountingPeriods.find(function(y){return String(y.id)===String(id);});state.editingPeriodId=x?x.id:null;$('period-form-card').classList.remove('crm-hidden');$('period-name').value=x?x.name:'';$('period-start').value=x?x.start_date:financeToday();$('period-end').value=x?x.end_date:financeToday();$('period-status').value=x?x.status:'open';}
@@ -3123,7 +3432,7 @@
     document.querySelectorAll('.crm-view').forEach(function(el){el.classList.add('crm-hidden');});
     var target=$('view-'+view); if(target)target.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
-    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods']};
+    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods'],'audit-trail':['Finance / Control','Audit Trail']};
     var t=titles[view]||titles.dashboard;
     var eyebrow=$('view-eyebrow');
     var title=$('view-title');
@@ -3138,6 +3447,7 @@
     if(view==='trial-balance') { loadFinanceAccounts().then(loadTrialBalance).catch(function(e){message(e.message||'Could not load trial balance.','error');}); }
     if(view==='statement-mapping') loadStatementMappings().catch(function(e){message(e.message||'Could not load statement mappings.','error');});
     if(view==='accounting-periods') loadAccountingPeriods().catch(function(e){message(e.message||'Could not load accounting periods.','error');});
+    if(view==='audit-trail') loadAuditTrail().catch(function(e){message(e.message||'Could not load audit trail.','error');});
     if(view==='settings') loadApplicationSettings().catch(function(e){message(e.message,'error');});
     if(view==='vouchers') loadVouchers().catch(function(e){message(e.message,'error');});
     if(view==='bookings') loadBookings().catch(function(e){message(e.message,'error');});
@@ -3516,7 +3826,7 @@
     }
   }
   function clearCrmSessionState() {
-    state.customers=[]; state.categories=[]; state.services=[]; state.vouchers=[]; state.users=[]; state.roles=[]; state.permissions=[]; state.access={}; state.rolePermissions=[]; state.bookings=[]; state.faqs=[]; state.translations=[]; state.contactMessages=[]; state.contactMessageSearch=''; state.contactMessageStatusFilter='all'; state.currentRole=null; state.currentUserId=null; state.currentView='dashboard'; state.mustChangePassword=false;
+    state.customers=[]; state.categories=[]; state.services=[]; state.vouchers=[]; state.users=[]; state.roles=[]; state.permissions=[]; state.access={}; state.rolePermissions=[]; state.bookings=[]; state.faqs=[]; state.translations=[]; state.contactMessages=[]; state.auditTrail=[]; state.contactMessageSearch=''; state.contactMessageStatusFilter='all'; state.currentRole=null; state.currentUserId=null; state.currentView='dashboard'; state.mustChangePassword=false;
     document.querySelectorAll('.crm-view').forEach(function(el){ el.classList.add('crm-hidden'); });
     var dashboard=$('view-dashboard'); if(dashboard) dashboard.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(el){ el.classList.remove('active'); });
@@ -3964,6 +4274,17 @@
     if($('report-statement-select')) $('report-statement-select').addEventListener('change',loadFinancialReport);
     if($('report-date-from')) $('report-date-from').addEventListener('change',loadFinancialReport);
     if($('report-date-to')) $('report-date-to').addEventListener('change',loadFinancialReport);
+    if($('report-export-csv')) $('report-export-csv').addEventListener('click',function(){var st=($('report-statement-select')||{}).value||'Profit & Loss';exportTableCsv('financial-report-body','JASPremium_'+st.replace(/[^A-Za-z0-9]+/g,'_')+'.csv',false,'financial_statements');});
+    if($('report-print-pdf')) $('report-print-pdf').addEventListener('click',function(){var st=($('report-statement-select')||{}).value||'Profit & Loss',summary=($('financial-report-summary')||{}).textContent||'';downloadFinancePdf('financial-report-body',st,summary,false,'financial_statements');});
+    if($('journal-export-csv')) $('journal-export-csv').addEventListener('click',function(){exportTableCsv('journal-entries-body','JASPremium_Journal_Entries.csv',true,'journal_entries');});
+    if($('journal-print-pdf')) $('journal-print-pdf').addEventListener('click',function(){downloadFinancePdf('journal-entries-body','Journal Entries','Posted and draft journal entries currently shown.',true,'journal_entries');});
+    if($('ledger-export-csv')) $('ledger-export-csv').addEventListener('click',function(){exportTableCsv('general-ledger-body','JASPremium_General_Ledger.csv',false,'general_ledger');});
+    if($('ledger-print-pdf')) $('ledger-print-pdf').addEventListener('click',function(){downloadFinancePdf('general-ledger-body','General Ledger','General Ledger activity currently shown.',false,'general_ledger');});
+    if($('trial-export-csv')) $('trial-export-csv').addEventListener('click',function(){exportTableCsv('trial-balance-body','JASPremium_Trial_Balance.csv',false,'trial_balance');});
+    if($('trial-print-pdf')) $('trial-print-pdf').addEventListener('click',function(){var summary=($('trial-balance-status')||{}).textContent||'';downloadFinancePdf('trial-balance-body','Trial Balance',summary,false,'trial_balance');});
+    ['audit-search','audit-action-filter','audit-date-from','audit-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',renderAuditTrail);});
+    if($('audit-export-csv')) $('audit-export-csv').addEventListener('click',function(){exportTableCsv('audit-trail-body','JASPremium_Audit_Trail.csv',false,'finance_audit_trail');});
+    if($('audit-print-pdf')) $('audit-print-pdf').addEventListener('click',function(){downloadFinancePdf('audit-trail-body','Audit Trail','Finance audit history currently shown.',false,'finance_audit_trail');});
     if($('period-add')) $('period-add').addEventListener('click',function(){openPeriodForm(null);});
     if($('period-cancel')) $('period-cancel').addEventListener('click',function(){$('period-form-card').classList.add('crm-hidden');});
     if($('period-form')) $('period-form').addEventListener('submit',savePeriod);

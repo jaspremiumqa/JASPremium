@@ -70,6 +70,7 @@
           <button class="crm-nav-item" data-view="financial-statements" data-admin-only><span>▥</span> Financial Statements</button>
           <button class="crm-nav-item" data-view="statement-mapping" data-admin-only><span>⌘</span> Statement Mapping</button>
           <button class="crm-nav-item" data-view="accounting-periods" data-admin-only><span>◷</span> Accounting Periods</button>
+          <button class="crm-nav-item" data-view="audit-trail" data-admin-only><span>✓</span> Audit Trail</button>
         </nav>
         <div class="crm-side-bottom">
           <a href="index.html" class="crm-nav-link">↗ View website</a>
@@ -910,8 +911,8 @@
 </section>
 
 <section id="view-financial-statements" class="crm-view crm-hidden" data-admin-only>
-  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Financial Statements</h2><p>Generated from posted journal entries and your statement mappings.</p></div></div>
-  <div class="crm-card"><div class="crm-list-filters"><select id="report-statement-select" class="crm-filter-select"><option value="Profit & Loss">Profit & Loss</option><option value="Balance Sheet">Balance Sheet</option><option value="Cash Flow">Cash Flow</option><option value="Statement of Changes in Equity">Statement of Changes in Equity</option></select><input id="report-date-from" class="crm-date-filter" type="date"><input id="report-date-to" class="crm-date-filter" type="date"><button id="report-refresh" class="crm-btn crm-btn-secondary">Generate</button></div><div id="financial-report-summary" class="crm-finance-summary"></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Section</th><th>Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="financial-report-body"></tbody></table></div></div>
+  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Financial Statements</h2><p>Generated from posted journal entries and your statement mappings.</p></div><div class="crm-report-actions"><button id="report-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="report-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div></div>
+  <div class="crm-card"><div class="crm-list-filters crm-financial-report-filters"><select id="report-statement-select" class="crm-filter-select"><option value="Profit & Loss">Profit & Loss</option><option value="Balance Sheet">Balance Sheet</option><option value="Cash Flow">Cash Flow</option><option value="Statement of Changes in Equity">Statement of Changes in Equity</option><option value="Trial Balance">Trial Balance</option></select><input id="report-date-from" class="crm-date-filter" type="date" aria-label="Report start date"><input id="report-date-to" class="crm-date-filter" type="date" aria-label="Report end date"><button id="report-refresh" class="crm-btn crm-btn-secondary">Generate</button></div><div id="financial-report-summary" class="crm-finance-summary"></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Section</th><th>Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="financial-report-body"></tbody></table></div></div>
 </section>
 
 
@@ -929,29 +930,35 @@
       <div class="crm-form-actions"><button type="button" id="journal-entry-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" id="journal-entry-save" class="crm-btn crm-btn-primary">Save draft</button><button type="button" id="journal-entry-post" class="crm-btn crm-btn-primary">Save & post</button></div>
     </form>
   </div>
-  <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="journal-search" type="search" placeholder="Search entry number, reference or description"></div><select id="journal-status-filter" class="crm-filter-select"><option value="all">All statuses</option><option value="draft">Draft</option><option value="posted">Posted</option><option value="void">Void</option></select><input id="journal-date-from" class="crm-date-filter" type="date"><input id="journal-date-to" class="crm-date-filter" type="date"></div>
+  <div class="crm-card"><div class="crm-list-filters crm-journal-filters"><div class="crm-search-box"><span>⌕</span><input id="journal-search" type="search" placeholder="Search entry no., reference, description, account code or account name"></div><select id="journal-status-filter" class="crm-filter-select"><option value="all">All statuses</option><option value="draft">Draft</option><option value="posted">Posted</option><option value="void">Void</option></select><input id="journal-date-from" class="crm-date-filter" type="date"><input id="journal-date-to" class="crm-date-filter" type="date"><button id="journal-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="journal-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div>
     <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Entry</th><th>Date</th><th>Reference</th><th>Description</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="journal-entries-body"></tbody></table></div></div>
 </section>
 
 <section id="view-general-ledger" class="crm-view crm-hidden" data-admin-only>
  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>General Ledger</h2><p>Account-by-account activity from posted journal entries.</p></div></div>
- <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="ledger-search" type="search" placeholder="Search account, entry or description"></div><select id="ledger-account-filter" class="crm-filter-select"><option value="all">All accounts</option></select><input id="ledger-date-from" class="crm-date-filter" type="date"><input id="ledger-date-to" class="crm-date-filter" type="date"></div>
+ <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="ledger-search" type="search" placeholder="Search account, entry or description"></div><select id="ledger-account-filter" class="crm-filter-select"><option value="all">All accounts</option></select><input id="ledger-date-from" class="crm-date-filter" type="date"><input id="ledger-date-to" class="crm-date-filter" type="date"><button id="ledger-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="ledger-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div>
  <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Date</th><th>Entry</th><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="general-ledger-body"></tbody></table></div></div>
 </section>
 
 <section id="view-trial-balance" class="crm-view crm-hidden" data-admin-only>
  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Trial Balance</h2><p>Verify that posted debits equal posted credits.</p></div></div>
- <div class="crm-card"><div class="crm-list-filters"><input id="trial-date-from" class="crm-date-filter" type="date"><input id="trial-date-to" class="crm-date-filter" type="date"><button id="trial-refresh" class="crm-btn crm-btn-secondary">Refresh</button></div><div id="trial-balance-status" class="crm-finance-balance">Loading…</div>
+ <div class="crm-card"><div class="crm-list-filters"><input id="trial-date-from" class="crm-date-filter" type="date"><input id="trial-date-to" class="crm-date-filter" type="date"><button id="trial-refresh" class="crm-btn crm-btn-secondary">Refresh</button><button id="trial-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="trial-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div><div id="trial-balance-status" class="crm-finance-balance">Loading…</div>
  <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Code</th><th>Account</th><th>Type</th><th>Debit</th><th>Credit</th><th>Net balance</th></tr></thead><tbody id="trial-balance-body"></tbody></table></div></div>
 </section>
 
 <section id="view-statement-mapping" class="crm-view crm-hidden" data-admin-only>
  <div class="crm-page-heading"><div><div class="crm-section-label">Finance</div><h2>Statement Mapping</h2><p>Control where accounts appear in generated financial statements.</p></div><button id="statement-map-add" class="crm-btn crm-btn-primary">+ Add mapping</button></div>
  <div id="statement-map-form-card" class="crm-card crm-hidden"><form id="statement-map-form" class="crm-standard-form"><div class="crm-form-grid">
- <div class="crm-field"><label>Statement</label><select id="map-statement"><option>Balance Sheet</option><option>Profit & Loss</option><option>Cash Flow</option><option>Statement of Changes in Equity</option></select></div>
+ <div class="crm-field"><label>Statement</label><select id="map-statement"><option>Balance Sheet</option><option>Profit & Loss</option><option>Cash Flow</option><option>Statement of Changes in Equity</option><option>Trial Balance</option></select></div>
  <div class="crm-field"><label>Account</label><select id="map-account"></select></div><div class="crm-field"><label>Section / line</label><input id="map-section" required></div><div class="crm-field"><label>Display order</label><input id="map-order" type="number" min="1" value="1"></div><div class="crm-field"><label class="crm-check"><input id="map-active" type="checkbox" checked> Active</label></div>
  </div><div class="crm-form-actions"><button type="button" id="statement-map-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button class="crm-btn crm-btn-primary">Save mapping</button></div></form></div>
  <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="statement-map-search" type="search" placeholder="Search mapping"></div><select id="statement-map-filter" class="crm-filter-select"><option value="all">All statements</option></select></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Statement</th><th>Account</th><th>Section / line</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead><tbody id="statement-map-body"></tbody></table></div></div>
+</section>
+
+<section id="view-audit-trail" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Finance / Control</div><h2>Audit Trail</h2><p>Immutable history of accounting changes, posting actions and report exports.</p></div><div class="crm-report-actions"><button id="audit-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="audit-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div></div>
+ <div class="crm-card"><div class="crm-list-filters crm-audit-filters"><div class="crm-search-box"><span>⌕</span><input id="audit-search" type="search" placeholder="Search user, action, table or record"></div><select id="audit-action-filter" class="crm-filter-select"><option value="all">All actions</option></select><input id="audit-date-from" class="crm-date-filter" type="date"><input id="audit-date-to" class="crm-date-filter" type="date"></div>
+ <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Date / Time</th><th>User</th><th>Action</th><th>Table</th><th>Record</th><th>Details</th></tr></thead><tbody id="audit-trail-body"></tbody></table></div></div>
 </section>
 
 <section id="view-accounting-periods" class="crm-view crm-hidden" data-admin-only>
@@ -1084,6 +1091,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v38"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v45-pdf-final"></script>
 </body>
 </html>
