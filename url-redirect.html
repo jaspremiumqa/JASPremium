@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Opening…</title>
+  <meta name="robots" content="noindex,nofollow">
+  <style>body{font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f7f3ef;color:#231f1c}.box{text-align:center;padding:28px;max-width:420px}.spinner{width:28px;height:28px;border:3px solid #ddd;border-top-color:#231f1c;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}.error{color:#8b2f2f}</style>
+</head>
+<body><div class="box"><div class="spinner"></div><div id="status">Opening link…</div></div>
+<script>
+(function(){
+  'use strict';
+
+  // Keep the QR resolver independent of the Supabase JS CDN. A QR scan should
+  // work even if a third-party script/CDN is blocked or temporarily unavailable.
+  var SUPABASE_URL = 'https://nonucaahxdwhmtqaoqii.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qJXElJyjAUwZsfCXJFAqOw_v9mf3VuX';
+  var status = document.getElementById('status');
+  var spinner = document.querySelector('.spinner');
+
+  function fail(message) {
+    if (spinner) spinner.style.display = 'none';
+    status.className = 'error';
+    status.textContent = message || 'This QR code could not be opened.';
+  }
+
+  function mapsFriendlyUrl(url) {
+    try {
+      var u = new URL(url);
+      var host = u.hostname.toLowerCase();
+      // Use a Google Maps universal URL for coordinate/search links.
+      // On supported phones this can hand off to the Google Maps app; otherwise
+      // it opens Maps in the browser. Other destinations are left unchanged.
+      if ((host === 'maps.google.com' || host === 'www.google.com' || host === 'google.com') &&
+          (host === 'maps.google.com' || u.pathname.indexOf('/maps') === 0 || u.searchParams.has('q'))) {
+        var q = u.searchParams.get('q');
+        if (q) return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+      }
+    } catch (e) {}
+    return url;
+  }
+
+  async function getDestination(code) {
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 10000);
+    try {
+      var response = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_public_url_qr_destination', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_PUBLISHABLE_KEY
+        },
+        body: JSON.stringify({ p_code: code }),
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error('Resolver request failed (' + response.status + ').');
+      var data = await response.json();
+      if (typeof data !== 'string' || !/^https?:\/\//i.test(data)) {
+        throw new Error('This QR code does not have a valid destination.');
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  (async function(){
+    try {
+      var code = new URLSearchParams(window.location.search).get('code');
+      if (!code) throw new Error('This QR code is missing its permanent code.');
+      code = code.trim();
+      if (!/^QR-[A-F0-9]{20}$/i.test(code)) throw new Error('This QR code has an invalid code.');
+
+      status.textContent = 'Opening destination…';
+      var url = mapsFriendlyUrl(await getDestination(code));
+      window.location.replace(url);
+    } catch (e) {
+      console.error('QR resolver error:', e);
+      fail('This QR code could not be opened. Please try scanning again.');
+    }
+  })();
+})();
+</script>
+</body></html>

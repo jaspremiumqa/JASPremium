@@ -160,3 +160,10 @@ create trigger journal_created_by_trigger before insert on public.journal_entrie
 for each row execute function public.set_journal_created_by();
 
 commit;
+-- URL QR destinations are operational records too: changing a destination
+-- must be auditable while the permanent QR identity remains unchanged.
+drop trigger if exists finance_audit_url_qr_codes on public.url_qr_codes;
+create trigger finance_audit_url_qr_codes
+after insert or update or delete on public.url_qr_codes
+for each row execute function public.finance_audit_trigger();
+

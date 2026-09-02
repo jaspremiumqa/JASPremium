@@ -911,3 +911,28 @@ html.crm-auth-pending #crm-password-setup {
 @media print{
   .crm-sidebar,.crm-topbar,.crm-page-heading .crm-report-actions,.crm-list-filters,.crm-card-header,.crm-form-actions{display:none!important}
 }
+
+
+/* Permanent URL QR codes */
+.crm-url-qr-table td { vertical-align: middle; }
+.crm-url-qr-resolver { display:block; margin-top:5px; max-width:260px; word-break:break-all; font-size:11px; opacity:.62; }
+.crm-url-qr-link { color:inherit; word-break:break-all; }
+.crm-url-qr-thumb { width:78px; min-height:78px; display:flex; align-items:center; justify-content:center; background:#fff; border:1px solid rgba(0,0,0,.08); padding:3px; }
+.crm-url-qr-thumb img, .crm-url-qr-thumb canvas { display:block; width:72px; height:72px; }
+.crm-url-qr-filters { grid-template-columns:minmax(220px,1fr); }
+.crm-url-qr-print-area { display:none; }
+@media (max-width: 760px) {
+  .crm-url-qr-table thead { display:none; }
+  .crm-url-qr-table, .crm-url-qr-table tbody, .crm-url-qr-table tr, .crm-url-qr-table td { display:block; width:100%; box-sizing:border-box; }
+  .crm-url-qr-table tr { padding:16px; border-bottom:1px solid rgba(0,0,0,.08); }
+  .crm-url-qr-table td { border:0 !important; padding:5px 0; }
+  .crm-url-qr-table td:nth-child(1)::before { content:'QR Code'; }
+  .crm-url-qr-table td:nth-child(2)::before { content:'Name'; }
+  .crm-url-qr-table td:nth-child(3)::before { content:'Destination'; }
+  .crm-url-qr-table td:nth-child(4)::before { content:'QR'; }
+  .crm-url-qr-table td:nth-child(5)::before { content:'Created'; }
+  .crm-url-qr-table td:nth-child(6)::before { content:'Actions'; }
+  .crm-url-qr-table td::before { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.6; margin-bottom:4px; }
+  .crm-url-qr-table td:nth-child(4) { display:flex; flex-direction:column; align-items:flex-start; }
+  .crm-url-qr-table td:nth-child(6) .crm-btn { margin:3px 3px 3px 0; }
+}

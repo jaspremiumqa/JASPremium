@@ -2,7 +2,7 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], urlQrCodes:[], editingUrlQrId:null, editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
@@ -107,7 +107,7 @@
     // Chart of Accounts is a read-only reference catalogue for administrators.
     // Keep it visible to administrators even on deployments that predate its
     // permission rows; the migration still adds the full permission set for roles.
-    if (['chart-of-accounts','financial-statements','audit-trail'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
+    if (['chart-of-accounts','financial-statements','audit-trail','url-qr-codes'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
     return !!state.access[section + '.' + action];
   }
   function requirePermission(section, action, messageText) {
@@ -116,7 +116,7 @@
     return false;
   }
   var ROLE_PERMISSION_SECTIONS = [
-    ['dashboard','Dashboard'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],['audit-trail','Audit Trail'],
+    ['dashboard','Dashboard'],['url-qr-codes','URL QR Codes'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],['audit-trail','Audit Trail'],
     ['bookings','Bookings'],['booking-config','Booking Setup'],['contact-messages','Contact Us'],['customers','Customers'],
     ['settings','Settings'],['translations','Translation'],['users','Users & Access'],['roles','Roles & Permissions']
   ];
@@ -3045,6 +3045,90 @@
     }
     resetJournalForm();await loadJournalEntries();message(postIt?'Journal entry posted.':'Journal draft saved.','success');
   }
+  // IMPORTANT: QR codes must always encode the public production resolver,
+  // never localhost, a preview host, or whatever origin the admin is currently opened on.
+  // This makes already-printed QR codes stable across destination URL changes and local/admin environments.
+  var JASPREMIUM_PUBLIC_QR_RESOLVER = 'https://jaspremiumqa.github.io/JASPremium/url-redirect.html';
+  function urlQrResolverBase(){ return JASPREMIUM_PUBLIC_QR_RESOLVER; }
+  function createPermanentQrCode(){
+    var bytes=new Uint8Array(10);
+    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes); else for(var i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
+    return 'QR-' + Array.prototype.map.call(bytes,function(b){return b.toString(16).padStart(2,'0');}).join('').toUpperCase();
+  }
+  function normalizeDestinationUrl(value){
+    var raw=String(value||'').trim();
+    if(!/^https?:\/\//i.test(raw)) throw new Error('Please enter a full URL starting with http:// or https://.');
+    try{var u=new URL(raw);if(u.protocol!=='http:'&&u.protocol!=='https:')throw new Error('Only web URLs are supported.');return u.toString();}catch(e){throw new Error('Please enter a valid web URL.');}
+  }
+  async function loadUrlQrCodes(){
+    if(!can('url-qr-codes','read')) return;
+    var r=await window.salonSupabase.from('url_qr_codes').select('id,permanent_code,name,destination_url,created_at,updated_at').order('created_at',{ascending:false});
+    if(r.error){message(r.error.message,'error');return;}
+    state.urlQrCodes=r.data||[]; renderUrlQrCodes();
+  }
+  function renderUrlQrCodes(){
+    var body=$('url-qr-body');if(!body)return;
+    var q=String(($('url-qr-search')||{}).value||'').trim().toLowerCase();
+    var rows=state.urlQrCodes.filter(function(x){return !q || [x.permanent_code,x.name,x.destination_url].join(' ').toLowerCase().includes(q);});
+    body.innerHTML=rows.map(function(x){
+      var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);
+      var id=escapeHtml(x.id), code=escapeHtml(x.permanent_code), name=escapeHtml(x.name), dest=escapeHtml(x.destination_url);
+      return '<tr><td><strong>'+code+'</strong><small class="crm-url-qr-resolver">'+escapeHtml(resolver)+'</small></td><td>'+name+'</td><td><a href="'+dest+'" target="_blank" rel="noopener noreferrer" class="crm-url-qr-link">'+dest+'</a></td><td><div class="crm-url-qr-thumb" data-qr-code="'+code+'" data-qr-resolver="'+escapeHtml(resolver)+'"></div></td><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleDateString():'')+'</td><td><button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-edit="'+id+'">Edit URL</button> <button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-download="'+id+'">Download QR</button> <button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-print="'+id+'">Print QR</button></td></tr>';
+    }).join('')||'<tr><td colspan="6" class="crm-empty">No QR codes found.</td></tr>';
+    body.querySelectorAll('.crm-url-qr-thumb').forEach(function(el){
+      if(window.QRCode) new QRCode(el,{text:el.getAttribute('data-qr-resolver'),width:72,height:72,correctLevel:QRCode.CorrectLevel.M});
+    });
+  }
+  function openUrlQrForm(id){
+    state.editingUrlQrId=id||null;
+    var x=id?state.urlQrCodes.find(function(r){return String(r.id)===String(id);}):null;
+    $('url-qr-form').reset();
+    $('url-qr-name').value=x?x.name:'';
+    $('url-qr-destination').value=x?x.destination_url:'';
+    $('url-qr-save').textContent=x?'Update URL':'Save QR code';
+    $('url-qr-form-card').classList.remove('crm-hidden');
+    $('url-qr-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  async function saveUrlQr(e){
+    e.preventDefault();
+    var id=state.editingUrlQrId;
+    if(!requirePermission('url-qr-codes',id?'update':'create'))return;
+    var destination;
+    try{destination=normalizeDestinationUrl($('url-qr-destination').value);}catch(err){message(err.message,'error');return;}
+    var name=$('url-qr-name').value.trim(); if(!name){message('Please enter a name or label.','error');return;}
+    var payload={name:name,destination_url:destination};
+    var r;
+    if(id){r=await window.salonSupabase.from('url_qr_codes').update(payload).eq('id',id);}else{
+      var code=createPermanentQrCode();
+      r=await window.salonSupabase.from('url_qr_codes').insert({permanent_code:code,name:name,destination_url:destination});
+      if(r.error && r.error.code==='23505'){code=createPermanentQrCode();r=await window.salonSupabase.from('url_qr_codes').insert({permanent_code:code,name:name,destination_url:destination});}
+    }
+    if(r.error){message(r.error.message,'error');return;}
+    $('url-qr-form-card').classList.add('crm-hidden');state.editingUrlQrId=null;await loadUrlQrCodes();message(id?'Destination URL updated. The existing printed QR code is unchanged.':'Permanent QR code created.','success');
+  }
+  function getUrlQr(id){return state.urlQrCodes.find(function(x){return String(x.id)===String(id);});}
+  function downloadUrlQr(id){
+    var x=getUrlQr(id);if(!x)return;var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);
+    var holder=document.createElement('div');holder.style.cssText='position:absolute;left:-99999px;top:-99999px;background:#fff;padding:24px;width:320px;text-align:center;';document.body.appendChild(holder);
+    var title=document.createElement('div');title.textContent=x.name;title.style.cssText='font:700 20px Arial,sans-serif;margin-bottom:14px;color:#111;';holder.appendChild(title);
+    var qr=document.createElement('div');holder.appendChild(qr);new QRCode(qr,{text:resolver,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
+    var code=document.createElement('div');code.textContent=x.permanent_code;code.style.cssText='font:700 14px Arial,sans-serif;margin-top:14px;letter-spacing:1px;color:#111;';holder.appendChild(code);
+    setTimeout(function(){
+      var canvas=holder.querySelector('canvas');
+      if(!canvas){message('Could not generate the QR image.','error');holder.remove();return;}
+      // Add a real white quiet zone around the QR modules for reliable scanning/printing.
+      var pad=24, out=document.createElement('canvas');
+      out.width=canvas.width+(pad*2); out.height=canvas.height+(pad*2);
+      var ctx=out.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,out.width,out.height);
+      ctx.drawImage(canvas,pad,pad);
+      var a=document.createElement('a');a.href=out.toDataURL('image/png');a.download='JASPremium_'+x.permanent_code+'.png';a.click();holder.remove();
+    },100);
+  }
+  function printUrlQr(id){
+    var x=getUrlQr(id);if(!x)return;var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);var w=window.open('','_blank','width=700,height=800');if(!w){message('Please allow pop-ups to print the QR code.','error');return;}
+    w.document.write('<!doctype html><html><head><title>'+escapeHtml(x.name)+'</title><style>body{font-family:Arial,sans-serif;text-align:center;margin:0;padding:40px;color:#111}h1{font-size:28px;margin:0 0 8px}p{font-size:14px;color:#555;margin:0 0 22px}.qr{display:inline-block;padding:18px;border:1px solid #ddd;background:#fff}.code{font-weight:700;letter-spacing:1px;margin-top:18px}@media print{body{padding:20mm}.no-print{display:none}}</style></head><body><h1>'+escapeHtml(x.name)+'</h1><p>Scan to open the current URL</p><div class="qr" id="qr"></div><div class="code">'+escapeHtml(x.permanent_code)+'</div><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\\/script><script>new QRCode(document.getElementById("qr"),{text:'+JSON.stringify(resolver)+',width:320,height:320,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print();},300);<\\/script></body></html>');w.document.close();
+  }
+
   async function loadJournalEntries(){
     if(!can('journal-entries','read'))return;
     var q=String(($('journal-search')&&$('journal-search').value)||'').trim().toLowerCase(), st=($('journal-status-filter')||{}).value||'all', from=($('journal-date-from')||{}).value||'', to=($('journal-date-to')||{}).value||'';
@@ -3432,7 +3516,7 @@
     document.querySelectorAll('.crm-view').forEach(function(el){el.classList.add('crm-hidden');});
     var target=$('view-'+view); if(target)target.classList.remove('crm-hidden');
     document.querySelectorAll('.crm-nav-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
-    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods'],'audit-trail':['Finance / Control','Audit Trail']};
+    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods'],'audit-trail':['Finance / Control','Audit Trail'],'url-qr-codes':['Tools','URL QR Codes']};
     var t=titles[view]||titles.dashboard;
     var eyebrow=$('view-eyebrow');
     var title=$('view-title');
@@ -3448,6 +3532,7 @@
     if(view==='statement-mapping') loadStatementMappings().catch(function(e){message(e.message||'Could not load statement mappings.','error');});
     if(view==='accounting-periods') loadAccountingPeriods().catch(function(e){message(e.message||'Could not load accounting periods.','error');});
     if(view==='audit-trail') loadAuditTrail().catch(function(e){message(e.message||'Could not load audit trail.','error');});
+    if(view==='url-qr-codes') loadUrlQrCodes().catch(function(e){message(e.message||'Could not load URL QR codes.','error');});
     if(view==='settings') loadApplicationSettings().catch(function(e){message(e.message,'error');});
     if(view==='vouchers') loadVouchers().catch(function(e){message(e.message,'error');});
     if(view==='bookings') loadBookings().catch(function(e){message(e.message,'error');});
@@ -3897,7 +3982,7 @@
       'invite-user-btn':['users','create'],'new-role-top':['roles','create'],
       'service-save':['services',state.editingServiceId?'update':'create'],'category-save':['services',state.editingCategoryId?'update':'create'],
       'voucher-save':['vouchers',state.editingVoucherId?'update':'create'],'faq-save':['faqs',state.editingFaqId?'update':'create'],
-      'role-save':['roles',state.editingRoleId?'update':'create'],'application-settings-save':['settings','update'],'journal-entry-save':['journal-entries','create'],'journal-entry-post':['journal-entries','post'],'statement-map-add':['statement-mapping','create'],'period-add':['accounting-periods','create']
+      'role-save':['roles',state.editingRoleId?'update':'create'],'application-settings-save':['settings','update'],'journal-entry-save':['journal-entries','create'],'journal-entry-post':['journal-entries','post'],'statement-map-add':['statement-mapping','create'],'period-add':['accounting-periods','create'],'url-qr-add':['url-qr-codes','create'],'url-qr-save':['url-qr-codes','create']
     };
     Object.keys(actionMap).forEach(function(id){var el=$(id),rule=actionMap[id];if(el)el.disabled=!can(rule[0],rule[1]);});
   }
@@ -4285,6 +4370,11 @@
     ['audit-search','audit-action-filter','audit-date-from','audit-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',renderAuditTrail);});
     if($('audit-export-csv')) $('audit-export-csv').addEventListener('click',function(){exportTableCsv('audit-trail-body','JASPremium_Audit_Trail.csv',false,'finance_audit_trail');});
     if($('audit-print-pdf')) $('audit-print-pdf').addEventListener('click',function(){downloadFinancePdf('audit-trail-body','Audit Trail','Finance audit history currently shown.',false,'finance_audit_trail');});
+    if($('url-qr-add')) $('url-qr-add').addEventListener('click',function(){openUrlQrForm(null);});
+    if($('url-qr-cancel')) $('url-qr-cancel').addEventListener('click',function(){$('url-qr-form-card').classList.add('crm-hidden');state.editingUrlQrId=null;});
+    if($('url-qr-form')) $('url-qr-form').addEventListener('submit',saveUrlQr);
+    if($('url-qr-search')) $('url-qr-search').addEventListener('input',renderUrlQrCodes);
+    if($('url-qr-body')) $('url-qr-body').addEventListener('click',function(e){var ed=e.target.closest('[data-url-qr-edit]');if(ed)openUrlQrForm(ed.dataset.urlQrEdit);var dl=e.target.closest('[data-url-qr-download]');if(dl)downloadUrlQr(dl.dataset.urlQrDownload);var pr=e.target.closest('[data-url-qr-print]');if(pr)printUrlQr(pr.dataset.urlQrPrint);});
     if($('period-add')) $('period-add').addEventListener('click',function(){openPeriodForm(null);});
     if($('period-cancel')) $('period-cancel').addEventListener('click',function(){$('period-form-card').classList.add('crm-hidden');});
     if($('period-form')) $('period-form').addEventListener('submit',savePeriod);

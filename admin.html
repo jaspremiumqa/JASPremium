@@ -71,6 +71,7 @@
           <button class="crm-nav-item" data-view="statement-mapping" data-admin-only><span>⌘</span> Statement Mapping</button>
           <button class="crm-nav-item" data-view="accounting-periods" data-admin-only><span>◷</span> Accounting Periods</button>
           <button class="crm-nav-item" data-view="audit-trail" data-admin-only><span>✓</span> Audit Trail</button>
+          <button class="crm-nav-item" data-view="url-qr-codes" data-admin-only><span>▣</span> URL QR Codes</button>
         </nav>
         <div class="crm-side-bottom">
           <a href="index.html" class="crm-nav-link">↗ View website</a>
@@ -955,6 +956,24 @@
  <div class="crm-card"><div class="crm-list-filters"><div class="crm-search-box"><span>⌕</span><input id="statement-map-search" type="search" placeholder="Search mapping"></div><select id="statement-map-filter" class="crm-filter-select"><option value="all">All statements</option></select></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Statement</th><th>Account</th><th>Section / line</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead><tbody id="statement-map-body"></tbody></table></div></div>
 </section>
 
+<section id="view-url-qr-codes" class="crm-view crm-hidden" data-admin-only>
+ <div class="crm-page-heading"><div><div class="crm-section-label">Tools</div><h2>URL QR Codes</h2><p>Create a permanent QR code for any website or URL. The QR always uses the JAS Premium public resolver, so changing the destination later does not change the printed QR code.</p></div><button id="url-qr-add" class="crm-btn crm-btn-primary">+ Create QR code</button></div>
+ <div id="url-qr-form-card" class="crm-card crm-hidden">
+  <form id="url-qr-form" class="crm-standard-form">
+   <div class="crm-form-grid">
+    <div class="crm-field"><label for="url-qr-name">Name / label</label><input id="url-qr-name" maxlength="120" required placeholder="e.g. Website menu, Booking page, Instagram"></div>
+    <div class="crm-field full"><label for="url-qr-destination">Destination URL</label><input id="url-qr-destination" type="url" inputmode="url" maxlength="2000" required placeholder="https://example.com/page"><small>The QR code points to the permanent JAS Premium public resolver. Changing this URL later will not change the QR code.</small></div>
+   </div>
+   <div class="crm-form-actions"><button type="button" id="url-qr-cancel" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" id="url-qr-save" class="crm-btn crm-btn-primary">Save QR code</button></div>
+  </form>
+ </div>
+ <div class="crm-card">
+  <div class="crm-list-filters crm-url-qr-filters"><div class="crm-search-box"><span>⌕</span><input id="url-qr-search" type="search" placeholder="Search name, code or URL" aria-label="Search URL QR codes"></div></div>
+  <div class="crm-table-wrap"><table class="crm-table crm-url-qr-table"><thead><tr><th>QR Code</th><th>Name</th><th>Current destination</th><th>QR</th><th>Created</th><th>Actions</th></tr></thead><tbody id="url-qr-body"><tr><td colspan="6" class="crm-empty">Loading QR codes…</td></tr></tbody></table></div>
+ </div>
+ <div id="url-qr-print-area" class="crm-url-qr-print-area" aria-hidden="true"></div>
+</section>
+
 <section id="view-audit-trail" class="crm-view crm-hidden" data-admin-only>
  <div class="crm-page-heading"><div><div class="crm-section-label">Finance / Control</div><h2>Audit Trail</h2><p>Immutable history of accounting changes, posting actions and report exports.</p></div><div class="crm-report-actions"><button id="audit-export-csv" class="crm-btn crm-btn-secondary">Export CSV</button><button id="audit-print-pdf" class="crm-btn crm-btn-primary">Download PDF</button></div></div>
  <div class="crm-card"><div class="crm-list-filters crm-audit-filters"><div class="crm-search-box"><span>⌕</span><input id="audit-search" type="search" placeholder="Search user, action, table or record"></div><select id="audit-action-filter" class="crm-filter-select"><option value="all">All actions</option></select><input id="audit-date-from" class="crm-date-filter" type="date"><input id="audit-date-to" class="crm-date-filter" type="date"></div>
@@ -1089,8 +1108,9 @@
       </div>
     </div>
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v45-pdf-final"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v46-url-qr"></script>
 </body>
 </html>
