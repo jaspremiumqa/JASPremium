@@ -37252,7 +37252,7 @@ html:not(.lt-ie10) .not-animated {
 .rd-navbar-toggle span {
 	width: 24px;
 	height: 3px;
-	background-color: #000;
+	background-color: #fff;
 	backface-visibility: hidden;
 	border-radius: 2px;
 }
