@@ -30,7 +30,7 @@
     if (!value) return null;
     var result = parseValue(value);
     if (!result || typeof result !== 'object' || Array.isArray(result) || !result.url) return null;
-    return {path:String(result.path || ''), url:String(result.url), width:String(result.width || '32px'), height:String(result.height || '32px')};
+    return { path: String(result.path || ''), url: String(result.url), width: String(result.width || '32px'), height: String(result.height || '32px') };
   }
 
   function normalizeSettings(raw) {
@@ -84,10 +84,10 @@
     });
     var normalized = normalizeSettings(settings);
     normalized.__social = {};
-    (result.data || []).forEach(function(row){
+    (result.data || []).forEach(function (row) {
       var key = String(row.setting_key || '');
       if (key.indexOf('social_') === 0) {
-        normalized.__social[key] = {setting_value: parseValue(row.setting_value), active: row.active !== false};
+        normalized.__social[key] = { setting_value: parseValue(row.setting_value), active: row.active !== false };
       }
     });
     return normalized;
@@ -111,10 +111,10 @@
 
   function applySocialLinks(settings) {
     var social = {};
-    Object.keys(settings || {}).forEach(function(key) {
+    Object.keys(settings || {}).forEach(function (key) {
       if (key.indexOf('social_') !== 0) return;
       var slug = key.slice(7);
-      if (['whatsapp','facebook','instagram'].indexOf(slug) === -1) return;
+      if (['whatsapp', 'facebook', 'instagram'].indexOf(slug) === -1) return;
       var row = settings[key];
       if (!row || row.active === false) return;
       var value = parseValue(row.setting_value);
@@ -122,9 +122,9 @@
         console.warn('[Application settings] ' + slug + ' is active but has no public URL; the channel will remain hidden.');
         return;
       }
-      social[slug] = {url:String(value.url).trim()};
+      social[slug] = { url: String(value.url).trim() };
     });
-    document.querySelectorAll('.site-social-link[data-social]').forEach(function(link) {
+    document.querySelectorAll('.site-social-link[data-social]').forEach(function (link) {
       var slug = link.getAttribute('data-social');
       var item = social[slug];
       var visible = !!item;
@@ -165,10 +165,10 @@
   }
 
   function applyWebsiteImages(settings) {
-    var imageKeys = ['who_we_are_image_1','who_we_are_image_2','who_we_are_image_3'];
-    imageKeys.forEach(function(key, index){
+    var imageKeys = ['who_we_are_image_1', 'who_we_are_image_2', 'who_we_are_image_3'];
+    imageKeys.forEach(function (key, index) {
       var image = optionalWebsiteImage(settings, key);
-      document.querySelectorAll('[data-site-image="who-we-are-' + (index + 1) + '"]').forEach(function(img){
+      document.querySelectorAll('[data-site-image="who-we-are-' + (index + 1) + '"]').forEach(function (img) {
         if (!image) {
           img.removeAttribute('src');
           img.hidden = true;
@@ -182,17 +182,17 @@
     });
 
     var hero = optionalWebsiteImage(settings, 'homepage_hero_image');
-    document.querySelectorAll('[data-site-background="homepage-hero"]').forEach(function(el){
+    document.querySelectorAll('[data-site-background="homepage-hero"]').forEach(function (el) {
       el.style.backgroundImage = hero ? 'url("' + hero.url.replace(/"/g, '\\"') + '")' : 'none';
     });
 
     var services = optionalWebsiteImage(settings, 'services_section_image');
-    document.querySelectorAll('[data-site-background="services-section"]').forEach(function(el){
+    document.querySelectorAll('[data-site-background="services-section"]').forEach(function (el) {
       el.style.backgroundImage = services ? 'url("' + services.url.replace(/"/g, '\\"') + '")' : 'none';
     });
 
     var contact = optionalWebsiteImage(settings, 'contact_section_image');
-    document.querySelectorAll('[data-site-background="contact-section"]').forEach(function(el){
+    document.querySelectorAll('[data-site-background="contact-section"]').forEach(function (el) {
       el.style.backgroundImage = contact ? 'url("' + contact.url.replace(/"/g, '\\"') + '")' : 'none';
     });
   }
@@ -281,10 +281,36 @@
       img.removeAttribute('height');
       img.style.setProperty('width', navLogo.width || '125px', 'important');
       img.style.setProperty('height', navLogo.height || 'auto', 'important');
-      img.style.setProperty('max-width', '100%', 'important');
+      isHomePage ? img.style.setProperty('max-width', '100%', 'important'):img.style.setProperty('max-width', '88px', 'important');
       img.style.setProperty('object-fit', 'contain', 'important');
       img.hidden = false;
     });
+    const mq = window.matchMedia("(max-width: 768px)");
+    function updateLogo(e) {
+      if (e.matches) {
+        if (window.matchMedia("(max-width: 768px)").matches) {
+          document.querySelectorAll(
+            ".site-brand-logo.site-brand-logo-mobile"
+          ).forEach(function (img) {
+            if (!otherNavLogo || !otherNavLogo.url) {
+              img.removeAttribute("src");
+              img.hidden = true;
+              return;
+            }
+            img.src = otherNavLogo.url;
+            img.removeAttribute("width");
+            img.removeAttribute("height");
+            img.style.setProperty("width", otherNavLogo.width || "125px", "important");
+            img.style.setProperty("height", otherNavLogo.height || "auto", "important");
+            img.style.setProperty("max-width", "88px", "important");
+            img.style.setProperty("object-fit", "contain", "important");
+            img.hidden = false;
+          });
+        }
+      }
+    }
+    mq.addListener(updateLogo);
+    updateLogo(mq); // run once on load
 
     document.querySelectorAll('.page-title').forEach(function (banner) {
       banner.style.backgroundImage = 'url("' + bannerImage.url.replace(/"/g, '\\"') + '")';
