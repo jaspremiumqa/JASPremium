@@ -1,2 +1,0 @@
-ROLE-RLS-FIX.sql must be run once in Supabase SQL Editor after the role/permission tables exist.
-It enables and defines RLS for crm_roles, crm_permissions and crm_role_permissions so the CRM can load roles and permissions while still enforcing role permissions at the database level.

@@ -499,7 +499,8 @@ div#date-picker-container {
   }
 }
 
-.rd-navbar-fixed .rd-navbar-brand .site-brand-logo {
+.rd-navbar-fixed .rd-navbar-brand .site-brand-logo,
+.rd-navbar-fixed .site-brand-logo-mobile {
   width: auto !important;
   height: 40px !important;
   min-width: 0;
@@ -510,14 +511,43 @@ div#date-picker-container {
 
 /* Desktop header: hide the site logo/brand mark and let the controls use the full header width. */
 @media (min-width: 992px) {
-  .rd-navbar-sidebar-linked .page-header-perspective .page-header-left {
-    display: none !important;
-  }
-
   .rd-navbar-sidebar-linked .page-header-perspective .page-header-right {
     flex-basis: 100% !important;
     max-width: 100% !important;
     width: 100% !important;
     justify-content: flex-end !important;
   }
+}
+
+/* Desktop/tablet header: keep the language switcher available in the menu,
+   but don't show the duplicate button beside the hamburger. */
+@media (min-width: 769px) {
+  .page-header-perspective .lang-switcher {
+    display: none !important;
+  }
+}
+
+/* Footer branding: the logo always appears above the translated footer text. */
+.site-footer-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.site-footer-logo-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 22px;
+}
+.site-footer-logo {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+}
+.site-footer-content-text {
+  display: block !important;
+}
+.site-footer-content-text[hidden] {
+  display: block !important;
 }

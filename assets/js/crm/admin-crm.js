@@ -650,18 +650,15 @@
   }
 
 
-  function brandingDefaultPayload(key) {
-    var defaultKey = key + '_default';
-    var row = state.appSettings.find(function(x){ return x.setting_key === defaultKey; });
-    if (!row) throw new Error('Application setting "' + defaultKey + '" is missing.');
-    return normalizeBrandingImage(row.setting_value, defaultKey);
-  }
-
   function renderBrandingSettings() {
     var header = imageSettingPayload('header_image');
+    var mainNavLogo = optionalImageSettingPayload('main_page_nav_logo_image');
+    var otherNavLogo = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
     var banner = imageSettingPayload('banner_image');
     var favicon = optionalImageSettingPayload('favicon_image');
-    var headerPreview = $('header-image-preview');
+    var footerLogo = optionalImageSettingPayload('footer_logo_image');
+    var mainNavLogoPreview = $('main-page-nav-logo-image-preview');
+    var otherNavLogoPreview = $('other-pages-nav-logo-image-preview');
     var sidebarLogo = $('crm-sidebar-logo');
     if (sidebarLogo) {
       sidebarLogo.src = header.url;
@@ -669,22 +666,48 @@
       sidebarLogo.style.objectFit = 'contain';
       sidebarLogo.onerror = function(){ sidebarLogo.removeAttribute('src'); sidebarLogo.hidden = true; };
     }
-    if (headerPreview) {
-      headerPreview.src = header.url;
-      headerPreview.style.width = header.width;
-      headerPreview.style.height = header.height;
-      headerPreview.onerror = function(){ headerPreview.removeAttribute('src'); headerPreview.hidden = true; };
+    function renderNavLogoPreview(preview, image) {
+      if (!preview) return;
+      if (image && image.url) {
+        preview.src = image.url;
+        preview.hidden = false;
+        preview.style.width = image.width || '125px';
+        preview.style.height = image.height || 'auto';
+      } else {
+        preview.removeAttribute('src');
+        preview.hidden = true;
+      }
+      preview.onerror = function(){ preview.removeAttribute('src'); preview.hidden = true; };
     }
+    renderNavLogoPreview(mainNavLogoPreview, mainNavLogo);
+    renderNavLogoPreview(otherNavLogoPreview, otherNavLogo);
     var bannerPreview = $('banner-image-preview');
     if (bannerPreview) {
       bannerPreview.style.backgroundImage = 'url("' + String(banner.url).replace(/"/g, '\\"') + '")';
       bannerPreview.style.width = banner.width;
       bannerPreview.style.minHeight = banner.height;
     }
-    if ($('header-image-width')) $('header-image-width').value = header.width;
-    if ($('header-image-height')) $('header-image-height').value = header.height;
+    if ($('main-page-nav-logo-image-width')) $('main-page-nav-logo-image-width').value = mainNavLogo ? (mainNavLogo.width || '125px') : '125px';
+    if ($('main-page-nav-logo-image-height')) $('main-page-nav-logo-image-height').value = mainNavLogo ? (mainNavLogo.height || 'auto') : 'auto';
+    if ($('other-pages-nav-logo-image-width')) $('other-pages-nav-logo-image-width').value = otherNavLogo ? (otherNavLogo.width || '125px') : '125px';
+    if ($('other-pages-nav-logo-image-height')) $('other-pages-nav-logo-image-height').value = otherNavLogo ? (otherNavLogo.height || 'auto') : 'auto';
     if ($('banner-image-width')) $('banner-image-width').value = banner.width;
     if ($('banner-image-height')) $('banner-image-height').value = banner.height;
+    var footerLogoPreview = $('footer-logo-image-preview');
+    if (footerLogoPreview) {
+      if (footerLogo && footerLogo.url) {
+        footerLogoPreview.src = footerLogo.url;
+        footerLogoPreview.hidden = false;
+        footerLogoPreview.style.width = footerLogo.width || '100%';
+        footerLogoPreview.style.height = footerLogo.height || 'auto';
+      } else {
+        footerLogoPreview.removeAttribute('src');
+        footerLogoPreview.hidden = true;
+      }
+      footerLogoPreview.onerror = function(){ footerLogoPreview.removeAttribute('src'); footerLogoPreview.hidden = true; };
+    }
+    if ($('footer-logo-image-width')) $('footer-logo-image-width').value = footerLogo ? (footerLogo.width || '100%') : '100%';
+    if ($('footer-logo-image-height')) $('footer-logo-image-height').value = footerLogo ? (footerLogo.height || 'auto') : 'auto';
     var faviconPreview = $('favicon-image-preview');
     if (faviconPreview) {
       if (favicon && favicon.url) { faviconPreview.src = favicon.url; faviconPreview.hidden = false; }
@@ -702,8 +725,8 @@
   function validateCssSize(value, label, fallback) {
     value = String(value || '').trim();
     if (!value) return fallback;
-    if (!/^(?:\d+(?:\.\d+)?)(?:px|%|vw|vh|rem|em|auto)$/.test(value)) {
-      throw new Error(label + ' must be a valid CSS size such as 125px, 100%, or 20.833vw.');
+    if (!/^(?:auto|\d+(?:\.\d+)?(?:px|%|vw|vh|rem|em))$/.test(value)) {
+      throw new Error(label + ' must be a valid CSS size such as 125px, 100%, or auto.');
     }
     return value;
   }
@@ -712,7 +735,7 @@
     var result = await window.salonSupabase.from('application_settings').upsert({
       setting_key: key,
       setting_value: payload,
-      description: key === 'header_image' ? 'Website header image and display dimensions.' : 'Website page banner image and display dimensions.',
+      description: (key === 'main_page_nav_logo_image' ? 'Main Home page navigation logo and display dimensions.' : (key === 'other_pages_nav_logo_image' ? 'Other website pages navigation logo and display dimensions.' : (key === 'nav_logo_image' ? 'Legacy website navigation logo and display dimensions.' : (key === 'header_image' ? 'CRM/header reference image and display dimensions.' : (key === 'banner_image' ? 'Website page banner image and display dimensions.' : 'Website footer logo and display dimensions.'))))),
       active: true,
       updated_at: new Date().toISOString()
     }, {onConflict:'setting_key'});
@@ -732,7 +755,7 @@
     var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
     if (!/^(jpg|jpeg|png|webp|gif|ico)$/.test(ext)) ext = 'jpg';
     var path = 'branding/' + key.replace('_image','') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
-    var old = key === 'favicon_image' ? (optionalImageSettingPayload(key) || {path:'',url:'',width:'32px',height:'32px'}) : imageSettingPayload(key);
+    var old = key === 'favicon_image' ? (optionalImageSettingPayload(key) || {path:'',url:'',width:'32px',height:'32px'}) : ((key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:(key === 'footer_logo_image' ? '100%' : '125px'),height:'auto'}) : imageSettingPayload(key));
     var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, {upsert:false, contentType:file.type || undefined});
     if (upload.error) throw upload.error;
     var publicUrlResult = window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
@@ -749,12 +772,19 @@
       await window.salonSupabase.storage.from('site-assets').remove([old.path]);
     }
     if (input) input.value = '';
-    message(key === 'header_image' ? 'Header image uploaded.' : (key === 'banner_image' ? 'Page banner image uploaded.' : 'Favicon uploaded.'),'success');
+    var uploadMessage = 'Favicon uploaded.';
+    if (key === 'main_page_nav_logo_image') uploadMessage = 'Main page Nav logo uploaded.';
+    else if (key === 'other_pages_nav_logo_image') uploadMessage = 'Other pages Nav logo uploaded.';
+    else if (key === 'nav_logo_image') uploadMessage = 'Nav logo uploaded.';
+    else if (key === 'header_image') uploadMessage = 'Header image uploaded.';
+    else if (key === 'banner_image') uploadMessage = 'Page banner image uploaded.';
+    else if (key === 'footer_logo_image') uploadMessage = 'Footer logo uploaded.';
+    message(uploadMessage,'success');
   }
 
   async function deleteBrandingImage(key) {
     if (!requirePermission('settings','update')) return;
-    var current = key === 'favicon_image' ? (optionalImageSettingPayload(key) || {path:'',url:'',width:'32px',height:'32px'}) : imageSettingPayload(key);
+    var current = (key === 'favicon_image' || key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:key === 'footer_logo_image' ? '100%' : (key === 'favicon_image' ? '32px' : '125px'),height:key === 'favicon_image' ? '32px' : 'auto'}) : imageSettingPayload(key);
     if (current.path && current.path.indexOf('branding/') === 0) {
       var remove = await window.salonSupabase.storage.from('site-assets').remove([current.path]);
       if (remove.error) throw remove.error;
@@ -764,8 +794,23 @@
       message('Favicon deleted.','success');
       return;
     }
+    if (key === 'footer_logo_image') {
+      await persistBrandingSetting(key, {path:'',url:'',width:'100%',height:'auto'});
+      message('Footer logo deleted.','success');
+      return;
+    }
+    if (key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') {
+      await persistBrandingSetting(key, {path:'',url:'',width:'125px',height:'auto'});
+      message(key === 'main_page_nav_logo_image' ? 'Main page Nav logo deleted.' : 'Other pages Nav logo deleted.','success');
+      return;
+    }
+    if (key === 'nav_logo_image') {
+      await persistBrandingSetting(key, {path:'',url:'',width:'125px',height:'auto'});
+      message('Legacy Nav logo deleted.','success');
+      return;
+    }
     await persistBrandingSetting(key, brandingDefaultPayload(key));
-    message((key === 'header_image' ? 'Header image' : 'Page banner image') + ' restored to the default image.','success');
+    message((key === 'header_image' ? 'Top navigation logo' : 'Page banner image') + ' restored to the default image.','success');
   }
 
 
@@ -902,6 +947,7 @@
 
   function applyCrmFavicon() {
     var favicon = optionalImageSettingPayload('favicon_image');
+    var footerLogo = optionalImageSettingPayload('footer_logo_image');
     var old = document.querySelector('link[data-crm-favicon]');
     if (old) old.remove();
 
@@ -1078,7 +1124,6 @@
     applyCrmWebsiteName(websiteName);
     var phoneInput = $('app-setting-contact-phone');
     if (phoneInput) phoneInput.value = String(contactPhone || '').trim();
-
     renderCurrencyOptions(options);
     renderBrandingSettings();
     renderSocialSettings();
@@ -1086,6 +1131,32 @@
 
     var status = $('app-settings-status');
     if (status) status.textContent = 'Settings synced';
+  }
+
+  async function saveImageDimensionsSetting(key, widthId, heightId, label, fallbackWidth) {
+    if (!requirePermission('settings','update')) return;
+    var image = optionalImageSettingPayload(key);
+    if (!image || !image.url) { message('Upload the ' + label + ' first.','error'); return; }
+    try {
+      image.width = validateCssSize($(widthId).value, label + ' width', image.width || fallbackWidth);
+      image.height = validateCssSize($(heightId).value, label + ' height', image.height || 'auto');
+      await persistBrandingSetting(key, image);
+      message(label + ' dimensions saved.','success');
+    } catch (err) {
+      message(err.message,'error');
+    }
+  }
+
+  async function saveFooterLogoDimensions() {
+    return saveImageDimensionsSetting('footer_logo_image','footer-logo-image-width','footer-logo-image-height','Footer logo','100%');
+  }
+
+  async function saveMainPageNavLogoDimensions() {
+    return saveImageDimensionsSetting('main_page_nav_logo_image','main-page-nav-logo-image-width','main-page-nav-logo-image-height','Main page Nav logo','125px');
+  }
+
+  async function saveOtherPagesNavLogoDimensions() {
+    return saveImageDimensionsSetting('other_pages_nav_logo_image','other-pages-nav-logo-image-width','other-pages-nav-logo-image-height','Other pages Nav logo','125px');
   }
 
   async function saveApplicationSettings(e) {
@@ -1103,15 +1174,31 @@
     var contactPhone = $('app-setting-contact-phone').value.trim();
     var options;
     var headerImage;
+    var mainPageNavLogoImage;
+    var otherPagesNavLogoImage;
     var bannerImage;
     var faviconImage;
+    var footerLogoImage;
 
     try {
       headerImage = imageSettingPayload('header_image');
+      mainPageNavLogoImage = optionalImageSettingPayload('main_page_nav_logo_image');
+      otherPagesNavLogoImage = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
       bannerImage = imageSettingPayload('banner_image');
       faviconImage = optionalImageSettingPayload('favicon_image') || {path:'',url:'',width:'32px',height:'32px'};
-      headerImage.width = validateCssSize($('header-image-width').value, 'Header width', headerImage.width);
-      headerImage.height = validateCssSize($('header-image-height').value, 'Header height', headerImage.height);
+      footerLogoImage = optionalImageSettingPayload('footer_logo_image');
+      if (footerLogoImage && footerLogoImage.url) {
+        footerLogoImage.width = validateCssSize($('footer-logo-image-width').value, 'Footer logo width', footerLogoImage.width || '100%');
+        footerLogoImage.height = validateCssSize($('footer-logo-image-height').value, 'Footer logo height', footerLogoImage.height || 'auto');
+      }
+      if (mainPageNavLogoImage && mainPageNavLogoImage.url) {
+        mainPageNavLogoImage.width = validateCssSize($('main-page-nav-logo-image-width').value, 'Main page Nav logo width', mainPageNavLogoImage.width || '125px');
+        mainPageNavLogoImage.height = validateCssSize($('main-page-nav-logo-image-height').value, 'Main page Nav logo height', mainPageNavLogoImage.height || 'auto');
+      }
+      if (otherPagesNavLogoImage && otherPagesNavLogoImage.url) {
+        otherPagesNavLogoImage.width = validateCssSize($('other-pages-nav-logo-image-width').value, 'Other pages Nav logo width', otherPagesNavLogoImage.width || '125px');
+        otherPagesNavLogoImage.height = validateCssSize($('other-pages-nav-logo-image-height').value, 'Other pages Nav logo height', otherPagesNavLogoImage.height || 'auto');
+      }
       bannerImage.width = validateCssSize($('banner-image-width').value, 'Banner width', bannerImage.width);
       bannerImage.height = validateCssSize($('banner-image-height').value, 'Banner height', bannerImage.height);
     } catch (err) {
@@ -1180,11 +1267,15 @@
       {key:'currency_options', value:options, description:'Currency labels by currency and language.'},
       {key:'default_language', value:language, description:'Default website language for new visitors.'},
       {key:'contact_phone', value:contactPhone, description:'Public contact phone number used across the website.'},
-      {key:'header_image', value:headerImage, description:'Website header image and display dimensions.'},
+      {key:'header_image', value:headerImage, description:'CRM/header reference image and display dimensions.'},
+      {key:'main_page_nav_logo_image', value:mainPageNavLogoImage || {path:'',url:'',width:'125px',height:'auto'}, description:'Main Home page navigation logo and display dimensions.'},
+      {key:'other_pages_nav_logo_image', value:otherPagesNavLogoImage || {path:'',url:'',width:'125px',height:'auto'}, description:'Other website pages navigation logo and display dimensions.'},
       {key:'banner_image', value:bannerImage, description:'Website page banner image and display dimensions.'},
       {key:'favicon_image', value:faviconImage, description:'Website favicon shown in the browser tab.'},
       {key:'loyalty_rewards', value:loyaltyRewards, description:'Customer loyalty reward redemption rules: points required and reward description.'}
-    ].concat(socialSettings);
+    ];
+    if (footerLogoImage && footerLogoImage.url) settings.push({key:'footer_logo_image', value:footerLogoImage, description:'Website footer logo shown above the translated footer text.'});
+    settings = settings.concat(socialSettings);
 
     var button = $('save-application-settings');
     if (button) { button.disabled = true; button.textContent = 'Saving…'; }
@@ -3989,7 +4080,34 @@
   function showApp(){$('crm-login').classList.add('crm-hidden');$('crm-app').classList.remove('crm-hidden');applyRoleVisibility();}
 
   document.addEventListener('DOMContentLoaded',async function(){
-    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);$('customer-detail-close').addEventListener('click',closeCustomerDetails);$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;var rows=document.querySelectorAll('[data-loyalty-reward-row]');if(rows.length<=1){message('Keep at least one loyalty reward.','error');return;}btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-header-image').addEventListener('click',function(){uploadBrandingImage('header_image','header-image-file').catch(function(e){message(e.message,'error');});});$('delete-header-image').addEventListener('click',function(){deleteBrandingImage('header_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
+    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);$('customer-detail-close').addEventListener('click',closeCustomerDetails);$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;var rows=document.querySelectorAll('[data-loyalty-reward-row]');if(rows.length<=1){message('Keep at least one loyalty reward.','error');return;}btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-main-page-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('main_page_nav_logo_image','main-page-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-main-page-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('main_page_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-other-pages-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('other_pages_nav_logo_image','other-pages-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-other-pages-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('other_pages_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('upload-footer-logo-image').addEventListener('click',function(){uploadBrandingImage('footer_logo_image','footer-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-footer-logo-image').addEventListener('click',function(){deleteBrandingImage('footer_logo_image').catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
+    function updateFooterLogoDimensionsPreview(){
+      var preview=$('footer-logo-image-preview');
+      if(!preview || preview.hidden) return;
+      var widthInput=$('footer-logo-image-width');
+      var heightInput=$('footer-logo-image-height');
+      if(widthInput && widthInput.value.trim()) preview.style.width=widthInput.value.trim();
+      if(heightInput && heightInput.value.trim()) preview.style.height=heightInput.value.trim();
+    }
+    function updateImageDimensionsPreview(widthId, heightId, previewId) {
+      var preview=$(previewId);
+      if(!preview || preview.hidden) return;
+      var widthInput=$(widthId), heightInput=$(heightId);
+      if(widthInput && widthInput.value.trim()) preview.style.setProperty('width', widthInput.value.trim(), '');
+      if(heightInput && heightInput.value.trim()) preview.style.setProperty('height', heightInput.value.trim(), '');
+    }
+    function bindImageDimensionInputs(widthId, heightId, previewId, saveFn) {
+      [widthId,heightId].forEach(function(id){
+        var input=$(id);
+        if(!input) return;
+        input.addEventListener('input',function(){ updateImageDimensionsPreview(widthId,heightId,previewId); });
+        input.addEventListener('change',function(){ saveFn(); });
+        input.addEventListener('blur',function(){ saveFn(); });
+      });
+    }
+    bindImageDimensionInputs('main-page-nav-logo-image-width','main-page-nav-logo-image-height','main-page-nav-logo-image-preview',saveMainPageNavLogoDimensions);
+    bindImageDimensionInputs('other-pages-nav-logo-image-width','other-pages-nav-logo-image-height','other-pages-nav-logo-image-preview',saveOtherPagesNavLogoDimensions);
+    bindImageDimensionInputs('footer-logo-image-width','footer-logo-image-height','footer-logo-image-preview',saveFooterLogoDimensions);
     WEBSITE_IMAGE_SLOTS.forEach(function(slot){
       var uploadButton = $(slot.uploadId);
       if (uploadButton) uploadButton.addEventListener('click',function(){uploadWebsiteImage(slot).catch(function(e){message(e.message,'error');});});

@@ -56,6 +56,8 @@
       website_name: String(websiteName).trim(),
       contact_phone: String(contactPhone).trim(),
       header_image: requireImage(raw.header_image || raw.headerImage, 'header_image'),
+      main_page_nav_logo_image: optionalImage(raw.main_page_nav_logo_image),
+      other_pages_nav_logo_image: optionalImage(raw.other_pages_nav_logo_image || raw.nav_logo_image),
       banner_image: requireImage(raw.banner_image || raw.bannerImage, 'banner_image'),
       favicon_image: optionalImage(raw.favicon_image || raw.faviconImage),
       who_we_are_image_1: optionalImage(raw.who_we_are_image_1),
@@ -63,7 +65,8 @@
       who_we_are_image_3: optionalImage(raw.who_we_are_image_3),
       homepage_hero_image: optionalImage(raw.homepage_hero_image),
       services_section_image: optionalImage(raw.services_section_image),
-      contact_section_image: optionalImage(raw.contact_section_image)
+      contact_section_image: optionalImage(raw.contact_section_image),
+      footer_logo_image: optionalImage(raw.footer_logo_image)
     };
   }
 
@@ -82,8 +85,9 @@
     var normalized = normalizeSettings(settings);
     normalized.__social = {};
     (result.data || []).forEach(function(row){
-      if (String(row.setting_key || '').indexOf('social_') === 0) {
-        normalized.__social[row.setting_key] = {setting_value: parseValue(row.setting_value), active: row.active !== false};
+      var key = String(row.setting_key || '');
+      if (key.indexOf('social_') === 0) {
+        normalized.__social[key] = {setting_value: parseValue(row.setting_value), active: row.active !== false};
       }
     });
     return normalized;
@@ -153,6 +157,11 @@
       width: String(value.width || 'auto'),
       height: String(value.height || 'auto')
     };
+  }
+
+  function applyLandscapeImages(settings) {
+    // Landscape image manager was removed from CRM. Kept as a no-op for
+    // compatibility with older cached site-loader.js files.
   }
 
   function applyWebsiteImages(settings) {
@@ -234,15 +243,46 @@
       meta.setAttribute('content', websiteName + ' – Hair & Beauty Salon');
     });
     var header = settings.header_image;
+    var mainNavLogo = settings.main_page_nav_logo_image;
+    var otherNavLogo = settings.other_pages_nav_logo_image;
+    var isHomePage = ((window.location.pathname.split('/').pop() || 'index.html').toLowerCase() === 'index.html');
+    var navLogo = isHomePage ? mainNavLogo : otherNavLogo;
     var bannerImage = settings.banner_image;
 
+    // Footer is injected dynamically by site-loader.js, so apply the footer
+    // logo whenever branding is (re)applied. This also fixes the case where
+    // the image element starts hidden before the footer fragment loads.
+    var footerLogo = settings.footer_logo_image;
+    document.querySelectorAll('[data-site-footer-logo]').forEach(function (img) {
+      if (!footerLogo || !footerLogo.url) {
+        img.removeAttribute('src');
+        img.hidden = true;
+        return;
+      }
+      img.src = footerLogo.url;
+      img.style.setProperty('width', footerLogo.width || '100%', 'important');
+      img.style.setProperty('height', footerLogo.height || 'auto', 'important');
+      img.style.setProperty('max-width', '100%', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
+      img.hidden = false;
+    });
+
     document.querySelectorAll('.brand-desktop img, .rd-navbar-brand img, .site-brand-logo').forEach(function (img) {
-      img.src = header.url;
-      img.width = parseInt(header.width, 10) || 0;
-      img.height = parseInt(header.height, 10) || 0;
-      img.style.width = header.width;
-      img.style.height = header.height;
-      img.style.objectFit = 'contain';
+      if (!navLogo || !navLogo.url) {
+        img.removeAttribute('src');
+        img.hidden = true;
+        return;
+      }
+      img.src = navLogo.url;
+      // Apply CRM dimensions as CSS, including values such as `auto`, without
+      // writing invalid/zero HTML width/height attributes that can override
+      // the intended sizing behavior.
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      img.style.setProperty('width', navLogo.width || '125px', 'important');
+      img.style.setProperty('height', navLogo.height || 'auto', 'important');
+      img.style.setProperty('max-width', '100%', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
       img.hidden = false;
     });
 
@@ -255,6 +295,7 @@
 
   window.applyApplicationBranding = applyBranding;
   window.applyWebsiteImages = applyWebsiteImages;
+  window.applyLandscapeImages = applyLandscapeImages;
   window.applySocialLinks = applySocialLinks;
 
   window.applicationSettingsReady = (async function () {
@@ -263,6 +304,7 @@
       var settings = await loadFromSupabase();
       applyBranding(settings);
       applyWebsiteImages(settings);
+      applyLandscapeImages(settings);
       applySocialLinks(settings.__social || {});
       document.dispatchEvent(new CustomEvent('applicationSettingsLoaded', { detail: settings }));
       console.info('[Application settings] Loaded.', settings.website_name, settings.header_image.url, settings.banner_image.url);

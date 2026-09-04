@@ -26435,13 +26435,7 @@ section {
 .page-footer-default {
 	padding: 50px 0 25px;
 	text-align: center;
-	background: #fff;
-}
-
-@media (min-width: 768px) {
-	.page-footer-default {
-		padding-top: 80px;
-	}
+	background: var(--color-primary);
 }
 
 .page-footer-variant-2 {
@@ -26540,6 +26534,26 @@ section {
 .footer-navigation-horizontal>li {
 	display: inline-block;
 }
+
+.site-footer-branding {
+  display: flex;
+  align-items: center; /* vertically center logo and text */
+  justify-content: center; /* center horizontally */
+  gap: 10px; /* space between logo and text */
+  padding: 8px 0; /* reduce height */
+}
+
+.site-footer-logo {
+  height: 28px; /* adjust for compact height */
+}
+
+.site-footer-text {
+  font-size: 15px;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+
 
 a {
 	display: inline-block;
@@ -37811,6 +37825,13 @@ html:not(.lt-ie10) .not-animated {
 	color: #242423;
 }
 
+.rd-navbar--is-stuck.rd-navbar-fullwidth .rd-navbar-nav>li>a,
+.rd-navbar--is-stuck.rd-navbar-fullwidth .rd-navbar-nav>li>a:active,
+.rd-navbar--is-stuck.rd-navbar-fullwidth .rd-navbar-nav>li>a:focus {
+	color: #fff;
+}
+
+
 .rd-navbar-fullwidth .rd-navbar-nav>li>a:hover {
 	text-decoration: underline;
 }
@@ -37871,7 +37892,7 @@ html:not(.lt-ie10) .not-animated {
 
 .rd-navbar-fullwidth.rd-navbar--is-clone,
 .rd-navbar-fullwidth.rd-navbar--is-stuck {
-	background: #fff;
+	background: var(--color-primary);
 	border-bottom-color: #f2f2f2;
 }
 
@@ -37960,7 +37981,7 @@ html:not(.lt-ie10) .not-animated {
 	right: 0;
 	box-shadow: none;
 	border-bottom: 1px solid #eff3f1;
-	background: #fff;
+	background: var(--color-primary);
 }
 
 .rd-navbar-fixed .rd-navbar-secondary {
@@ -38810,7 +38831,7 @@ html:not(.lt-ie10) .not-animated {
 	display: inline-block;
 	font: 400 14px/18px "Arvo", Helvetica, Arial, sans-serif;
 	text-transform: uppercase;
-	color: #000;
+	color: #fff;
 	vertical-align: middle;
 }
 
@@ -38837,7 +38858,7 @@ html:not(.lt-ie10) .not-animated {
 .rd-navbar-sidebar-linked .perspective-menu-toggle span:after {
 	width: 26px;
 	height: 1px;
-	background: #000;
+	background: #fff;
 }
 
 .rd-navbar-sidebar-linked .perspective-menu-toggle span:before,
@@ -38890,7 +38911,7 @@ html:not(.lt-ie10) .not-animated {
 	background: #fff;
 	height: 76px;
 	padding: 7px 40px;
-	border-bottom: 1px solid #eff3f1;
+	/* border-bottom: 1px solid #eff3f1; */
 }
 
 .rd-navbar-sidebar-linked .page-header-perspective.active {
@@ -39076,7 +39097,7 @@ html:not(.lt-ie10) .not-animated {
 	height: 48px;
 	line-height: 48px;
 	cursor: pointer;
-	color: #000;
+	color: #fff;
 	background-color: transparent;
 	border: none;
 }
@@ -39106,7 +39127,7 @@ html:not(.lt-ie10) .not-animated {
 .rd-navbar-default .rd-navbar-toggle span {
 	width: 26px;
 	height: 1px;
-	background-color: #000;
+	background-color: #fff;
 	backface-visibility: hidden;
 	border-radius: 2px;
 }
@@ -41566,6 +41587,7 @@ a.pswp__share--download:hover {
 	cursor: grabbing;
 }
 
-/*# sourceMappingURL=style.css.map */
-
-/* Supabase-managed social icons */
+.page-header.page-header-perspective {
+	background-color: var(--color-primary);
+	    color: #fff;
+}

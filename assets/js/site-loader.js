@@ -103,7 +103,15 @@
     .then(data => {
       document.getElementById("footer-placeholder").innerHTML = data;
       if (window.getApplicationSettings && window.applySocialLinks) {
-        window.getApplicationSettings().then(function(settings){ if (window.applyWebsiteImages) window.applyWebsiteImages(settings); window.applySocialLinks(settings.__social || {}); }).catch(function(){});
+        window.getApplicationSettings().then(function(settings){
+          // The footer fragment is inserted after application-settings.js has
+          // already run once. Re-apply branding now so the CRM-managed footer
+          // logo is populated into the newly inserted DOM.
+          if (window.applyApplicationBranding) window.applyApplicationBranding(settings);
+          if (window.applyWebsiteImages) window.applyWebsiteImages(settings);
+          if (window.applyLandscapeImages) window.applyLandscapeImages(settings);
+          window.applySocialLinks(settings.__social || {});
+        }).catch(function(){});
       }
     })
     .catch(error => console.error("Error loading footer:", error));
@@ -131,7 +139,11 @@
       .then(data => {
         document.getElementById("rdNavBar").innerHTML = data;
         if (window.getApplicationSettings && window.applySocialLinks) {
-          window.getApplicationSettings().then(function(settings){ if (window.applyWebsiteImages) window.applyWebsiteImages(settings); window.applySocialLinks(settings.__social || {}); }).catch(function(){});
+          window.getApplicationSettings().then(function(settings){
+            if (window.applyApplicationBranding) window.applyApplicationBranding(settings);
+            if (window.applyWebsiteImages) window.applyWebsiteImages(settings);
+            window.applySocialLinks(settings.__social || {});
+          }).catch(function(){});
         }
 
         // Set active nav link

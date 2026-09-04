@@ -712,27 +712,87 @@
           <div class="crm-settings-card-head">
             <div>
               <div class="crm-settings-kicker">Website branding</div>
-              <h3>Header image</h3>
-              <p>Upload the logo shown in the website header. You can change its displayed width and height.</p>
+              <h3>Main page Nav logo</h3>
+              <p>This logo is used only on the <strong>main Home page</strong> navigation. It is completely independent from the logo used on the other pages.</p>
             </div>
           </div>
           <div class="crm-branding-editor">
-            <div class="crm-branding-preview" id="header-image-preview-wrap">
-              <img id="header-image-preview" alt="Header image preview">
+            <div class="crm-branding-preview" id="main-page-nav-logo-image-preview-wrap">
+              <img id="main-page-nav-logo-image-preview" alt="Main page Nav logo preview">
             </div>
             <div class="crm-branding-controls">
               <div class="crm-field">
-                <label for="header-image-file">Upload image</label>
-                <input id="header-image-file" type="file" accept="image/*">
+                <label for="main-page-nav-logo-image-file">Upload image</label>
+                <input id="main-page-nav-logo-image-file" type="file" accept="image/*">
                 <small>JPG, PNG, WEBP or GIF. Maximum 5 MB.</small>
               </div>
               <div class="crm-form-grid crm-branding-size-grid">
-                <div class="crm-field"><label for="header-image-width">Width</label><input id="header-image-width" type="text" placeholder="125px"></div>
-                <div class="crm-field"><label for="header-image-height">Height</label><input id="header-image-height" type="text" placeholder="100px"></div>
+                <div class="crm-field"><label for="main-page-nav-logo-image-width">Width</label><input id="main-page-nav-logo-image-width" type="text" placeholder="125px"></div>
+                <div class="crm-field"><label for="main-page-nav-logo-image-height">Height</label><input id="main-page-nav-logo-image-height" type="text" placeholder="auto"></div>
               </div>
               <div class="crm-branding-actions">
-                <button type="button" class="crm-btn crm-btn-primary crm-btn-small" id="upload-header-image">Upload / Replace</button>
-                <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="delete-header-image">Delete image</button>
+                <button type="button" class="crm-btn crm-btn-primary crm-btn-small" id="upload-main-page-nav-logo-image">Upload / Replace</button>
+                <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="delete-main-page-nav-logo-image">Delete image</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="crm-card crm-settings-card crm-branding-card">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Website branding</div>
+              <h3>Other pages Nav logo</h3>
+              <p>This logo is used on <strong>all other website pages</strong>, such as Services, Vouchers, About, FAQ and Contact.</p>
+            </div>
+          </div>
+          <div class="crm-branding-editor">
+            <div class="crm-branding-preview" id="other-pages-nav-logo-image-preview-wrap">
+              <img id="other-pages-nav-logo-image-preview" alt="Other pages Nav logo preview">
+            </div>
+            <div class="crm-branding-controls">
+              <div class="crm-field">
+                <label for="other-pages-nav-logo-image-file">Upload image</label>
+                <input id="other-pages-nav-logo-image-file" type="file" accept="image/*">
+                <small>JPG, PNG, WEBP or GIF. Maximum 5 MB.</small>
+              </div>
+              <div class="crm-form-grid crm-branding-size-grid">
+                <div class="crm-field"><label for="other-pages-nav-logo-image-width">Width</label><input id="other-pages-nav-logo-image-width" type="text" placeholder="125px"></div>
+                <div class="crm-field"><label for="other-pages-nav-logo-image-height">Height</label><input id="other-pages-nav-logo-image-height" type="text" placeholder="auto"></div>
+              </div>
+              <div class="crm-branding-actions">
+                <button type="button" class="crm-btn crm-btn-primary crm-btn-small" id="upload-other-pages-nav-logo-image">Upload / Replace</button>
+                <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="delete-other-pages-nav-logo-image">Delete image</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="crm-card crm-settings-card crm-branding-card">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Website branding</div>
+              <h3>Footer logo</h3>
+              <p>The footer always shows this logo above the translated footer text. There is no footer text/image switch.</p>
+            </div>
+          </div>
+          <div class="crm-branding-editor">
+            <div class="crm-branding-preview" id="footer-logo-image-preview-wrap">
+              <img id="footer-logo-image-preview" alt="Footer logo preview">
+            </div>
+            <div class="crm-branding-controls">
+              <div class="crm-field">
+                <label for="footer-logo-image-file">Upload logo</label>
+                <input id="footer-logo-image-file" type="file" accept="image/*">
+                <small>PNG, JPG, WEBP or GIF. A transparent PNG is recommended. Maximum 5 MB.</small>
+              </div>
+              <div class="crm-form-grid crm-branding-size-grid">
+                <div class="crm-field"><label for="footer-logo-image-width">Width</label><input id="footer-logo-image-width" type="text" placeholder="100%"></div>
+                <div class="crm-field"><label for="footer-logo-image-height">Height</label><input id="footer-logo-image-height" type="text" placeholder="auto"></div>
+              </div>
+              <div class="crm-branding-actions">
+                <button type="button" class="crm-btn crm-btn-primary crm-btn-small" id="upload-footer-logo-image">Upload / Replace</button>
+                <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="delete-footer-logo-image">Delete logo</button>
               </div>
             </div>
           </div>
@@ -1111,6 +1171,6 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v46-url-qr"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v50-nav-dimensions"></script>
 </body>
 </html>
