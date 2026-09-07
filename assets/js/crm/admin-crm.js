@@ -45,6 +45,24 @@
     if (toast) { toast.classList.remove('show'); }
     ['app-message','login-message'].forEach(function(id){ var el=$(id); if(el){el.textContent='';el.className='crm-message';} });
   }
+  function crmConfirm(title, messageText){
+    return new Promise(function(resolve){
+      var modal=$('crm-confirm-modal');
+      var titleEl=$('crm-confirm-title'), msgEl=$('crm-confirm-message'), ok=$('crm-confirm-ok'), cancel=$('crm-confirm-cancel');
+      if(!modal||!ok||!cancel){ resolve(window.confirm(messageText)); return; }
+      if(titleEl) titleEl.textContent=title||'Confirm action';
+      if(msgEl) msgEl.textContent=messageText||'Are you sure you want to continue?';
+      modal.classList.remove('crm-hidden');
+      document.body.classList.add('crm-confirm-open');
+      var done=false;
+      function finish(value){ if(done)return; done=true; modal.classList.add('crm-hidden'); document.body.classList.remove('crm-confirm-open'); ok.removeEventListener('click',yes); cancel.removeEventListener('click',no); modal.removeEventListener('click',backdrop); document.removeEventListener('keydown',escape); resolve(value); }
+      function yes(){finish(true);} function no(){finish(false);} function backdrop(e){if(e.target===modal)no();} function escape(e){if(e.key==='Escape')no();}
+      ok.addEventListener('click',yes); cancel.addEventListener('click',no); modal.addEventListener('click',backdrop); document.addEventListener('keydown',escape);
+      setTimeout(function(){cancel.focus();},0);
+    });
+  }
+  window.crmConfirm = crmConfirm;
+
   async function getCurrentRole() {
     var sessionResult = await window.salonSupabase.auth.getSession();
     if (!sessionResult.data.session) return null;
@@ -236,7 +254,7 @@
 
   function startRoleCreate(){
     if(!can('roles','create')){message('You do not have permission to create roles.','error');return;}
-    state.editingRoleId=null; $('role-form').reset(); $('role-form-title').textContent='Create role'; $('role-save').textContent='Create role'; $('role-name').disabled=false; renderRolePermissionEditor([]); $('role-form-card').classList.remove('crm-hidden'); $('role-name').focus();
+    state.editingRoleId=null; $('role-form').reset(); $('role-form-title').textContent='Create role'; $('role-save').textContent='Create role'; $('role-name').disabled=false; renderRolePermissionEditor([]); openCrmFormCardModal('role-form-card'); $('role-name').focus();
   }
 
   function editRole(id){
@@ -252,7 +270,7 @@
       var p=state.permissions.find(function(permission){return String(permission.id)===String(x.permission_id);});
       return p ? p.section+'.'+p.action : null;
     }).filter(Boolean);
-    renderRolePermissionEditor(keys); $('role-form-card').classList.remove('crm-hidden'); $('role-name').focus();
+    renderRolePermissionEditor(keys); openCrmFormCardModal('role-form-card'); $('role-name').focus();
   }
 
   async function saveRole(e){
@@ -285,13 +303,13 @@
       var ins=await window.salonSupabase.from('crm_role_permissions').insert(selected.map(function(permissionId){return {role_id:role.id,permission_id:permissionId};}));
       if(ins.error){message(ins.error.message,'error');return;}
     }
-    $('role-form-card').classList.add('crm-hidden'); state.editingRoleId=null; await loadRoles(); await loadAccess(); message('Role saved successfully.','success');
+    closeCrmFormCardModal('role-form-card'); state.editingRoleId=null; await loadRoles(); await loadAccess(); message('Role saved successfully.','success');
   }
 
   async function deleteRole(id){
     if(!requirePermission('roles','delete','You do not have permission to delete roles.'))return;
     var role=state.roles.find(function(r){return String(r.id)===String(id);}); if(!role || role.is_system)return;
-    if(!window.confirm('Delete the role "'+(role.name||'this role')+'"? Users using it must be reassigned first.'))return;
+    if(!await crmConfirm('Delete role', 'Delete the role \"'+(role.name||'this role')+'\"? Users using it must be reassigned first.'))return;
     var usersUsing=await window.salonSupabase.from('admin_users').select('user_id',{count:'exact',head:true}).eq('role_id',role.id);
     if(usersUsing.error){message(usersUsing.error.message,'error');return;}
     if(usersUsing.count){message('This role is assigned to '+usersUsing.count+' user(s). Reassign them before deleting the role.','error');return;}
@@ -333,7 +351,8 @@
         '<td>'+escapeHtml(c.email||'—')+'</td>' +
         '<td><span class="crm-role-badge">'+escapeHtml(c.loyalty_tier||'Member')+'</span> <strong>'+Number(c.loyalty_points||0)+' pts</strong></td>' +
         '<td>'+escapeHtml(c.notes||'—')+'</td>' +
-        '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="viewCustomer('+Number(c.id)+')">View</button> ' +
+        '<td>' +
+        '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="viewCustomer('+Number(c.id)+')">View</button> ' +
         (can('customers','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="editCustomer('+Number(c.id)+')">Edit</button>' : '') +
         (can('customers','delete') ? ' <button type="button" class="crm-btn crm-btn-danger crm-btn-sm" onclick="deleteCustomer('+Number(c.id)+')">Delete</button>' : '') + '</td>' +
         '</tr>';
@@ -350,7 +369,7 @@
     state.editingCustomerId = null;
     $('customer-form').reset();
     $('customer-form-title').textContent = 'Add customer';
-    $('customer-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('customer-form-card');
     $('customer-name').focus();
   }
 
@@ -363,7 +382,7 @@
     $('customer-email').value = c.email || '';
     $('customer-notes').value = c.notes || '';
     $('customer-form-title').textContent = 'Edit customer';
-    $('customer-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('customer-form-card');
     $('customer-name').focus();
   }
 
@@ -399,7 +418,7 @@
     }
     message(state.editingCustomerId ? 'Customer updated.' : 'Customer added.','success');
     state.editingCustomerId = null;
-    $('customer-form-card').classList.add('crm-hidden');
+    closeCrmFormCardModal('customer-form-card');
     await loadCustomers();
   }
 
@@ -407,7 +426,7 @@
     if (!requirePermission('customers','delete','You do not have permission to delete customers.')) return;
     var customer = state.customers.find(function(x){ return String(x.id) === String(id); });
     if (!customer) return;
-    if (!window.confirm('Delete ' + (customer.name || 'this customer') + '? The customer will be hidden from the CRM, but their booking history will be preserved.')) return;
+    if (!await crmConfirm('Delete customer', 'Delete ' + (customer.name || 'this customer') + '? The customer will be hidden from the CRM, but their booking history will be preserved.')) return;
     var result = await window.salonSupabase.rpc('crm_delete_customer', { p_id: Number(id) });
     if (result.error) { message(result.error.message || 'Could not delete customer.','error'); return; }
     if (state.selectedCustomerId && String(state.selectedCustomerId) === String(id)) closeCustomerDetails();
@@ -417,7 +436,7 @@
 
   function cancelCustomerEdit() {
     state.editingCustomerId = null;
-    $('customer-form-card').classList.add('crm-hidden');
+    closeCrmFormCardModal('customer-form-card');
   }
 
   async function viewCustomer(id) {
@@ -509,6 +528,8 @@
   function closeCustomerDetails() {
     state.selectedCustomerId = null;
     $('customer-detail-card').classList.add('crm-hidden');
+    $('customer-detail-card').setAttribute('aria-hidden','true');
+    document.body.classList.remove('crm-form-modal-open');
   }
 
   function renderCustomerLoyalty(c) {
@@ -656,7 +677,8 @@
     var otherNavLogo = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
     var banner = imageSettingPayload('banner_image');
     var favicon = optionalImageSettingPayload('favicon_image');
-    var footerLogo = optionalImageSettingPayload('footer_logo_image');
+    var footerLogoStored = optionalImageSettingPayload('footer_logo_image');
+    var footerLogo = otherNavLogo && otherNavLogo.url ? Object.assign({}, otherNavLogo, {width: (footerLogoStored && footerLogoStored.width) || '100%', height: (footerLogoStored && footerLogoStored.height) || 'auto'}) : footerLogoStored;
     var mainNavLogoPreview = $('main-page-nav-logo-image-preview');
     var otherNavLogoPreview = $('other-pages-nav-logo-image-preview');
     var sidebarLogo = $('crm-sidebar-logo');
@@ -756,6 +778,7 @@
     if (!/^(jpg|jpeg|png|webp|gif|ico)$/.test(ext)) ext = 'jpg';
     var path = 'branding/' + key.replace('_image','') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
     var old = key === 'favicon_image' ? (optionalImageSettingPayload(key) || {path:'',url:'',width:'32px',height:'32px'}) : ((key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:(key === 'footer_logo_image' ? '100%' : '125px'),height:'auto'}) : imageSettingPayload(key));
+    var oldFooterForShared = key === 'other_pages_nav_logo_image' ? optionalImageSettingPayload('footer_logo_image') : null;
     var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, {upsert:false, contentType:file.type || undefined});
     if (upload.error) throw upload.error;
     var publicUrlResult = window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
@@ -763,13 +786,21 @@
     if (!publicUrl) throw new Error('Could not create a public URL for the uploaded image.');
 
     try {
-      await persistBrandingSetting(key, {path:path, url:publicUrl, width:old.width, height:old.height});
+      var sharedPayload = {path:path, url:publicUrl, width:old.width, height:old.height};
+      await persistBrandingSetting(key, sharedPayload);
+      if (key === 'other_pages_nav_logo_image') {
+        await persistBrandingSetting('footer_logo_image', {path:path, url:publicUrl, width:(oldFooterForShared && oldFooterForShared.width) || '100%', height:(oldFooterForShared && oldFooterForShared.height) || 'auto'});
+      }
     } catch (err) {
       await window.salonSupabase.storage.from('site-assets').remove([path]);
       throw err;
     }
     if (old.path && old.path.indexOf('branding/') === 0) {
-      await window.salonSupabase.storage.from('site-assets').remove([old.path]);
+      var oldPaths = [old.path];
+      if (key === 'other_pages_nav_logo_image') {
+        if (oldFooterForShared && oldFooterForShared.path && oldFooterForShared.path.indexOf('branding/') === 0 && oldPaths.indexOf(oldFooterForShared.path) < 0) oldPaths.push(oldFooterForShared.path);
+      }
+      await window.salonSupabase.storage.from('site-assets').remove(oldPaths);
     }
     if (input) input.value = '';
     var uploadMessage = 'Favicon uploaded.';
@@ -785,6 +816,8 @@
   async function deleteBrandingImage(key) {
     if (!requirePermission('settings','update')) return;
     var current = (key === 'favicon_image' || key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:key === 'footer_logo_image' ? '100%' : (key === 'favicon_image' ? '32px' : '125px'),height:key === 'favicon_image' ? '32px' : 'auto'}) : imageSettingPayload(key);
+    var deleteLabel = key === 'favicon_image' ? 'favicon' : key === 'footer_logo_image' ? 'footer logo' : (key === 'main_page_nav_logo_image' ? 'main page navigation logo' : key === 'other_pages_nav_logo_image' ? 'other pages navigation logo' : key === 'nav_logo_image' ? 'navigation logo' : key === 'banner_image' ? 'page banner image' : 'this image');
+    if (!await crmConfirm('Delete ' + deleteLabel, 'Delete the ' + deleteLabel + '? This cannot be undone.')) return;
     if (current.path && current.path.indexOf('branding/') === 0) {
       var remove = await window.salonSupabase.storage.from('site-assets').remove([current.path]);
       if (remove.error) throw remove.error;
@@ -801,7 +834,8 @@
     }
     if (key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') {
       await persistBrandingSetting(key, {path:'',url:'',width:'125px',height:'auto'});
-      message(key === 'main_page_nav_logo_image' ? 'Main page Nav logo deleted.' : 'Other pages Nav logo deleted.','success');
+      if (key === 'other_pages_nav_logo_image') await persistBrandingSetting('footer_logo_image', {path:'',url:'',width:'100%',height:'auto'});
+      message(key === 'main_page_nav_logo_image' ? 'Main page Nav logo deleted.' : 'Other pages Nav & Footer logo deleted.','success');
       return;
     }
     if (key === 'nav_logo_image') {
@@ -1048,11 +1082,12 @@
     }).filter(function(item){
       return Number.isInteger(item.points) && item.points > 0 && item.reward;
     });
-    return cleaned.length ? cleaned : DEFAULT_LOYALTY_REWARDS.map(function(item){ return {points:item.points,reward:item.reward}; });
+    return cleaned;
   }
 
   function loyaltyRewardsSetting() {
-    return settingValue('loyalty_rewards', DEFAULT_LOYALTY_REWARDS);
+    var row = state.appSettings.find(function(x){ return x.setting_key === 'loyalty_rewards'; });
+    return row ? parseSettingPayload(row.setting_value) : DEFAULT_LOYALTY_REWARDS;
   }
 
   function renderLoyaltyRewardSettings() {
@@ -1081,7 +1116,6 @@
       seen[points] = true;
       rewards.push({points:points,reward:reward});
     });
-    if (!rewards.length) throw new Error('Add at least one loyalty reward, or keep the default rewards.');
     rewards.sort(function(a,b){ return b.points-a.points; });
     return rewards;
   }
@@ -1186,10 +1220,13 @@
       otherPagesNavLogoImage = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
       bannerImage = imageSettingPayload('banner_image');
       faviconImage = optionalImageSettingPayload('favicon_image') || {path:'',url:'',width:'32px',height:'32px'};
-      footerLogoImage = optionalImageSettingPayload('footer_logo_image');
+      var storedFooterLogo = optionalImageSettingPayload('footer_logo_image');
+      footerLogoImage = otherPagesNavLogoImage && otherPagesNavLogoImage.url
+        ? Object.assign({}, otherPagesNavLogoImage)
+        : storedFooterLogo;
       if (footerLogoImage && footerLogoImage.url) {
-        footerLogoImage.width = validateCssSize($('footer-logo-image-width').value, 'Footer logo width', footerLogoImage.width || '100%');
-        footerLogoImage.height = validateCssSize($('footer-logo-image-height').value, 'Footer logo height', footerLogoImage.height || 'auto');
+        footerLogoImage.width = validateCssSize($('footer-logo-image-width').value, 'Footer logo width', (storedFooterLogo && storedFooterLogo.width) || '100%');
+        footerLogoImage.height = validateCssSize($('footer-logo-image-height').value, 'Footer logo height', (storedFooterLogo && storedFooterLogo.height) || 'auto');
       }
       if (mainPageNavLogoImage && mainPageNavLogoImage.url) {
         mainPageNavLogoImage.width = validateCssSize($('main-page-nav-logo-image-width').value, 'Main page Nav logo width', mainPageNavLogoImage.width || '125px');
@@ -1274,7 +1311,7 @@
       {key:'favicon_image', value:faviconImage, description:'Website favicon shown in the browser tab.'},
       {key:'loyalty_rewards', value:loyaltyRewards, description:'Customer loyalty reward redemption rules: points required and reward description.'}
     ];
-    if (footerLogoImage && footerLogoImage.url) settings.push({key:'footer_logo_image', value:footerLogoImage, description:'Website footer logo shown above the translated footer text.'});
+    if (footerLogoImage && footerLogoImage.url) settings.push({key:'footer_logo_image', value:footerLogoImage, description:'Website footer logo using the shared Other pages Nav & Footer image.'});
     settings = settings.concat(socialSettings);
 
     var button = $('save-application-settings');
@@ -1325,7 +1362,7 @@
   function renderFaqs() {
     var tbody = $('faq-table-body');
     if (!tbody) return;
-    var rows = state.faqs.slice().sort(function(a,b){ return Number(b.sort_order||0)-Number(a.sort_order||0) || crmIdDesc(a.id,b.id); });
+    var rows = state.faqs.slice().sort(crmLatestDesc);
     tbody.innerHTML = rows.map(function(f) {
       var answer = String(f.answer_en || '');
       if (answer.length > 150) answer = answer.slice(0,147) + '…';
@@ -1347,12 +1384,12 @@
     $('faq-form-title').textContent = 'Add FAQ';
     $('faq-sort-order').value = state.faqs.length ? String(Math.max.apply(null, state.faqs.map(function(f){ return Number(f.sort_order)||0; })) + 1) : '1';
     $('faq-active').checked = true;
-    $('faq-form-card').classList.add('crm-hidden');
+    closeCrmFormCardModal('faq-form-card');
   }
 
   function startFaqCreate() {
     resetFaqForm();
-    $('faq-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('faq-form-card');
     $('faq-form-card').scrollIntoView({behavior:'smooth', block:'center'});
     window.setTimeout(function(){ $('faq-question-en').focus(); }, 350);
   }
@@ -1368,7 +1405,7 @@
     $('faq-sort-order').value = Number(f.sort_order || 0);
     $('faq-active').checked = f.active !== false;
     $('faq-form-title').textContent = 'Edit FAQ';
-    $('faq-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('faq-form-card');
     $('faq-form-card').scrollIntoView({behavior:'smooth', block:'center'});
     window.setTimeout(function(){ $('faq-question-en').focus(); }, 350);
   }
@@ -1418,7 +1455,7 @@
   async function deleteFaq(id) {
     if(!requirePermission('faqs','delete')) return;
     var f = state.faqs.find(function(x){ return String(x.id) === String(id); });
-    if (!f || !window.confirm('Delete this FAQ? This cannot be undone.')) return;
+    if (!f || !(await crmConfirm('Delete FAQ', 'Delete this FAQ? This cannot be undone.'))) return;
     var result = await window.salonSupabase.from('faqs').delete().eq('id', id);
     if (result.error) {
       message(result.error.message,'error');
@@ -1447,7 +1484,7 @@
       });
     } else state.vouchers=[];
     state.bookingVouchers=state.vouchers.slice();
-    renderCategories(); renderServices(); renderVouchers(); populateCategorySelect(); syncServiceCategoryFilter(); if(!state.editingServiceId) generateServiceSku(); updateDashboard();
+    renderCategories(); renderServices(); populateWalkinServices(); renderVouchers(); populateCategorySelect(); syncServiceCategoryFilter(); if(!state.editingServiceId) generateServiceSku(); updateDashboard();
   }
   async function loadUsers() {
     if (!can('users','read')) {
@@ -1485,6 +1522,11 @@
     }
   }
 
+  function crmLatestDesc(a,b){
+    var ad=String(a&&a.created_at||''); var bd=String(b&&b.created_at||'');
+    if(ad||bd){var at=ad?Date.parse(ad):0,bt=bd?Date.parse(bd):0;if(bt!==at)return bt-at;}
+    return crmIdDesc(a&&a.id,b&&b.id);
+  }
   function renderCategories() {
     var body=$('category-table-body'); if(!body)return;
     var query=String(($('category-search')&&$('category-search').value)||'').trim().toLowerCase();
@@ -1493,7 +1535,7 @@
       var matchesQuery=!query || [c.name_en,c.name_ar,c.description_en,c.description_ar].join(' ').toLowerCase().indexOf(query)!==-1;
       var matchesStatus=status==='all' || (status==='active' ? c.active!==false : c.active===false);
       return matchesQuery && matchesStatus;
-    }).sort(function(a,b){ return Number(b.sort_order||0)-Number(a.sort_order||0) || crmIdDesc(a.id,b.id); });
+    }).sort(crmLatestDesc);
     body.innerHTML=rows.map(function(c){
       var image=c.image_url||'';
       var imageHtml=image?'<div class="crm-category-thumb"><img src="'+escapeHtml(image)+'" alt="'+escapeHtml(c.name_en||'Category')+'" onerror="this.parentNode.style.display=&quot;none&quot;"></div>':'<span class="crm-small">No image</span>';
@@ -1517,7 +1559,7 @@
       var matchesCategory=category==='all' || String(s.category_id)===category;
       var matchesStatus=status==='all' || (status==='active' ? s.active!==false : s.active===false);
       return matchesQuery && matchesCategory && matchesStatus;
-    }).sort(crmSkuDesc);
+    }).sort(crmLatestDesc);
     body.innerHTML=rows.map(function(s){
       return '<tr><td>'+escapeHtml(s.sku||'')+'</td><td><strong>'+escapeHtml(s.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(s.name_ar)+'</span></td>'+
       '<td>'+escapeHtml(categoryName(s.category_id))+'</td><td class="crm-price">$'+escapeHtml(s.price_usd==null?'':s.price_usd)+'<br><span class="crm-price-muted">'+(s.price_qar==null?'—':escapeHtml(s.price_qar)+' QAR')+'</span></td>'+
@@ -1636,7 +1678,7 @@
       : '<div class="crm-image-empty">No image uploaded</div>';
     $('voucher-image-delete').classList.toggle('crm-hidden', !v.image_path);
 
-    $('voucher-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('voucher-form-card');
     $('voucher-title-en').focus();
     window.scrollTo({top:0, behavior:'smooth'});
   }
@@ -1810,7 +1852,7 @@
       }
 
       state.editingVoucherId = null;
-      $('voucher-form-card').classList.add('crm-hidden');
+      closeCrmFormCardModal('voucher-form-card');
       await loadVouchers();
       message('Voucher saved successfully.', 'success');
     } catch (err) {
@@ -1841,7 +1883,7 @@
     var voucher = state.vouchers.find(function(v){ return String(v.id) === String(state.editingVoucherId); });
     if (!voucher || !voucher.image_path) return;
 
-    if (!window.confirm('Remove this voucher image?')) return;
+    if (!await crmConfirm('Delete voucher image', 'Remove this voucher image? This cannot be undone.')) return;
 
     try {
       var imagePath = voucher.image_path;
@@ -1883,7 +1925,7 @@
     if (!voucher) return;
 
     var title = voucher.title_en || voucher.title || voucher.sku || 'this voucher';
-    if (!window.confirm('Delete "' + title + '"? This cannot be undone.')) return;
+    if (!await crmConfirm('Delete voucher', 'Delete \"' + title + '\"? This cannot be undone.')) return;
 
     try {
       if (voucher.image_path) {
@@ -1900,7 +1942,7 @@
       }
 
       await loadVouchers();
-      $('voucher-form-card').classList.add('crm-hidden');
+      closeCrmFormCardModal('voucher-form-card');
       message('Voucher deleted.', 'success');
     } catch (err) {
       console.error('Could not delete voucher:', err);
@@ -1953,6 +1995,9 @@
     $('stat-vouchers') && ($('stat-vouchers').textContent=state.vouchers.filter(function(v){return v.active!==false;}).length);
     $('stat-users') && ($('stat-users').textContent=state.users.length);
     $('stat-bookings') && ($('stat-bookings').textContent=state.bookings.length);
+    var dashStatusCounts={pending:0,confirmed:0,completed:0,cancelled:0};
+    (state.bookings||[]).forEach(function(b){var st=String(bookingStatus(b)||'').toLowerCase();if(Object.prototype.hasOwnProperty.call(dashStatusCounts,st))dashStatusCounts[st]++;});
+    Object.keys(dashStatusCounts).forEach(function(st){var el=$('dash-bookings-'+st);if(el)el.textContent=String(dashStatusCounts[st]);});
 
     // Keep the dashboard count independent from whether the customer page
     // has been opened first.
@@ -2018,7 +2063,8 @@
     $('service-description-en').value=s.description_en||'';$('service-description-ar').value=s.description_ar||'';
     $('service-price-usd').value=s.price_usd==null?'':s.price_usd;$('service-price-qar').value=s.price_qar==null?'':s.price_qar;
     $('service-duration').value=s.duration_minutes==null?30:s.duration_minutes;$('service-sort').value=s.sort_order||0;$('service-active').checked=s.active!==false;
-    showView('services'); window.scrollTo({top:0,behavior:'smooth'});
+    setServicesTab('services'); showView('services');
+    var modal=$('service-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
   }
   async function saveService(e){
     if(!requirePermission('services', state.editingServiceId?'update':'create')) return;
@@ -2041,7 +2087,7 @@
       if(result.error.code==='23505') msg='This service SKU already exists in this category.';
       if(result.error.code==='23514') msg='Enter at least one price: USD or QAR.';
       message(msg,'error');return;
-    } message(state.editingServiceId?'Service updated.':'Service added.','success');resetServiceForm();await loadData();
+    } message(state.editingServiceId?'Service updated.':'Service added.','success');closeServiceForm();await loadData();
   }
   function renderCategoryImagePreview(url) {
     var wrap=$('category-image-preview-wrap');
@@ -2083,18 +2129,94 @@
     return {path:path,url:publicUrl};
   }
 
+  function setServicesTab(tab){
+    var isCategories=tab!=='services';
+    var catPanel=$('services-tab-categories'),svcPanel=$('services-tab-services');
+    if(catPanel)catPanel.classList.toggle('crm-hidden',!isCategories);
+    if(svcPanel)svcPanel.classList.toggle('crm-hidden',isCategories);
+    document.querySelectorAll('[data-services-tab]').forEach(function(btn){
+      var active=btn.getAttribute('data-services-tab')===(isCategories?'categories':'services');
+      btn.classList.toggle('is-active',active);btn.setAttribute('aria-selected',active?'true':'false');
+    });
+  }
+
+  function setBookingConfigTab(tab){
+    tab=tab==='closures'?'closures':'settings';
+    document.querySelectorAll('[data-booking-config-panel]').forEach(function(panel){
+      panel.classList.toggle('crm-hidden',panel.getAttribute('data-booking-config-panel')!==tab);
+    });
+    document.querySelectorAll('[data-booking-config-tab]').forEach(function(btn){
+      var active=btn.getAttribute('data-booking-config-tab')===tab;
+      btn.classList.toggle('is-active',active);
+      btn.setAttribute('aria-selected',active?'true':'false');
+    });
+  }
+
+  function setSettingsTab(tab){
+    tab=tab||'language-currency';
+    var allowed=['language-currency','rewards','social','media','url-qr'];
+    if(allowed.indexOf(tab)<0)tab='language-currency';
+    document.querySelectorAll('[data-settings-panel]').forEach(function(panel){
+      panel.classList.toggle('crm-hidden',panel.getAttribute('data-settings-panel')!==tab);
+    });
+    document.querySelectorAll('[data-settings-tab]').forEach(function(btn){
+      var active=btn.getAttribute('data-settings-tab')===tab;
+      btn.classList.toggle('is-active',active);
+      btn.setAttribute('aria-selected',active?'true':'false');
+    });
+    var save=$('save-application-settings');
+    if(save)save.closest('.crm-settings-actions').classList.toggle('crm-hidden',tab==='url-qr');
+    if(tab==='url-qr') loadUrlQrCodes().catch(function(e){message(e.message||'Could not load URL QR codes.','error');});
+  }
+
+  function mountCrmFormModal(modal){
+    if(!modal) return;
+    // Keep form dialogs under <body> so position:fixed is relative to the viewport,
+    // not to a CRM section/container that may affect positioning.
+    if(modal.parentElement!==document.body) document.body.appendChild(modal);
+    modal.style.position='fixed';
+    modal.style.inset='0';
+    modal.style.display='flex';
+    modal.style.alignItems='center';
+    modal.style.justifyContent='center';
+  }
+
+  function openCategoryForm(id){
+    if(id){ editCategory(id); return; }
+    if(!requirePermission('services','create'))return;
+    resetCategoryForm();
+    var modal=$('category-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
+    var input=$('category-name-en');if(input)input.focus();
+  }
+  function closeCategoryForm(){
+    resetCategoryForm();
+    var modal=$('category-form-modal');if(modal){modal.classList.add('crm-hidden');modal.setAttribute('aria-hidden','true');}
+  }
+  function openServiceForm(id){
+    if(id){ editService(id); return; }
+    if(!requirePermission('services','create'))return;
+    resetServiceForm();
+    var modal=$('service-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
+    var input=$('service-name-en');if(input)input.focus();
+  }
+  function closeServiceForm(){
+    resetServiceForm();
+    var modal=$('service-form-modal');if(modal){modal.classList.add('crm-hidden');modal.setAttribute('aria-hidden','true');}
+  }
+
   function editCategory(id){
     var c=state.categories.find(function(x){return String(x.id)===String(id);});if(!c)return;
     state.editingCategoryId=c.id; applyRoleVisibility();$('category-form-title').textContent='Edit Category';$('category-save').textContent='Save Changes';
     $('category-name-en').value=c.name_en||'';$('category-name-ar').value=c.name_ar||'';$('category-description-en').value=c.description_en||'';$('category-description-ar').value=c.description_ar||'';
     $('category-image-file').value='';renderCategoryImagePreview(c.image_url||'');$('category-width').value=c.image_width==null?'':c.image_width;$('category-height').value=c.image_height==null?'':c.image_height;$('category-sort').value=c.sort_order||0;$('category-active').checked=c.active!==false;
-    showView('services');window.scrollTo({top:0,behavior:'smooth'});
+    setServicesTab('categories'); showView('services');
+    var modal=$('category-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
   }
   async function deleteService(id){
     if(!requirePermission('services','delete')) return;
     var s=state.services.find(function(x){return String(x.id)===String(id);});
     if(!s) return;
-    if(!window.confirm('Delete service "'+(s.name_en||s.sku||'this service')+'"? This cannot be undone.')) return;
+    if(!await crmConfirm('Delete service', 'Delete \"'+(s.name_en||s.sku||'this service')+'\"? This cannot be undone.')) return;
     try{
       var refs=await window.salonSupabase.from('booking_services').select('id',{count:'exact',head:true}).eq('service_id',id);
       if(refs.error) throw refs.error;
@@ -2113,7 +2235,7 @@
     if(!requirePermission('services','delete')) return;
     var c=state.categories.find(function(x){return String(x.id)===String(id);});
     if(!c) return;
-    if(!window.confirm('Delete category "'+(c.name_en||'this category')+'"? You must delete all services in this category first.')) return;
+    if(!await crmConfirm('Delete category', 'Delete category "'+(c.name_en||'this category')+'"? You must delete all services in this category first.')) return;
     try{
       var refs=await window.salonSupabase.from('services').select('id',{count:'exact',head:true}).eq('category_id',id);
       if(refs.error) throw refs.error;
@@ -2164,7 +2286,7 @@
       }
     }
     message(state.editingCategoryId?'Category updated.':'Category added.','success');
-    resetCategoryForm();
+    closeCategoryForm();
     await loadData();
   }
 
@@ -2192,14 +2314,14 @@
       var results = await Promise.all([
         window.salonSupabase
           .from('bookings')
-          .select('id,booking_date,start_time,end_time,status,total_price,total_duration_minutes,customer_id,customer_notes,created_at,public_reference')
+          .select('id,booking_date,start_time,end_time,status,is_walkin,currency,total_price,subtotal_price,discount_type,discount_value,discount_amount,total_duration_minutes,customer_id,customer_notes,created_at,updated_at,public_reference')
           .order('created_at',{ascending:false}),
         window.salonSupabase
           .from('customers')
           .select('id,name,phone,email,notes'),
         window.salonSupabase
           .from('booking_services')
-          .select('id,booking_id,service_id,staff_id,start_time,end_time,price,duration_minutes,voucher_id')
+          .select('id,booking_id,service_id,staff_id,start_time,end_time,price,currency,duration_minutes,voucher_id')
           .order('start_time',{ascending:true})
       ]);
 
@@ -2240,6 +2362,7 @@
           start: String(row.start_time || '').slice(0,5),
           end: String(row.end_time || '').slice(0,5),
           price: row.price,
+          currency: row.currency || null,
           duration_minutes: row.duration_minutes,
           serviceName: service ? (service.name_en || service.name || '') : '',
           voucherName: voucher ? (voucher.title_en || voucher.title || '') : ''
@@ -2267,9 +2390,14 @@
           start_time: row.start_time,
           end_time: row.end_time,
           status: String(row.status || 'pending').toLowerCase(),
+          is_walkin: row.is_walkin === true,
           total: row.total_price,
+          subtotal_price: row.subtotal_price,
+          discount_type: row.discount_type || null,
+          discount_value: row.discount_value || 0,
+          discount_amount: row.discount_amount || 0,
           total_duration_minutes: row.total_duration_minutes,
-          currency: 'USD',
+          currency: String(((items[0] && items[0].currency) || row.currency || settingValue('display_currency', 'USD')) || 'USD').toUpperCase(),
           customer: {
             id: row.customer_id,
             name: customer ? (customer.name || 'Customer') : 'Customer',
@@ -2333,7 +2461,7 @@
     if (voucher) return {
       name: voucher.title_en || voucher.title || item.voucherSku || 'Voucher',
       duration: voucher.duration_minutes || voucher.durationMinutes || item.duration_minutes || 30,
-      price: voucher.price_usd != null ? voucher.price_usd : (voucher.price != null ? voucher.price : item.price),
+      price: item && item.price != null ? item.price : (voucher.price_usd != null ? voucher.price_usd : (voucher.price != null ? voucher.price : null)),
       voucher: true
     };
 
@@ -2346,7 +2474,8 @@
     if (found) return {
       name: found.name_en || found.name || item.serviceSku || 'Service',
       duration: found.duration_minutes || item.duration_minutes,
-      price: found.price_usd != null ? found.price_usd : (found.price != null ? found.price : item.price)
+      price: item && item.price != null ? item.price : (function(){ var c=walkinServiceCurrency(found); if(c==='QAR' && found.price_qar!=null) return found.price_qar; if(c==='USD' && found.price_usd!=null) return found.price_usd; return found.price != null ? found.price : null; })(),
+      currency: item && item.currency ? String(item.currency).toUpperCase() : walkinServiceCurrency(found)
     };
 
     return { name: (item && (item.voucherName || item.serviceName || item.voucherSku || item.serviceSku)) || 'Service', duration: item ? item.duration_minutes : null, price: item ? item.price : null };
@@ -2358,7 +2487,8 @@
 
   function bookingMoney(b) {
     if (b.total == null || b.total === '') return '—';
-    return escapeHtml(String(b.total)) + ' ' + escapeHtml(b.currency === 'QAR' ? 'QAR' : '$');
+    var currency = String((b.items && b.items[0] && b.items[0].currency) || b.currency || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+    return escapeHtml(Number(b.total).toFixed(2)) + ' ' + escapeHtml(currency);
   }
 
   function statusLabel(status) {
@@ -2569,7 +2699,7 @@
         '<td><strong>' + escapeHtml(names.join(', ') || '—') + '</strong><br><span class="crm-small">' + (b.items ? b.items.length : 0) + ' service' + ((b.items && b.items.length === 1) ? '' : 's') + '</span></td>' +
         '<td>' + escapeHtml(c.phone || '—') + '<br><span class="crm-small">' + escapeHtml(c.email || 'No email') + '</span></td>' +
         '<td class="crm-price">' + bookingMoney(b) + '</td>' +
-        '<td><span class="crm-badge ' + badgeClass + '">' + escapeHtml(statusLabel(status)) + '</span></td>' +
+        '<td><span class="crm-badge ' + badgeClass + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? ' <span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '</td>' +
         '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-booking="' + escapeHtml(b.id || '') + '">View</button></td>' +
       '</tr>';
     }).join('');
@@ -2648,17 +2778,27 @@
 
   function renderBookingDetail(id) {
     var b = findBooking(id); if (!b) return;
+    window.__openBookingDetailId = id;
     var c = bookingCustomer(b), status = bookingStatus(b);
     var dateText = b.date ? new Date(b.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : '—';
-    var items = (b.items || []).map(function(item) {
+    var items = (b.items || []).map(function(item, idx) {
       var s = serviceForBookingItem(item);
-      return '<div class="crm-detail-item"><div><strong>' + escapeHtml(s.name) + '</strong><span>' + escapeHtml(item.start || '') + (item.end ? ' – ' + escapeHtml(item.end) : '') + '</span></div><strong>' + (s.price == null ? '—' : escapeHtml(String(s.price)) + ' ' + (b.currency === 'QAR' ? 'QAR' : '$')) + '</strong></div>';
+      var price = item.price != null ? Number(item.price) : (s.price == null ? 0 : Number(s.price));
+      var itemCurrency = String(item.currency || s.currency || b.currency || settingValue('display_currency', 'USD')).toUpperCase();
+      return '<div class="crm-detail-item crm-booking-price-item"><div><strong>' + escapeHtml(s.name) + '</strong><span>' + escapeHtml(item.start || '') + (item.end ? ' – ' + escapeHtml(item.end) : '') + '</span></div><label class="crm-price-edit"><span>Price (' + escapeHtml(itemCurrency) + ')</span><input type="number" min="0" step="0.01" value="' + escapeHtml(price.toFixed(2)) + '" data-booking-item-price="' + escapeHtml(String(item.id || idx)) + '"></label></div>';
     }).join('');
+    var lineSubtotal = (b.items || []).reduce(function(sum,item){ var v=Number(item.price); return sum + (isFinite(v)?v:0); },0);
+    var savedSubtotal = b.subtotal_price != null && b.subtotal_price !== '' ? Number(b.subtotal_price) : lineSubtotal;
+    var discountType = b.discount_type === 'amount' ? 'amount' : 'percent';
+    var discountValue = Number(b.discount_value || 0);
+    var discountAmount = Number(b.discount_amount || 0);
+    var bookingCurrency = String(((b.items && b.items[0] && b.items[0].currency) || b.currency || settingValue('display_currency', 'USD')) || 'USD').toUpperCase();
+    var finalPrice = Number(b.total != null ? b.total : Math.max(savedSubtotal-discountAmount,0));
     var nextStatuses = ['pending','confirmed','completed','cancelled'].filter(function(s){return s!==status;}).map(function(s){
       return '<button type="button" class="crm-btn ' + (s==='cancelled'?'crm-btn-danger':'crm-btn-secondary') + '" data-booking-status="' + s + '" data-booking-id="' + escapeHtml(b.id) + '">' + statusLabel(s) + '</button>';
     }).join('');
     $('booking-detail-content').innerHTML =
-      '<div class="crm-detail-status"><span class="crm-badge ' + (status==='confirmed'?'active':status==='cancelled'?'inactive':'crm-booking-status-'+status) + '">' + escapeHtml(statusLabel(status)) + '</span><span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
+      '<div class="crm-detail-status"><span class="crm-badge ' + (status==='confirmed'?'active':status==='cancelled'?'inactive':'crm-booking-status-'+status) + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? '<span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '<span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
       '<div class="crm-detail-grid">' +
         '<div><span class="crm-detail-label">Customer</span><strong>' + escapeHtml(c.name || '—') + '</strong></div>' +
         '<div><span class="crm-detail-label">Phone / WhatsApp</span><strong>' + escapeHtml(c.phone || '—') + '</strong></div>' +
@@ -2675,8 +2815,15 @@
         '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-appointment="' + escapeHtml(b.id) + '">Save date & time</button>' +
         '<span id="crm-edit-booking-message" class="crm-small"></span>' +
       '</div>' +
-      '<div class="crm-detail-section"><div class="crm-section-label">Services</div>' + items + '</div>' +
-      '<div class="crm-detail-total"><span>Total</span><strong>' + bookingMoney(b) + '</strong></div>' +
+      '<div class="crm-detail-section"><div class="crm-section-label">Services & pricing</div>' + items +
+        '<div class="crm-booking-price-summary">' +
+          '<div><span>Original price</span><strong id="crm-booking-subtotal">' + savedSubtotal.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
+          '<div class="crm-booking-discount-row"><label>Discount</label><select id="crm-booking-discount-type"><option value="percent"' + (discountType==='percent'?' selected':'') + '>%</option><option value="amount"' + (discountType==='amount'?' selected':'') + '>Fixed amount</option></select><input id="crm-booking-discount-value" type="number" min="0" step="0.01" value="' + escapeHtml(discountValue.toFixed(2)) + '"><span id="crm-booking-discount-amount">−' + discountAmount.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</span></div>' +
+          '<div class="crm-booking-final-row"><span>Final price</span><strong id="crm-booking-final-price">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
+        '</div>' +
+        '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-pricing="' + escapeHtml(b.id) + '">Save pricing</button><span id="crm-edit-booking-pricing-message" class="crm-small"></span>' +
+      '</div>' +
+      '<div class="crm-detail-total"><span>Total</span><strong id="crm-booking-total-display">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
       (b.bookingComment ? '<div class="crm-detail-section"><div class="crm-section-label">Customer comment</div><p class="crm-detail-notes">' + escapeHtml(b.bookingComment) + '</p></div>' : '') +
       (c.notes ? '<div class="crm-detail-section"><div class="crm-section-label">Internal CRM notes</div><p class="crm-detail-notes">' + escapeHtml(c.notes) + '</p></div>' : '') +
       '<div class="crm-detail-actions">' + nextStatuses + '</div>';
@@ -2746,6 +2893,66 @@
         button.textContent = button.dataset.originalText || 'Save date & time';
       }
     }
+  }
+
+  function updateBookingPricingPreview() {
+    var subtotalEl=$('crm-booking-subtotal'), typeEl=$('crm-booking-discount-type'), valueEl=$('crm-booking-discount-value');
+    if(!subtotalEl || !typeEl || !valueEl) return;
+    var b = findBooking(window.__openBookingDetailId);
+    var currency = String((b && b.items && b.items[0] && b.items[0].currency) || (b && b.currency) || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+    var currencies = {};
+    var subtotal=0;
+    document.querySelectorAll('[data-booking-item-price]').forEach(function(input){
+      var v=Number(input.value); if(isFinite(v)&&v>=0) subtotal+=v;
+    });
+    if (b && Array.isArray(b.items)) {
+      b.items.forEach(function(item){
+        var cur=String(item.currency || '').toUpperCase();
+        if(cur) currencies[cur]=true;
+      });
+    }
+    var type=typeEl.value || 'percent';
+    var value=Math.max(Number(valueEl.value)||0,0);
+    var amount=type==='amount' ? Math.min(value,subtotal) : subtotal*Math.min(value,100)/100;
+    var finalPrice=Math.max(subtotal-amount,0);
+    subtotalEl.textContent=subtotal.toFixed(2)+' '+currency;
+    var amountEl=$('crm-booking-discount-amount'); if(amountEl) amountEl.textContent='−'+amount.toFixed(2)+' '+currency;
+    var finalEl=$('crm-booking-final-price'); if(finalEl) finalEl.textContent=finalPrice.toFixed(2)+' '+currency;
+    var totalEl=$('crm-booking-total-display'); if(totalEl) totalEl.textContent=finalPrice.toFixed(2)+' '+currency;
+  }
+
+  async function saveBookingPricing(id) {
+    if(!requirePermission('bookings','update')) return;
+    var b=findBooking(id); if(!b) return;
+    var button=document.querySelector('[data-save-booking-pricing="'+CSS.escape(String(id))+'"]');
+    var msg=$('crm-edit-booking-pricing-message');
+    var typeEl=$('crm-booking-discount-type'), valueEl=$('crm-booking-discount-value');
+    var inputs=Array.prototype.slice.call(document.querySelectorAll('[data-booking-item-price]'));
+    var itemById={}; (b.items||[]).forEach(function(item){itemById[String(item.id)] = item;});
+    var updates=[]; var subtotal=0;
+    for(var i=0;i<inputs.length;i++){
+      var input=inputs[i], price=Number(input.value);
+      if(!isFinite(price)||price<0){ if(msg) msg.textContent='Enter valid non-negative prices.'; return; }
+      subtotal+=price;
+      var item=itemById[String(input.getAttribute('data-booking-item-price'))];
+      if(item && item.id!=null) updates.push({id:item.id,price:price});
+    }
+    var discountType=typeEl && typeEl.value==='amount' ? 'amount' : 'percent';
+    var discountValue=Math.max(Number(valueEl && valueEl.value)||0,0);
+    var discountAmount=discountType==='amount' ? Math.min(discountValue,subtotal) : subtotal*Math.min(discountValue,100)/100;
+    var finalPrice=Math.max(subtotal-discountAmount,0);
+    if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Saving…';}
+    try{
+      for(var j=0;j<updates.length;j++){
+        var r=await window.salonSupabase.from('booking_services').update({price:updates[j].price}).eq('id',updates[j].id).eq('booking_id',b.databaseId||id);
+        if(r.error) throw r.error;
+      }
+      var br=await window.salonSupabase.from('bookings').update({subtotal_price:subtotal,discount_type:discountAmount>0?discountType:null,discount_value:discountAmount>0?discountValue:0,discount_amount:discountAmount,total_price:finalPrice}).eq('id',b.databaseId||id);
+      if(br.error) throw br.error;
+      (b.items||[]).forEach(function(item){var u=updates.find(function(x){return String(x.id)===String(item.id);});if(u)item.price=u.price;});
+      b.subtotal_price=subtotal;b.discount_type=discountAmount>0?discountType:null;b.discount_value=discountAmount>0?discountValue:0;b.discount_amount=discountAmount;b.total=finalPrice;
+      persistBookings();renderBookings();renderBookingDetail(id);message('Booking pricing updated.','success');
+    }catch(e){console.error('Could not update booking pricing:',e);if(msg)msg.textContent='Could not save pricing: '+(e.message||'Unknown error');if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Save pricing';}}
   }
 
   function closeBookingDetail() {
@@ -2837,7 +3044,7 @@
     if($('chart-account-form-title')) $('chart-account-form-title').textContent='Add account';
     if($('chart-account-save')) $('chart-account-save').textContent='Add account';
     if($('chart-account-active')) $('chart-account-active').checked=true;
-    if($('chart-account-form-card')) $('chart-account-form-card').classList.add('crm-hidden');
+    if($('chart-account-form-card')) closeCrmFormCardModal('chart-account-form-card');
   }
   function openChartAccountForm(code){
     if(code && !requirePermission('chart-of-accounts','update')) return;
@@ -2855,7 +3062,7 @@
     if($('chart-account-balance')) $('chart-account-balance').value=a ? (a.typical_balance||'') : '';
     if($('chart-account-notes')) $('chart-account-notes').value=a ? (a.notes||'') : '';
     if($('chart-account-active')) $('chart-account-active').checked=!a || a.active!==false;
-    if($('chart-account-form-card')) $('chart-account-form-card').classList.remove('crm-hidden');
+    if($('chart-account-form-card')) openCrmFormCardModal('chart-account-form-card');
     showView('chart-of-accounts');
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -2875,7 +3082,7 @@
   async function deleteChartAccount(code){
     if(!requirePermission('chart-of-accounts','delete')) return;
     var a=state.chartOfAccounts.find(function(x){return String(x.account_code)===String(code);});
-    if(!a || !window.confirm('Delete account '+code+'? This cannot be undone.')) return;
+    if(!a || !(await crmConfirm('Delete account', 'Delete account '+code+'? This cannot be undone.'))) return;
     var result=await window.salonSupabase.from('chart_of_accounts').delete().eq('account_code',code);
     if(result.error){message(result.error.message,'error');return;}
     await loadChartOfAccounts(); message('Account deleted.','success');
@@ -2962,7 +3169,7 @@
 
   async function deleteContactMessage(id) {
     if(!requirePermission('contact-messages','delete')) return;
-    if(!window.confirm('Delete this contact request? This cannot be undone.')) return;
+    if(!await crmConfirm('Delete contact request', 'Delete this contact request? This cannot be undone.')) return;
     var result=await window.salonSupabase.from('contact_messages').delete().eq('id',id);
     if(result.error){message(result.error.message,'error');return;}
     await loadContactMessages();
@@ -3015,7 +3222,7 @@
   function openTranslationForm(key) {
     var row = (state.translations || []).find(function(item) { return item.key === key; });
     state.editingTranslationKey = row ? row.key : null;
-    $('translation-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('translation-form-card');
     $('translation-key').value = row ? row.key : '';
     $('translation-key').readOnly = !!row;
     $('translation-en').value = row ? (row.en || '') : '';
@@ -3078,9 +3285,40 @@
     ['map-account'].forEach(function(id){var el=$(id);if(el){var v=el.value;el.innerHTML=opts; if(v)el.value=v;}});
   }
 
+  function filterJournalAccountDropdown(search){
+    if(!search)return;
+    var menu=search.closest('.crm-journal-account-menu');
+    if(!menu)return;
+    var q=String(search.value||'').trim().toLowerCase();
+    var visible=0;
+    menu.querySelectorAll('[data-journal-account-option]').forEach(function(option){
+      var haystack=(String(option.getAttribute('data-journal-account-option')||'')+' '+String(option.textContent||'')).toLowerCase();
+      var match=!q||haystack.indexOf(q)!==-1;
+      option.classList.toggle('crm-journal-account-hidden',!match);
+      if(match)visible++;
+    });
+    var empty=menu.querySelector('[data-journal-account-no-results]');
+    if(!empty){
+      empty=document.createElement('div');
+      empty.setAttribute('data-journal-account-no-results','');
+      empty.className='crm-small crm-journal-account-no-results';
+      empty.textContent='No matching accounts found.';
+      var list=menu.querySelector('.crm-journal-account-list');
+      if(list)list.appendChild(empty);
+    }
+    if(empty)empty.style.display=visible?'none':'';
+  }
+
   function journalLineHtml(line){
-    var opts='<option value="">Select account</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'" '+(String(a.account_code)===String(line&&line.account_code||'')?'selected':'')+'>'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');
-    return '<tr data-journal-line><td><select data-line-account required>'+opts+'</select></td><td><input data-line-description maxlength="255" value="'+escapeHtml(line&&line.description||'')+'"></td><td><input data-line-debit type="number" min="0" step="0.01" value="'+(line&&line.debit||'')+'"></td><td><input data-line-credit type="number" min="0" step="0.01" value="'+(line&&line.credit||'')+'"></td><td><button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-remove-journal-line>×</button></td></tr>';
+    var selectedCode=String(line&&line.account_code||'');
+    var selectedAccount=state.chartOfAccounts.find(function(a){return String(a.account_code)===selectedCode;});
+    var selectedLabel=selectedAccount?financeAccountLabel(selectedAccount):'Select account';
+    var accountGroup='journal-account-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    var accountOptions=state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){
+      var code=String(a.account_code);
+      return '<label class="crm-journal-account-option" data-journal-account-option="'+escapeHtml((financeAccountLabel(a)+' '+code).toLowerCase())+'"><input type="radio" name="'+accountGroup+'" value="'+escapeHtml(code)+'" data-journal-account-radio '+(code===selectedCode?'checked':'')+'><span><strong>'+escapeHtml(a.account_name||a.major_account||code)+'</strong><small>'+escapeHtml(code+(a.account_type?' • '+a.account_type:''))+'</small></span></label>';
+    }).join('');
+    return '<tr data-journal-line><td><input type="hidden" data-line-account required value="'+escapeHtml(selectedCode)+'"><details class="crm-journal-account-dropdown"><summary><span data-journal-account-label>'+escapeHtml(selectedLabel)+'</span></summary><div class="crm-journal-account-menu"><div class="crm-walkin-service-search"><span>⌕</span><input type="search" data-journal-account-search placeholder="Search account by code or name" autocomplete="off"></div><div class="crm-journal-account-list">'+(accountOptions||'<div class="crm-small">No active accounts found.</div>')+'</div></div></details></td><td><input data-line-description maxlength="255" value="'+escapeHtml(line&&line.description||'')+'"></td><td><input data-line-debit type="number" min="0" step="0.01" value="'+(line&&line.debit||'')+'"></td><td><input data-line-credit type="number" min="0" step="0.01" value="'+(line&&line.credit||'')+'"></td><td><button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-remove-journal-line>×</button></td></tr>';
   }
   function addJournalLine(line){ var b=$('journal-lines-body');if(b){b.insertAdjacentHTML('beforeend',journalLineHtml(line||{}));updateJournalBalance();} }
   function updateJournalBalance(){
@@ -3093,7 +3331,7 @@
     if($('journal-entry-date'))$('journal-entry-date').value=financeToday();
     if($('journal-lines-body'))$('journal-lines-body').innerHTML='';
     addJournalLine({});addJournalLine({});
-    if($('journal-entry-form-card'))$('journal-entry-form-card').classList.add('crm-hidden');
+    if($('journal-entry-form-card'))closeCrmFormCardModal('journal-entry-form-card');
   }
   async function openJournalForm(id){
     if(!requirePermission('journal-entries',id?'update':'create'))return;
@@ -3109,7 +3347,7 @@
       $('journal-entry-date').value=r.data.entry_date||financeToday();$('journal-entry-reference').value=r.data.reference||'';$('journal-entry-description').value=r.data.description||'';
       $('journal-lines-body').innerHTML='';(l.data||[]).forEach(addJournalLine);
     }else resetJournalForm();
-    $('journal-entry-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('journal-entry-form-card');
   }
   function journalFormData(){
     var lines=[];document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function(r,i){lines.push({line_no:i+1,account_code:r.querySelector('[data-line-account]').value,description:r.querySelector('[data-line-description]').value.trim()||null,debit:Number(r.querySelector('[data-line-debit]').value||0),credit:Number(r.querySelector('[data-line-credit]').value||0)});});
@@ -3164,7 +3402,7 @@
     body.innerHTML=rows.map(function(x){
       var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);
       var id=escapeHtml(x.id), code=escapeHtml(x.permanent_code), name=escapeHtml(x.name), dest=escapeHtml(x.destination_url);
-      return '<tr><td><strong>'+code+'</strong><small class="crm-url-qr-resolver">'+escapeHtml(resolver)+'</small></td><td>'+name+'</td><td><a href="'+dest+'" target="_blank" rel="noopener noreferrer" class="crm-url-qr-link">'+dest+'</a></td><td><div class="crm-url-qr-thumb" data-qr-code="'+code+'" data-qr-resolver="'+escapeHtml(resolver)+'"></div></td><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleDateString():'')+'</td><td><button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-edit="'+id+'">Edit URL</button> <button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-download="'+id+'">Download QR</button> <button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-print="'+id+'">Print QR</button></td></tr>';
+      return '<tr><td><strong>'+code+'</strong><small class="crm-url-qr-resolver">'+escapeHtml(resolver)+'</small></td><td>'+name+'</td><td><a href="'+dest+'" target="_blank" rel="noopener noreferrer" class="crm-url-qr-link">'+dest+'</a></td><td><div class="crm-url-qr-thumb" data-qr-code="'+code+'" data-qr-resolver="'+escapeHtml(resolver)+'"></div></td><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleDateString():'')+'</td><td><button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-edit="'+id+'">Edit URL</button> <button class="crm-btn crm-btn-secondary crm-btn-small crm-icon-action" data-url-qr-download="'+id+'" aria-label="Download QR" title="Download QR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></button></td></tr>';
     }).join('')||'<tr><td colspan="6" class="crm-empty">No QR codes found.</td></tr>';
     body.querySelectorAll('.crm-url-qr-thumb').forEach(function(el){
       if(window.QRCode) new QRCode(el,{text:el.getAttribute('data-qr-resolver'),width:72,height:72,correctLevel:QRCode.CorrectLevel.M});
@@ -3177,7 +3415,7 @@
     $('url-qr-name').value=x?x.name:'';
     $('url-qr-destination').value=x?x.destination_url:'';
     $('url-qr-save').textContent=x?'Update URL':'Save QR code';
-    $('url-qr-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('url-qr-form-card');
     $('url-qr-form-card').scrollIntoView({behavior:'smooth',block:'start'});
   }
   async function saveUrlQr(e){
@@ -3195,7 +3433,7 @@
       if(r.error && r.error.code==='23505'){code=createPermanentQrCode();r=await window.salonSupabase.from('url_qr_codes').insert({permanent_code:code,name:name,destination_url:destination});}
     }
     if(r.error){message(r.error.message,'error');return;}
-    $('url-qr-form-card').classList.add('crm-hidden');state.editingUrlQrId=null;await loadUrlQrCodes();message(id?'Destination URL updated. The existing printed QR code is unchanged.':'Permanent QR code created.','success');
+    closeCrmFormCardModal('url-qr-form-card');state.editingUrlQrId=null;await loadUrlQrCodes();message(id?'Destination URL updated. The existing printed QR code is unchanged.':'Permanent QR code created.','success');
   }
   function getUrlQr(id){return state.urlQrCodes.find(function(x){return String(x.id)===String(id);});}
   function downloadUrlQr(id){
@@ -3215,10 +3453,7 @@
       var a=document.createElement('a');a.href=out.toDataURL('image/png');a.download='JASPremium_'+x.permanent_code+'.png';a.click();holder.remove();
     },100);
   }
-  function printUrlQr(id){
-    var x=getUrlQr(id);if(!x)return;var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);var w=window.open('','_blank','width=700,height=800');if(!w){message('Please allow pop-ups to print the QR code.','error');return;}
-    w.document.write('<!doctype html><html><head><title>'+escapeHtml(x.name)+'</title><style>body{font-family:Arial,sans-serif;text-align:center;margin:0;padding:40px;color:#111}h1{font-size:28px;margin:0 0 8px}p{font-size:14px;color:#555;margin:0 0 22px}.qr{display:inline-block;padding:18px;border:1px solid #ddd;background:#fff}.code{font-weight:700;letter-spacing:1px;margin-top:18px}@media print{body{padding:20mm}.no-print{display:none}}</style></head><body><h1>'+escapeHtml(x.name)+'</h1><p>Scan to open the current URL</p><div class="qr" id="qr"></div><div class="code">'+escapeHtml(x.permanent_code)+'</div><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\\/script><script>new QRCode(document.getElementById("qr"),{text:'+JSON.stringify(resolver)+',width:320,height:320,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print();},300);<\\/script></body></html>');w.document.close();
-  }
+
 
   async function loadJournalEntries(){
     if(!can('journal-entries','read'))return;
@@ -3232,9 +3467,32 @@
       return(!q||h.includes(q))&&(st==='all'||x.status===st)&&(!from||x.entry_date>=from)&&(!to||x.entry_date<=to);
     });
     var body=$('journal-entries-body');if(!body)return;
-    body.innerHTML=rows.map(function(x){var acts='';if(x.status==='draft'&&can('journal-entries','update'))acts+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="'+x.id+'">Edit</button> ';if(x.status==='draft'&&can('journal-entries','delete'))acts+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="'+x.id+'">Delete</button> ';if(x.status==='draft'&&can('journal-entries','post'))acts+='<button class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="'+x.id+'">Post</button>';return '<tr><td><strong>'+escapeHtml(x.entry_no||('JE-'+x.id))+'</strong></td><td>'+escapeHtml(x.entry_date||'')+'</td><td>'+escapeHtml(x.reference||'—')+'</td><td>'+escapeHtml(x.description||'')+'</td><td>'+financeMoney(x.total_debit)+'</td><td>'+escapeHtml(x.status||'')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
+    body.innerHTML=rows.map(function(x){var acts='';if(can('journal-entries','read'))acts+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-journal="'+x.id+'">View</button> ';if(x.status==='draft'&&can('journal-entries','update'))acts+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="'+x.id+'">Edit</button> ';if(x.status==='draft'&&can('journal-entries','delete'))acts+='<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="'+x.id+'">Delete</button> ';if(x.status==='draft'&&can('journal-entries','post'))acts+='<button type="button" class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="'+x.id+'">Post</button>';return '<tr><td><strong>'+escapeHtml(x.entry_no||('JE-'+x.id))+'</strong></td><td>'+escapeHtml(x.entry_date||'')+'</td><td>'+escapeHtml(x.reference||'—')+'</td><td>'+escapeHtml(x.description||'')+'</td><td>'+financeMoney(x.total_debit)+'</td><td>'+escapeHtml(x.status||'')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
   }
-  async function deleteJournal(id){if(!requirePermission('journal-entries','delete'))return;if(!confirm('Delete this draft journal entry?'))return;var r=await window.salonSupabase.from('journal_entries').delete().eq('id',id).eq('status','draft');if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Draft deleted.','success');}}
+  async function viewJournalEntry(id){
+    if(!can('journal-entries','read'))return;
+    var card=$('journal-entry-view-card'), body=$('journal-entry-view-body');
+    if(!card||!body)return;
+    body.innerHTML='<div class="crm-loading">Loading journal entry…</div>';
+    openCrmFormCardModal('journal-entry-view-card');
+    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit').eq('id',id).single();
+    if(r.error){closeCrmFormCardModal('journal-entry-view-card');message(r.error.message,'error');return;}
+    var l=await window.salonSupabase.from('journal_entry_lines').select('line_no,account_code,description,debit,credit').eq('journal_entry_id',id).order('line_no',{ascending:true});
+    if(l.error){closeCrmFormCardModal('journal-entry-view-card');message(l.error.message,'error');return;}
+    var entry=r.data||{}, lines=l.data||[], totalD=lines.reduce(function(x,a){return x+Number(a.debit||0);},0), totalC=lines.reduce(function(x,a){return x+Number(a.credit||0);},0);
+    var status=String(entry.status||'').toLowerCase();
+    var statusClass=status==='posted'?'active':status==='draft'?'pending':'cancelled';
+    var rows=lines.map(function(line){
+      var account=state.chartOfAccounts.find(function(a){return String(a.account_code)===String(line.account_code);});
+      var accountName=account?(account.account_name||account.major_account||''):'Unknown account';
+      return '<tr><td><strong>'+escapeHtml(line.account_code||'')+'</strong><small>'+escapeHtml(accountName)+'</small></td><td>'+escapeHtml(line.description||'—')+'</td><td>'+financeMoney(line.debit)+'</td><td>'+financeMoney(line.credit)+'</td></tr>';
+    }).join('')||'<tr><td colspan="4" class="crm-empty">No journal lines found.</td></tr>';
+    body.innerHTML='<div class="crm-journal-view-meta"><div><span class="crm-eyebrow">Journal entry</span><h3>'+escapeHtml(entry.entry_no||('JE-'+entry.id))+'</h3></div><span class="crm-badge '+statusClass+'">'+escapeHtml(entry.status||'—')+'</span></div>'+
+      '<div class="crm-form-grid crm-journal-view-grid"><div class="crm-field"><label>Date</label><div class="crm-readonly-value">'+escapeHtml(entry.entry_date||'—')+'</div></div><div class="crm-field"><label>Reference</label><div class="crm-readonly-value">'+escapeHtml(entry.reference||'—')+'</div></div><div class="crm-field full"><label>Description</label><div class="crm-readonly-value">'+escapeHtml(entry.description||'—')+'</div></div></div>'+
+      '<div class="crm-card-inner crm-journal-view-lines"><div class="crm-card-header"><h3>Journal lines</h3></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><th colspan="2">Totals</th><th>'+financeMoney(totalD)+'</th><th>'+financeMoney(totalC)+'</th></tr></tfoot></table></div><div class="crm-finance-balance">'+(Math.abs(totalD-totalC)<=0.005?'✓ Balanced':'⚠ Difference: '+financeMoney(Math.abs(totalD-totalC)))+'</div></div>';
+  }
+
+  async function deleteJournal(id){if(!requirePermission('journal-entries','delete'))return;if(!await crmConfirm('Delete journal entry','Delete this draft journal entry?'))return;var r=await window.salonSupabase.from('journal_entries').delete().eq('id',id).eq('status','draft');if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Draft deleted.','success');}}
   async function postJournal(id){if(!requirePermission('journal-entries','post'))return;if(!confirm('Post this journal entry? Posted entries cannot be edited.'))return;var r=await window.salonSupabase.rpc('post_journal_entry',{p_entry_id:id});if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Journal entry posted.','success');}}
 
   async function loadGeneralLedger(){
@@ -3271,10 +3529,10 @@
   }
   function openMappingForm(id){
     var x=id&&state.statementMappings.find(function(y){return String(y.id)===String(id);});state.editingMappingId=x?x.id:null;
-    $('statement-map-form-card').classList.remove('crm-hidden');$('map-statement').value=x?x.statement:'Profit & Loss';$('map-account').value=x?x.account_code:'';$('map-section').value=x?x.section_line:'';$('map-order').value=x?x.display_order:1;$('map-active').checked=x?x.active:true;
+    openCrmFormCardModal('statement-map-form-card');$('map-statement').value=x?x.statement:'Profit & Loss';$('map-account').value=x?x.account_code:'';$('map-section').value=x?x.section_line:'';$('map-order').value=x?x.display_order:1;$('map-active').checked=x?x.active:true;
   }
-  async function saveMapping(e){e.preventDefault();var id=state.editingMappingId;if(!requirePermission('statement-mapping',id?'update':'create'))return;var payload={statement:$('map-statement').value,account_code:$('map-account').value,section_line:$('map-section').value.trim(),display_order:Number($('map-order').value||1),active:$('map-active').checked};var r=id?await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id',id):await window.salonSupabase.from('financial_statement_mappings').insert(payload);if(r.error){message(r.error.message,'error');return;}$('statement-map-form-card').classList.add('crm-hidden');await loadStatementMappings();message('Statement mapping saved.','success');}
-  async function deleteMapping(id){if(!requirePermission('statement-mapping','delete'))return;if(!confirm('Delete this statement mapping?'))return;var r=await window.salonSupabase.from('financial_statement_mappings').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadStatementMappings();message('Mapping deleted.','success');}}
+  async function saveMapping(e){e.preventDefault();var id=state.editingMappingId;if(!requirePermission('statement-mapping',id?'update':'create'))return;var payload={statement:$('map-statement').value,account_code:$('map-account').value,section_line:$('map-section').value.trim(),display_order:Number($('map-order').value||1),active:$('map-active').checked};var r=id?await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id',id):await window.salonSupabase.from('financial_statement_mappings').insert(payload);if(r.error){message(r.error.message,'error');return;}closeCrmFormCardModal('statement-map-form-card');await loadStatementMappings();message('Statement mapping saved.','success');}
+  async function deleteMapping(id){if(!requirePermission('statement-mapping','delete'))return;if(!await crmConfirm('Delete statement mapping','Delete this statement mapping?'))return;var r=await window.salonSupabase.from('financial_statement_mappings').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadStatementMappings();message('Mapping deleted.','success');}}
 
   function financeDateInRange(date,from,to){ return (!from||date>=from)&&(!to||date<=to); }
   function financeNormalAmount(account,debit,credit){
@@ -3593,9 +3851,37 @@
   }
   async function loadAccountingPeriods(){
     if(!can('accounting-periods','read'))return;var r=await window.salonSupabase.from('accounting_periods').select('id,name,start_date,end_date,status').order('start_date',{ascending:false});if(r.error){message(r.error.message,'error');return;}state.accountingPeriods=r.data||[];var b=$('periods-body');if(b)b.innerHTML=state.accountingPeriods.map(function(x){var a='';if(can('accounting-periods','update'))a+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-period="'+x.id+'">Edit</button> ';if(can('accounting-periods','delete'))a+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-period="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.start_date+'</td><td>'+x.end_date+'</td><td>'+escapeHtml(x.status)+'</td><td>'+a+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounting periods configured.</td></tr>';}
-  function openPeriodForm(id){var x=id&&state.accountingPeriods.find(function(y){return String(y.id)===String(id);});state.editingPeriodId=x?x.id:null;$('period-form-card').classList.remove('crm-hidden');$('period-name').value=x?x.name:'';$('period-start').value=x?x.start_date:financeToday();$('period-end').value=x?x.end_date:financeToday();$('period-status').value=x?x.status:'open';}
-  async function savePeriod(e){e.preventDefault();var id=state.editingPeriodId;if(!requirePermission('accounting-periods',id?'update':'create'))return;var payload={name:$('period-name').value.trim(),start_date:$('period-start').value,end_date:$('period-end').value,status:$('period-status').value};if(payload.end_date<payload.start_date){message('End date must be after start date.','error');return;}var r=id?await window.salonSupabase.from('accounting_periods').update(payload).eq('id',id):await window.salonSupabase.from('accounting_periods').insert(payload);if(r.error){message(r.error.message,'error');return;}$('period-form-card').classList.add('crm-hidden');await loadAccountingPeriods();message('Accounting period saved.','success');}
-  async function deletePeriod(id){if(!requirePermission('accounting-periods','delete'))return;if(!confirm('Delete this accounting period?'))return;var r=await window.salonSupabase.from('accounting_periods').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadAccountingPeriods();message('Period deleted.','success');}}
+  function openPeriodForm(id){var x=id&&state.accountingPeriods.find(function(y){return String(y.id)===String(id);});state.editingPeriodId=x?x.id:null;openCrmFormCardModal('period-form-card');$('period-name').value=x?x.name:'';$('period-start').value=x?x.start_date:financeToday();$('period-end').value=x?x.end_date:financeToday();$('period-status').value=x?x.status:'open';}
+  async function savePeriod(e){e.preventDefault();var id=state.editingPeriodId;if(!requirePermission('accounting-periods',id?'update':'create'))return;var payload={name:$('period-name').value.trim(),start_date:$('period-start').value,end_date:$('period-end').value,status:$('period-status').value};if(payload.end_date<payload.start_date){message('End date must be after start date.','error');return;}var r=id?await window.salonSupabase.from('accounting_periods').update(payload).eq('id',id):await window.salonSupabase.from('accounting_periods').insert(payload);if(r.error){message(r.error.message,'error');return;}closeCrmFormCardModal('period-form-card');await loadAccountingPeriods();message('Accounting period saved.','success');}
+  async function deletePeriod(id){if(!requirePermission('accounting-periods','delete'))return;if(!await crmConfirm('Delete accounting period','Delete this accounting period?'))return;var r=await window.salonSupabase.from('accounting_periods').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadAccountingPeriods();message('Period deleted.','success');}}
+
+  function enhanceCrudActionButtons(root){
+    var scope=root||document;
+    scope.querySelectorAll('button.crm-btn, a.crm-btn').forEach(function(btn){
+      // Keep the destructive action in the confirmation dialog as text.
+      // Table/list Delete actions remain icon-only.
+      if(btn.closest && btn.closest('.crm-confirm-modal')) return;
+      if(btn.classList.contains('crm-icon-action')) return;
+      var label=String(btn.textContent||'').trim();
+      var match=label.match(/^(Edit|Delete|View)(?:\s|$)/i);
+      if(!match) return;
+      var action=match[1].toLowerCase();
+      var title=label||action.charAt(0).toUpperCase()+action.slice(1);
+      var icon='';
+      if(action==='edit') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
+      if(action==='delete') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>';
+      if(action==='view') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+      btn.setAttribute('title',title);btn.setAttribute('aria-label',title);btn.classList.add('crm-icon-action');btn.innerHTML=icon+'<span class="crm-action-text">'+escapeHtml(title)+'</span>';
+    });
+  }
+  function startCrudIconObserver(){
+    enhanceCrudActionButtons(document);
+    if(window.MutationObserver){
+      var target=document.querySelector('.crm-main')||document.body;
+      var observer=new MutationObserver(function(){enhanceCrudActionButtons(target);});
+      observer.observe(target,{childList:true,subtree:true});
+    }
+  }
 
   function showView(view, restoring){
     if(view!=='dashboard' && !can(view,'read')){
@@ -3647,7 +3933,7 @@
         var detail=(result.data&&result.data.error)||result.error.message||'Could not send invitation.';
         message(detail,'error');return;
       }
-      message('Invitation sent to '+payload.email+'.','success');$('user-form').reset();$('user-form-card').classList.add('crm-hidden');await loadUsers();
+      message('Invitation sent to '+payload.email+'.','success');$('user-form').reset();closeCrmFormCardModal('user-form-card');await loadUsers();
     } finally {
       if(button){button.disabled=false;button.textContent='Send invitation';}
     }
@@ -3660,8 +3946,8 @@
     $('edit-user-role').value=String(u.role_id || (state.roles.find(function(r){return String(r.name).toLowerCase()===String(u.role||'staff').toLowerCase();})||{}).id || '');
     $('edit-user-active').checked=u.active!==false;
     $('user-edit-email').textContent=u.email||'';
-    $('user-edit-card').classList.remove('crm-hidden');
-    $('user-form-card').classList.add('crm-hidden');
+    openCrmFormCardModal('user-edit-card');
+    closeCrmFormCardModal('user-form-card');
     var tempCard=$('temporary-password-card');
     if(tempCard) tempCard.classList.toggle('crm-hidden', !(state.currentRole === 'admin' && String(state.editingUserId)!==String(state.currentUserId)));
     if($('temporary-password')) $('temporary-password').value='';
@@ -3713,7 +3999,7 @@
     if(!payload.full_name){message('Please enter a display name.','error');return;}
     var result=await window.salonSupabase.from('admin_users').update(payload).eq('user_id',state.editingUserId);
     if(result.error){message(result.error.message,'error');return;}
-    message('User updated.','success');state.editingUserId=null;$('user-edit-card').classList.add('crm-hidden');await loadUsers();
+    message('User updated.','success');state.editingUserId=null;closeCrmFormCardModal('user-edit-card');await loadUsers();
   }
   async function toggleUser(id){
     if(!can('users','update')) return;
@@ -3753,9 +4039,8 @@
     if(!u) return;
 
     var displayName=u.full_name || u.email || 'this user';
-    var confirmed=window.confirm(
-      'Delete "'+displayName+'" permanently?\n\n'+
-      'This permanently removes the user account and CRM access.'
+    var confirmed=await crmConfirm('Delete CRM user',
+      'Delete "'+displayName+'" permanently? This permanently removes the user account and CRM access.'
     );
     if(!confirmed) return;
 
@@ -4069,7 +4354,7 @@
       el.classList.toggle('crm-hidden', !(allowed && active));
     });
     var actionMap={
-      'new-category-top':['services','create'],'new-voucher-top':['vouchers','create'],'new-faq-top':['faqs','create'],
+      'new-category-top':['services','create'],'new-service-top':['services','create'],'new-voucher-top':['vouchers','create'],'new-faq-top':['faqs','create'],
       'invite-user-btn':['users','create'],'new-role-top':['roles','create'],
       'service-save':['services',state.editingServiceId?'update':'create'],'category-save':['services',state.editingCategoryId?'update':'create'],
       'voucher-save':['vouchers',state.editingVoucherId?'update':'create'],'faq-save':['faqs',state.editingFaqId?'update':'create'],
@@ -4077,10 +4362,85 @@
     };
     Object.keys(actionMap).forEach(function(id){var el=$(id),rule=actionMap[id];if(el)el.disabled=!can(rule[0],rule[1]);});
   }
+  function convertCrmFormCardsToModals(){
+    var selectors = [
+      '[id$="-form-card"]',
+      '[id$="-edit-card"]',
+      '[id$="-view-card"]',
+      '#walkin-booking-card',
+      '#customer-detail-card'
+    ];
+    var nodes = document.querySelectorAll(selectors.join(','));
+    nodes.forEach(function(card){
+      if(!card || card.dataset.crmModalized==='1') return;
+      if(card.id==='category-form-modal' || card.id==='service-form-modal' || card.id==='booking-detail-modal') return;
+      card.dataset.crmModalized='1';
+      card.classList.add('crm-form-card-modal');
+      card.setAttribute('role','dialog');
+      card.setAttribute('aria-modal','true');
+      card.setAttribute('aria-hidden', card.classList.contains('crm-hidden') ? 'true' : 'false');
+      var heading = card.querySelector('h1,h2,h3');
+      if(heading) card.setAttribute('aria-labelledby', heading.id || (heading.id = card.id+'-title'));
+
+      // Put every modal's actual content inside the same white panel. This prevents
+      // individual forms/cards from inheriting transparent backgrounds and keeps
+      // Add, Edit and View dialogs visually identical to the Service popup.
+      var panel = document.createElement('div');
+      panel.className='crm-form-card-modal-panel';
+      while(card.firstChild) panel.appendChild(card.firstChild);
+
+      var close = document.createElement('button');
+      close.type='button';
+      close.className='crm-form-card-modal-close';
+      close.setAttribute('aria-label','Close');
+      close.title='Close';
+      close.innerHTML='×';
+      close.addEventListener('click',function(){
+        card.classList.add('crm-hidden');
+        card.setAttribute('aria-hidden','true');
+        document.body.classList.remove('crm-form-modal-open');
+      });
+
+      var backdrop = document.createElement('div');
+      backdrop.className='crm-form-card-modal-backdrop';
+      backdrop.addEventListener('click',function(){
+        card.classList.add('crm-hidden');
+        card.setAttribute('aria-hidden','true');
+        document.body.classList.remove('crm-form-modal-open');
+      });
+
+      card.appendChild(backdrop);
+      card.appendChild(panel);
+      // Customer View intentionally has no visible Close button. It can still be
+      // dismissed through the backdrop or Escape, while Add/Edit popups keep their
+      // normal in-panel Close button.
+      if(card.id !== 'customer-detail-card') panel.appendChild(close);
+      document.body.appendChild(card);
+    });
+  }
+
+  function openCrmFormCardModal(id){
+    var card=$(id); if(!card) return;
+    card.classList.remove('crm-hidden');
+    card.setAttribute('aria-hidden','false');
+    document.body.classList.add('crm-form-modal-open');
+    var focusable=card.querySelector('input:not([type=hidden]),select,textarea,button:not(.crm-form-card-modal-close)');
+    if(focusable) setTimeout(function(){try{focusable.focus();}catch(e){}},30);
+  }
+
+  function closeCrmFormCardModal(id){
+    var card=$(id); if(!card) return;
+    card.classList.add('crm-hidden');
+    card.setAttribute('aria-hidden','true');
+    document.body.classList.remove('crm-form-modal-open');
+  }
+
   function showApp(){$('crm-login').classList.add('crm-hidden');$('crm-app').classList.remove('crm-hidden');applyRoleVisibility();}
 
   document.addEventListener('DOMContentLoaded',async function(){
-    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);$('customer-detail-close').addEventListener('click',closeCustomerDetails);$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;var rows=document.querySelectorAll('[data-loyalty-reward-row]');if(rows.length<=1){message('Keep at least one loyalty reward.','error');return;}btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-main-page-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('main_page_nav_logo_image','main-page-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-main-page-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('main_page_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-other-pages-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('other_pages_nav_logo_image','other-pages-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-other-pages-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('other_pages_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('upload-footer-logo-image').addEventListener('click',function(){uploadBrandingImage('footer_logo_image','footer-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-footer-logo-image').addEventListener('click',function(){deleteBrandingImage('footer_logo_image').catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
+    convertCrmFormCardsToModals();
+
+    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);if($('new-category-top'))$('new-category-top').addEventListener('click',function(){openCategoryForm();});if($('new-service-top'))$('new-service-top').addEventListener('click',function(){openServiceForm();});document.querySelectorAll('[data-services-tab]').forEach(function(btn){btn.addEventListener('click',function(){setServicesTab(btn.getAttribute('data-services-tab'));});});document.querySelectorAll('[data-booking-config-tab]').forEach(function(btn){btn.addEventListener('click',function(){setBookingConfigTab(btn.getAttribute('data-booking-config-tab'));});});document.querySelectorAll('[data-settings-tab]').forEach(function(btn){btn.addEventListener('click',function(){setSettingsTab(btn.getAttribute('data-settings-tab'));});});setBookingConfigTab('settings');setSettingsTab('language-currency');document.querySelectorAll('[data-close-category-form]').forEach(function(el){el.addEventListener('click',closeCategoryForm);});document.querySelectorAll('[data-close-service-form]').forEach(function(el){el.addEventListener('click',closeServiceForm);});$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);document.querySelectorAll('[data-close-customer-detail]').forEach(function(el){el.addEventListener('click',closeCustomerDetails);});$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-main-page-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('main_page_nav_logo_image','main-page-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-main-page-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('main_page_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-other-pages-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('other_pages_nav_logo_image','other-pages-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-other-pages-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('other_pages_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
     function updateFooterLogoDimensionsPreview(){
       var preview=$('footer-logo-image-preview');
       if(!preview || preview.hidden) return;
@@ -4112,18 +4472,18 @@
       var uploadButton = $(slot.uploadId);
       if (uploadButton) uploadButton.addEventListener('click',function(){uploadWebsiteImage(slot).catch(function(e){message(e.message,'error');});});
     });
-    $('user-form').addEventListener('submit',inviteUser);$('user-cancel').addEventListener('click',function(){$('user-form-card').classList.add('crm-hidden');});
+    $('user-form').addEventListener('submit',inviteUser);$('user-cancel').addEventListener('click',function(){closeCrmFormCardModal('user-form-card');});
     $('user-edit-form').addEventListener('submit',saveUser);
     if($('user-search')) $('user-search').addEventListener('input',function(e){state.userSearch=e.target.value;renderUsers();});
     if($('user-role-filter')) $('user-role-filter').addEventListener('change',function(e){state.userRoleFilter=e.target.value;renderUsers();});
     if($('user-status-filter')) $('user-status-filter').addEventListener('change',function(e){state.userStatusFilter=e.target.value;renderUsers();});
     if($('role-search')) $('role-search').addEventListener('input',function(e){state.roleSearch=e.target.value;renderRoles();});
-    if($('role-type-filter')) $('role-type-filter').addEventListener('change',function(e){state.roleTypeFilter=e.target.value;renderRoles();});$('user-edit-cancel').addEventListener('click',function(){$('user-edit-card').classList.add('crm-hidden');state.editingUserId=null;});
+    if($('role-type-filter')) $('role-type-filter').addEventListener('change',function(e){state.roleTypeFilter=e.target.value;renderRoles();});$('user-edit-cancel').addEventListener('click',function(){closeCrmFormCardModal('user-edit-card');state.editingUserId=null;});
     var tempGenerate=$('generate-temporary-password'); if(tempGenerate) tempGenerate.addEventListener('click',generateTemporaryPassword); var tempSet=$('set-temporary-password'); if(tempSet) tempSet.addEventListener('click',setTemporaryPassword);
-    var roleForm=$('role-form'); if(roleForm) roleForm.addEventListener('submit',saveRole); var roleCancel=$('role-cancel'); if(roleCancel) roleCancel.addEventListener('click',function(){$('role-form-card').classList.add('crm-hidden');state.editingRoleId=null;}); var newRoleTop=$('new-role-top'); if(newRoleTop) newRoleTop.addEventListener('click',startRoleCreate); var rolesTableBody=$('roles-table-body'); if(rolesTableBody) rolesTableBody.addEventListener('click',function(e){var edit=e.target.closest('[data-edit-role]');if(edit)editRole(edit.getAttribute('data-edit-role'));var del=e.target.closest('[data-delete-role]');if(del)deleteRole(del.getAttribute('data-delete-role'));}); var roleSelectAll=$('role-select-all'); if(roleSelectAll) roleSelectAll.addEventListener('change',function(e){document.querySelectorAll('[data-role-permission]').forEach(function(c){c.checked=e.target.checked;});});
+    var roleForm=$('role-form'); if(roleForm) roleForm.addEventListener('submit',saveRole); var roleCancel=$('role-cancel'); if(roleCancel) roleCancel.addEventListener('click',function(){closeCrmFormCardModal('role-form-card');state.editingRoleId=null;}); var newRoleTop=$('new-role-top'); if(newRoleTop) newRoleTop.addEventListener('click',startRoleCreate); var rolesTableBody=$('roles-table-body'); if(rolesTableBody) rolesTableBody.addEventListener('click',function(e){var edit=e.target.closest('[data-edit-role]');if(edit)editRole(edit.getAttribute('data-edit-role'));var del=e.target.closest('[data-delete-role]');if(del)deleteRole(del.getAttribute('data-delete-role'));}); var roleSelectAll=$('role-select-all'); if(roleSelectAll) roleSelectAll.addEventListener('change',function(e){document.querySelectorAll('[data-role-permission]').forEach(function(c){c.checked=e.target.checked;});});
     $('password-setup-form').addEventListener('submit',finishPasswordSetup);
-    $('invite-user-btn').addEventListener('click',function(){$('user-form-card').classList.remove('crm-hidden');$('user-name').focus();});
-    $('service-reset').addEventListener('click',resetServiceForm);$('category-reset').addEventListener('click',resetCategoryForm);
+    $('invite-user-btn').addEventListener('click',function(){openCrmFormCardModal('user-form-card');$('user-name').focus();});
+    $('service-reset').addEventListener('click',closeServiceForm);$('category-reset').addEventListener('click',closeCategoryForm);
     $('category-image-file').addEventListener('change',function(){
       var file=this.files&&this.files[0];
       if(!file){ renderCategoryImagePreview(''); return; }
@@ -4143,6 +4503,7 @@
     if($('voucher-status-filter')) $('voucher-status-filter').addEventListener('change',renderVouchers);
 
     document.querySelectorAll('[data-view-target]').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view-target'));});});
+    document.querySelectorAll('[data-booking-filter]').forEach(function(b){b.addEventListener('click',function(){var filter=b.getAttribute('data-booking-filter')||'all';state.bookingFilter=filter;if($('booking-status-filter'))$('booking-status-filter').value=filter;showView('bookings');renderBookings();});});
     function setCrmMobileMenu(open){
       var sidebar=$('crm-sidebar'),backdrop=$('crm-sidebar-backdrop');
       if(sidebar) sidebar.classList.toggle('open',!!open);
@@ -4150,10 +4511,20 @@
       document.body.classList.toggle('crm-menu-open',!!open);
       if($('mobile-menu')) $('mobile-menu').setAttribute('aria-expanded',open?'true':'false');
     }
+    function setCrmSidebarCollapsed(collapsed){
+      var sidebar=$('crm-sidebar'), toggle=$('crm-sidebar-toggle');
+      if(!sidebar)return;
+      sidebar.classList.toggle('collapsed',!!collapsed);
+      document.body.classList.toggle('crm-sidebar-collapsed',!!collapsed);
+      if(toggle){toggle.setAttribute('aria-expanded',collapsed?'false':'true');toggle.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');toggle.title=collapsed?'Expand sidebar':'Collapse sidebar';toggle.innerHTML=collapsed?'<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m10 6 6 6-6 6\"/></svg>':'<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m14 6-6 6 6 6\"/></svg>';}
+      try{localStorage.setItem('jas_crm_sidebar_collapsed',collapsed?'1':'0');}catch(e){}
+    }
+    var sidebarCollapsed=false;try{sidebarCollapsed=localStorage.getItem('jas_crm_sidebar_collapsed')==='1';}catch(e){}
+    setCrmSidebarCollapsed(sidebarCollapsed);
     $('mobile-menu').addEventListener('click',function(){setCrmMobileMenu(!$('crm-sidebar').classList.contains('open'));});
-    if($('crm-sidebar-close')) $('crm-sidebar-close').addEventListener('click',function(){setCrmMobileMenu(false);});
+    if($('crm-sidebar-toggle')) $('crm-sidebar-toggle').addEventListener('click',function(){if(window.innerWidth<=760){setCrmMobileMenu(!$('crm-sidebar').classList.contains('open'));}else{setCrmSidebarCollapsed(!$('crm-sidebar').classList.contains('collapsed'));}});
     if($('crm-sidebar-backdrop')) $('crm-sidebar-backdrop').addEventListener('click',function(){setCrmMobileMenu(false);});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape') setCrmMobileMenu(false);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){setCrmMobileMenu(false);if($('category-form-modal')&&!$('category-form-modal').classList.contains('crm-hidden'))closeCategoryForm();if($('service-form-modal')&&!$('service-form-modal').classList.contains('crm-hidden'))closeServiceForm();document.querySelectorAll('.crm-form-card-modal:not(.crm-hidden)').forEach(function(card){card.classList.add('crm-hidden');card.setAttribute('aria-hidden','true');});document.body.classList.remove('crm-form-modal-open');}});
     document.querySelectorAll('.crm-nav-item,.crm-nav-link').forEach(function(item){item.addEventListener('click',function(){if(window.innerWidth<=760) setCrmMobileMenu(false);});});
     $('bookings-refresh').addEventListener('click',function(){loadBookings().catch(function(e){message(e.message,'error');});});
     if($('chart-account-search')) $('chart-account-search').addEventListener('input',function(e){state.chartAccountSearch=e.target.value;renderChartOfAccounts();});
@@ -4179,15 +4550,19 @@
     $('booking-search').addEventListener('input',function(e){state.bookingSearch=e.target.value;renderBookings();});
     $('booking-date-filter').addEventListener('change',function(e){state.bookingDateFilter=e.target.value;renderBookings();});
     if($('booking-status-filter')) $('booking-status-filter').addEventListener('change',function(e){state.bookingFilter=e.target.value;renderBookings();});
-    document.querySelectorAll('[data-booking-filter]').forEach(function(b){b.addEventListener('click',function(){state.bookingFilter=b.getAttribute('data-booking-filter');if($('booking-status-filter'))$('booking-status-filter').value=state.bookingFilter;renderBookings();});});
+
     $('bookings-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-view-booking]');if(b)renderBookingDetail(b.getAttribute('data-view-booking'));});
     document.querySelectorAll('[data-close-booking]').forEach(function(el){el.addEventListener('click',closeBookingDetail);});
     $('booking-detail-content').addEventListener('click',function(e){
       var statusButton=e.target.closest('[data-booking-status]');
       if(statusButton) updateBookingStatus(statusButton.getAttribute('data-booking-id'),statusButton.getAttribute('data-booking-status'));
       var saveButton=e.target.closest('[data-save-booking-appointment]');
-      if(saveButton) saveBookingAppointment(saveButton.getAttribute('data-save-booking-appointment'));
+      if(saveButton) { saveBookingAppointment(saveButton.getAttribute('data-save-booking-appointment')); return; }
+      var pricingButton=e.target.closest('[data-save-booking-pricing]');
+      if(pricingButton) saveBookingPricing(pricingButton.getAttribute('data-save-booking-pricing'));
     });
+    $('booking-detail-content').addEventListener('input',function(e){ if(e.target.matches('[data-booking-item-price],#crm-booking-discount-value')) updateBookingPricingPreview(); });
+    $('booking-detail-content').addEventListener('change',function(e){ if(e.target.matches('#crm-booking-discount-type')) updateBookingPricingPreview(); });
     document.querySelectorAll('[data-booking-view]').forEach(function(b){b.addEventListener('click',function(){setBookingView(b.getAttribute('data-booking-view'));});});
     $('schedule-prev').addEventListener('click',function(){state.scheduleDate.setDate(state.scheduleDate.getDate()-7);renderSchedule();});
     $('schedule-next').addEventListener('click',function(){state.scheduleDate.setDate(state.scheduleDate.getDate()+7);renderSchedule();});
@@ -4199,8 +4574,8 @@
     $('category-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-edit-category]');if(b)editCategory(b.getAttribute('data-edit-category'));var d=e.target.closest('[data-delete-category]');if(d)deleteCategory(d.getAttribute('data-delete-category'));}); $('users-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-user]');if(edit){editUser(edit.getAttribute('data-edit-user'));return;}var toggle=e.target.closest('[data-toggle-user]');if(toggle){toggleUser(toggle.getAttribute('data-toggle-user'));return;}var reset=e.target.closest('[data-reset-password]');if(reset){resetUserPassword(reset.getAttribute('data-reset-password'));return;}var del=e.target.closest('[data-delete-user]');if(del)deleteUser(del.getAttribute('data-delete-user'));});
     $('voucher-form').addEventListener('submit',saveVoucher);
     $('voucher-reset').addEventListener('click',resetVoucherForm);
-    $('voucher-cancel').addEventListener('click',function(){$('voucher-form-card').classList.add('crm-hidden');state.editingVoucherId=null;});
-    $('new-voucher-top').addEventListener('click',function(){resetVoucherForm();$('voucher-form-card').classList.remove('crm-hidden');$('voucher-sku').focus();window.scrollTo({top:0,behavior:'smooth'});});
+    $('voucher-cancel').addEventListener('click',function(){closeCrmFormCardModal('voucher-form-card');state.editingVoucherId=null;});
+    $('new-voucher-top').addEventListener('click',function(){resetVoucherForm();openCrmFormCardModal('voucher-form-card');$('voucher-sku').focus();window.scrollTo({top:0,behavior:'smooth'});});
     $('vouchers-refresh').addEventListener('click',function(){loadVouchers().catch(function(e){message(e.message,'error');});});
     $('voucher-image-delete').addEventListener('click',deleteVoucherImage);    $('voucher-image-file').addEventListener('change',previewVoucherImageFile);
     $('voucher-table-body').addEventListener('click',function(e){
@@ -4275,6 +4650,7 @@
     window.viewCustomer = viewCustomer;
     window.editCustomer = editCustomer;
     window.startCustomerCreate = startCustomerCreate;
+    startCrudIconObserver();
     window.deleteCustomer = deleteCustomer;
   });
   var bookingConfigState = { settings: null, rules: [], editingRuleId: null };
@@ -4318,7 +4694,7 @@
     });
     body.querySelectorAll('.delete-booking-rule').forEach(function(b){
       b.addEventListener('click',async function(){
-        if(!confirm('Delete this booking block?'))return;
+        if(!await crmConfirm('Delete booking block','Delete this booking block?'))return;
         try{
           await window.salonDatabase.deleteBookingScheduleRule(Number(b.dataset.id));
           await loadBookingConfig();
@@ -4351,7 +4727,7 @@
     $('booking-rule-form-title').textContent=r?'Edit booking block':'Add booking block';
     $('booking-rule-start').value=r?toLocalDateTimeInput(r.starts_at):'';
     $('booking-rule-end').value=r?toLocalDateTimeInput(r.ends_at):'';
-    $('booking-rule-form-card').classList.remove('crm-hidden');
+    openCrmFormCardModal('booking-rule-form-card');
     $('booking-rule-form-card').scrollIntoView({behavior:'smooth',block:'start'});
   }
 
@@ -4425,18 +4801,654 @@
     try {
       if(bookingConfigState.editingRuleId) await window.salonDatabase.updateBookingScheduleRule(bookingConfigState.editingRuleId,payload);
       else await window.salonDatabase.createBookingScheduleRule(payload);
-      $('booking-rule-form-card').classList.add('crm-hidden');
+      closeCrmFormCardModal('booking-rule-form-card');
       bookingConfigState.editingRuleId=null;
       await loadBookingConfig(); message('Booking block saved.','success');
     } catch(err){console.error(err);message(err.message||'Could not save booking block.','error');}
   }
 
 
-  document.addEventListener('DOMContentLoaded', function(){
+
+  var walkinState = { customer: null, customers: [], services: [], creatingCustomer: false };
+
+  function walkinSetMessage(text, type) {
+    var el = $('walkin-booking-message');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'crm-message' + (type ? ' ' + type : '');
+  }
+
+  function walkinToday() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function walkinServiceDuration(service) {
+    var n = Number(service && service.duration_minutes);
+    return isFinite(n) && n > 0 ? n : 30;
+  }
+
+  function walkinServiceCurrency(service) {
+    if (!service) return null;
+    // A service may have more than one configured price. In that case the
+    // CRM must use the website's configured default/display currency; the
+    // receptionist should never have to choose a booking currency.
+    if (service.currency) return String(service.currency).toUpperCase();
+    var configured = String(settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+    if (service.prices && typeof service.prices === 'object') {
+      if (service.prices[configured] != null && isFinite(Number(service.prices[configured]))) return configured;
+      var keys = Object.keys(service.prices).filter(function(k){ return service.prices[k] != null && isFinite(Number(service.prices[k])); });
+      if (keys.length === 1) return String(keys[0]).toUpperCase();
+    }
+    if (configured === 'USD' && service.price_usd != null && isFinite(Number(service.price_usd))) return 'USD';
+    if (configured === 'QAR' && service.price_qar != null && isFinite(Number(service.price_qar))) return 'QAR';
+    var hasUsd = service.price_usd != null && isFinite(Number(service.price_usd));
+    var hasQar = service.price_qar != null && isFinite(Number(service.price_qar));
+    if (hasUsd && !hasQar) return 'USD';
+    if (hasQar && !hasUsd) return 'QAR';
+    return null;
+  }
+
+  function walkinServicePrice(service) {
+    if (!service) return null;
+    var c = walkinServiceCurrency(service);
+    var n = null;
+    if (c && service.prices && service.prices[c] != null) n = Number(service.prices[c]);
+    else if (c === 'USD' && service.price_usd != null) n = Number(service.price_usd);
+    else if (c === 'QAR' && service.price_qar != null) n = Number(service.price_qar);
+    else if (service.price != null) n = Number(service.price);
+    return isFinite(n) ? n : null;
+  }
+
+  function walkinBookingCurrency(services) {
+    var currencies = (services || []).map(walkinServiceCurrency).filter(Boolean);
+    var unique = currencies.filter(function(c,i,a){ return a.indexOf(c) === i; });
+    return unique.length === 1 ? unique[0] : null;
+  }
+
+  function walkinAddMinutes(time, minutes) {
+    var base = parseTimeMinutes(time);
+    if (base == null) return '';
+    var total = base + Number(minutes || 0);
+    if (total >= 24 * 60) return '';
+    return pad2(Math.floor(total / 60)) + ':' + pad2(total % 60);
+  }
+
+  function walkinSelectedServices() {
+    var container = $('walkin-services');
+    if (!container) return [];
+    var ids = Array.prototype.slice.call(container.querySelectorAll('input[type="checkbox"][data-walkin-service]:checked'))
+      .map(function(input){ return String(input.value); });
+    return ids.map(function(id){
+      return walkinState.services.find(function(s){ return String(s.id) === id; });
+    }).filter(Boolean);
+  }
+
+  function walkinRenderCustomerResults(matches) {
+    var el = $('walkin-customer-results');
+    if (!el) return;
+    if (!matches.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = '<div class="crm-walkin-results-title">Select customer</div>' + matches.map(function(c){
+      var selected = walkinState.customer && String(walkinState.customer.id) === String(c.id);
+      return '<button type="button" class="crm-walkin-result' + (selected ? ' is-selected' : '') + '" data-walkin-customer-id="' + escapeHtml(String(c.id)) + '">' +
+        '<span><strong>' + escapeHtml(c.name || 'Customer') + '</strong><small>#' + escapeHtml(String(c.id)) + '</small></span>' +
+        '<span class="crm-walkin-result-phone">' + escapeHtml(c.phone || 'No phone') + '</span>' +
+      '</button>';
+    }).join('');
+  }
+
+  function selectWalkinCustomer(customerId) {
+    var c = walkinState.customers.find(function(customer){ return String(customer.id) === String(customerId); });
+    if (!c) return;
+    walkinState.customer = c;
+    $('walkin-customer-id').value = String(c.id);
+    $('walkin-customer-name').value = (c.name || 'Customer') + ' • #' + c.id + (c.phone ? ' • ' + c.phone : '');
+    walkinRenderCustomerResults(walkinState.customers.filter(function(x){
+      return String(x.id) === String(c.id);
+    }));
+    walkinSetMessage('Customer selected: ' + (c.name || 'Customer') + ' (#' + c.id + ').', 'success');
+  }
+
+  function populateWalkinServices() {
+    var container = $('walkin-services');
+    if (!container) return;
+    var previousSelected = [];
+    var existing = $('walkin-services');
+    if (existing) previousSelected = Array.prototype.slice.call(existing.querySelectorAll('input[data-walkin-service]:checked')).map(function(i){return String(i.value);});
+    var services = (state.services || []).filter(function(s) {
+      return s && (s.is_active === undefined || s.is_active !== false);
+    }).sort(function(a,b) {
+      return String(a.name_en || a.name || a.sku || '').localeCompare(String(b.name_en || b.name || b.sku || ''));
+    });
+    walkinState.services = services;
+    var list = services.length ? services.map(function(s) {
+      var name = s.name_en || s.name || s.sku || 'Service';
+      var duration = walkinServiceDuration(s);
+      var price = walkinServicePrice(s);
+      var serviceCurrency = walkinServiceCurrency(s);
+      var priceText = price == null ? 'Price unavailable' : price.toFixed(2) + (serviceCurrency ? ' ' + serviceCurrency : '');
+      return '<label class="crm-walkin-service-option" data-walkin-service-option="' + escapeHtml(String(name).toLowerCase()) + '">' +
+        '<input type="checkbox" data-walkin-service value="' + escapeHtml(String(s.id)) + '">' +
+        '<span class="crm-walkin-service-copy"><strong>' + escapeHtml(name) + '</strong><small>' + duration + ' min • ' + escapeHtml(priceText) + '</small></span>' +
+      '</label>';
+    }).join('') : '<div class="crm-small">No active services found.</div>';
+    container.innerHTML = '<details class="crm-walkin-service-dropdown">' +
+      '<summary><span id="walkin-service-selection-label">Select services</span><span id="walkin-service-count" class="crm-walkin-service-count">' + services.length + ' services</span></summary>' +
+      '<div class="crm-walkin-service-menu">' +
+        '<div class="crm-walkin-service-search"><span>⌕</span><input id="walkin-service-search" type="search" placeholder="Search service by name" autocomplete="off"></div>' +
+        '<div class="crm-walkin-service-list">' + list + '</div>' +
+      '</div></details>';
+    previousSelected.forEach(function(id){ var cb=container.querySelector('input[data-walkin-service][value="'+CSS.escape(id)+'"]'); if(cb) cb.checked=true; });
+    updateWalkinServiceCount();
+  }
+
+  function updateWalkinServiceCount() {
+    var container = $('walkin-services');
+    var count = $('walkin-service-count');
+    var label = $('walkin-service-selection-label');
+    if (!container || !count) return;
+    var total = container.querySelectorAll('input[data-walkin-service]').length;
+    var selected = container.querySelectorAll('input[data-walkin-service]:checked').length;
+    count.textContent = selected ? selected + ' selected' : total + ' services';
+    if (label) label.textContent = selected ? selected + ' service' + (selected === 1 ? '' : 's') + ' selected' : 'Select services';
+  }
+
+  function filterWalkinServices() {
+    var input = $('walkin-service-search');
+    var q = ((input && input.value) || '').trim().toLowerCase();
+    var container = $('walkin-services');
+    if (!container) return;
+    var options = Array.prototype.slice.call(container.querySelectorAll('[data-walkin-service-option]'));
+    var visible = 0;
+    options.forEach(function(option) {
+      var name = option.getAttribute('data-walkin-service-option') || '';
+      var match = !q || name.indexOf(q) !== -1;
+      option.classList.toggle('crm-walkin-service-hidden', !match);
+      if (match) visible++;
+    });
+    var list = container.querySelector('.crm-walkin-service-list');
+    if (list) {
+      var empty = list.querySelector('.crm-walkin-service-no-results');
+      if (!visible && q) {
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'crm-walkin-service-no-results';
+          list.appendChild(empty);
+        }
+        empty.textContent = 'No services found for “' + q + '”.';
+      } else if (empty) {
+        empty.remove();
+      }
+    }
+  }
+
+  function updateWalkinServiceDetails() {
+    var services = walkinSelectedServices();
+    var priceEl = $('walkin-price');
+    var discountTypeEl = $('walkin-discount-type');
+    var discountValueEl = $('walkin-discount-value');
+    var finalPriceEl = $('walkin-final-price');
+    var endEl = $('walkin-end');
+    var summary = $('walkin-service-summary');
+    var totalDuration = services.reduce(function(sum,s){ return sum + walkinServiceDuration(s); }, 0);
+    var currency = walkinBookingCurrency(services);
+    var originalPrice = services.reduce(function(sum,s){ var p=walkinServicePrice(s); return sum + (p==null?0:p); }, 0);
+    var unavailable = services.filter(function(s){ return walkinServicePrice(s)==null || !walkinServiceCurrency(s); });
+    var discountType = discountTypeEl ? discountTypeEl.value : 'percent';
+    var discountValue = parseFloat(discountValueEl ? discountValueEl.value : '') || 0;
+    var discountAmount = discountType === 'amount' ? discountValue : originalPrice * Math.min(Math.max(discountValue, 0), 100) / 100;
+    discountAmount = Math.min(Math.max(discountAmount, 0), originalPrice);
+    var finalPrice = Math.max(originalPrice - discountAmount, 0);
+    if (priceEl) priceEl.value = services.length ? originalPrice.toFixed(2) : '';
+    var currencyLabelEls = document.querySelectorAll('[data-walkin-currency-label]');
+    currencyLabelEls.forEach(function(el){ el.textContent = currency || '—'; });
+    if (finalPriceEl) finalPriceEl.value = services.length ? finalPrice.toFixed(2) : '';
+    if (endEl) endEl.value = services.length && $('walkin-start').value ? walkinAddMinutes($('walkin-start').value, totalDuration) : '';
+    if (services.length && !currency) {
+      if (summary) summary.textContent = 'Selected services use different currencies. Each service keeps its own currency, but a single booking total cannot mix currencies. Please select services with the same currency.';
+      return;
+    }
+    if (unavailable.length) {
+      if (summary) summary.textContent = 'Price is not configured for ' + currency + ' for: ' + unavailable.map(function(s){return s.name_en||s.name||'Service';}).join(', ') + '.';
+      return;
+    }
+    if (!services.length) {
+      if (summary) summary.textContent = 'Select one or more services to calculate duration and price.';
+      return;
+    }
+    if (summary) {
+      summary.textContent = totalDuration + ' minutes • ' + originalPrice.toFixed(2) + ' ' + currency + ' original' + (discountAmount > 0 ? ' • ' + discountAmount.toFixed(2) + ' ' + currency + ' discount • ' + finalPrice.toFixed(2) + ' ' + currency + ' final' : ' • ' + finalPrice.toFixed(2) + ' ' + currency + ' final') + ' • ' + services.length + (services.length === 1 ? ' service' : ' services');
+    }
+  }
+
+  function showWalkinNewCustomer(rawQuery) {
+    var panel = $('walkin-new-customer');
+    if (!panel) return;
+    if (!can('customers', 'create')) {
+      panel.classList.add('crm-hidden');
+      return;
+    }
+    panel.classList.remove('crm-hidden');
+    // Always reset the new-customer fields when a new search has no match.
+    // This prevents a previous phone/name from being carried into a different search.
+    var name = $('walkin-new-customer-name');
+    var phone = $('walkin-new-customer-phone');
+    var email = $('walkin-new-customer-email');
+    if (name) name.value = '';
+    if (phone) phone.value = '';
+    if (email) email.value = '';
+    var q = String(rawQuery || '').trim();
+    if (name && q && !/^[+]?\d+$/.test(q.replace(/\s/g,''))) name.value = q;
+    if (phone && /^[+]?\d[\d\s-]+$/.test(q)) phone.value = q;
+  }
+
+  function hideWalkinNewCustomer() {
+    var panel = $('walkin-new-customer');
+    if (panel) panel.classList.add('crm-hidden');
+  }
+
+  async function createWalkinCustomer() {
+    if (!can('customers', 'create')) throw new Error('You do not have permission to create customers.');
+    var name = (($('walkin-new-customer-name') && $('walkin-new-customer-name').value) || '').trim();
+    var phone = (($('walkin-new-customer-phone') && $('walkin-new-customer-phone').value) || '').trim() || null;
+    var email = (($('walkin-new-customer-email') && $('walkin-new-customer-email').value) || '').trim() || null;
+    if (!name) throw new Error('Enter the new customer name.');
+    if (phone && !/^\+?[0-9]+$/.test(phone)) throw new Error('Phone can contain only numbers, with an optional + at the beginning.');
+
+    // If the phone already belongs to a loaded customer, use that customer instead of creating a duplicate.
+    if (phone) {
+      var normalized = phone.replace(/[^\d+]/g,'');
+      var existing = (state.customers || []).find(function(c){ return String(c.phone || '').replace(/[^\d+]/g,'') === normalized; });
+      if (existing) {
+        selectWalkinCustomer(existing.id);
+        hideWalkinNewCustomer();
+        walkinSetMessage('That phone number already belongs to ' + (existing.name || 'an existing customer') + '. Existing customer selected.', 'success');
+        return existing;
+      }
+    }
+
+    walkinState.creatingCustomer = true;
+    var result = await window.salonSupabase.from('customers').insert({name:name, phone:phone, email:email, notes:null}).select('id,name,phone,email').single();
+    walkinState.creatingCustomer = false;
+    if (result.error) throw result.error;
+    var c = result.data;
+    state.customers = [c].concat(state.customers || []);
+    walkinState.customer = c;
+    walkinState.customers = [c];
+    $('walkin-customer-id').value = String(c.id);
+    $('walkin-customer-name').value = (c.name || 'Customer') + ' • #' + c.id + (c.phone ? ' • ' + c.phone : '');
+    walkinRenderCustomerResults([c]);
+    hideWalkinNewCustomer();
+    walkinSetMessage('New customer created and selected for this booking.', 'success');
+    return c;
+  }
+
+  function clearWalkinCustomerSelection() {
+    walkinState.customer = null;
+    walkinState.customers = [];
+    var idEl = $('walkin-customer-id');
+    var nameEl = $('walkin-customer-name');
+    var resultsEl = $('walkin-customer-results');
+    if (idEl) idEl.value = '';
+    if (nameEl) nameEl.value = '';
+    if (resultsEl) resultsEl.innerHTML = '';
+  }
+
+  function updateWalkinEndTime() {
+    updateWalkinServiceDetails();
+  }
+
+  function openWalkinBooking(customerId) {
+    if (!can('bookings', 'create')) {
+      message('You do not have permission to create bookings.', 'error');
+      return;
+    }
+    var card = $('walkin-booking-card');
+    if (!card) return;
+    // Always ensure the service selector is populated when the walk-in form opens.
+    // This also covers cases where the Services data loaded after DOMContentLoaded.
+    if (!walkinState.services.length && state.services && state.services.length) populateWalkinServices();
+    walkinState.customer = null;
+    walkinState.customers = [];
+    walkinState.creatingCustomer = false;
+    walkinSetMessage('');
+    hideWalkinNewCustomer();
+    $('walkin-customer-number').value = customerId != null ? String(customerId) : '';
+    $('walkin-customer-id').value = '';
+    $('walkin-customer-name').value = '';
+    $('walkin-customer-results').innerHTML = '';
+    $('walkin-date').value = walkinToday();
+    $('walkin-start').value = '';
+    $('walkin-end').value = '';
+    $('walkin-price').value = '';
+    $('walkin-discount-type').value = 'percent';
+    $('walkin-discount-value').value = '';
+    $('walkin-final-price').value = '';
+    $('walkin-notes').value = '';
+    card.querySelectorAll('input[data-walkin-service]').forEach(function(input){ input.checked = false; });
+    updateWalkinServiceDetails();
+    card.classList.remove('crm-hidden');
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    if (customerId != null) searchWalkinCustomer();
+    else setTimeout(function(){ $('walkin-customer-number').focus(); }, 50);
+  }
+
+  // Expose for customer-row inline onclick handlers.
+  window.openWalkinBooking = openWalkinBooking;
+  window.startWalkinBooking = openWalkinBooking;
+
+  function closeWalkinBooking() {
+    var card = $('walkin-booking-card');
+    if (card) closeCrmFormCardModal('walkin-booking-card');
+    walkinState.customer = null;
+    walkinState.customers = [];
+    walkinSetMessage('');
+    hideWalkinNewCustomer();
+  }
+
+  async function searchWalkinCustomer() {
+    var raw = (($('walkin-customer-number') && $('walkin-customer-number').value) || '').trim();
+    if (!raw) {
+      clearWalkinCustomerSelection();
+      hideWalkinNewCustomer();
+      walkinSetMessage('Enter a customer number, name or phone number.', 'error');
+      return;
+    }
+
+    // A new search is independent from the previous selection.
+    clearWalkinCustomerSelection();
+    hideWalkinNewCustomer();
+    walkinSetMessage('Searching customers…', '');
+
+    var q = raw.toLowerCase();
+    var normalized = raw.replace(/[^\d+]/g, '');
+    var customers = state.customers || [];
+    var matches = [];
+
+    // First use exact customer number / exact phone when possible.
+    if (/^\d+$/.test(raw)) {
+      var exactId = customers.find(function(c){ return String(c.id) === raw; });
+      if (exactId) matches = [exactId];
+    }
+    if (!matches.length && normalized) {
+      var exactPhone = customers.find(function(c){
+        return String(c.phone || '').replace(/[^\d+]/g, '') === normalized;
+      });
+      if (exactPhone) matches = [exactPhone];
+    }
+
+    // Then search the database so a stale/limited customer list can never
+    // incorrectly make an existing customer look like a new customer.
+    if (!matches.length) {
+      var safeQ = q.replace(/[,*()]/g, ' ').trim();
+      if (safeQ) {
+        var result = await window.salonSupabase
+          .from('customers')
+          .select('id,name,phone,email,notes,created_at,is_deleted,loyalty_points,loyalty_lifetime_points,loyalty_tier')
+          .eq('is_deleted', false)
+          .or('name.ilike.*' + safeQ + '*,phone.ilike.*' + safeQ + '*')
+          .order('id', {ascending:false})
+          .limit(25);
+        if (result.error) {
+          console.error('Walk-in customer search failed:', result.error);
+          walkinSetMessage(result.error.message || 'Could not search customers.', 'error');
+          return;
+        }
+        matches = result.data || [];
+      }
+    }
+
+    // Merge DB matches into the local cache without creating duplicates.
+    matches.forEach(function(c){
+      if (!customers.some(function(x){ return String(x.id) === String(c.id); })) customers.push(c);
+    });
+
+    walkinState.customers = matches;
+    if (!matches.length) {
+      walkinState.customer = null;
+      $('walkin-customer-id').value = '';
+      $('walkin-customer-name').value = '';
+      walkinRenderCustomerResults([]);
+      showWalkinNewCustomer(raw);
+      walkinSetMessage('Customer not found. Enter the new customer details below, or change the search.', '');
+      return;
+    }
+    if (matches.length === 1) {
+      hideWalkinNewCustomer();
+      selectWalkinCustomer(matches[0].id);
+      return;
+    }
+    walkinState.customer = null;
+    $('walkin-customer-id').value = '';
+    $('walkin-customer-name').value = '';
+    hideWalkinNewCustomer();
+    walkinRenderCustomerResults(matches);
+    walkinSetMessage(matches.length + ' customers found. Select the correct customer using the phone number.', '');
+  }
+
+  function walkinBlockingOverlap(date, start, end) {
+    var startMin = parseTimeMinutes(start), endMin = parseTimeMinutes(end);
+    if (startMin == null || endMin == null || endMin <= startMin) return null;
+    return (state.bookings || []).find(function(b) {
+      if (!b || b.date !== date || bookingStatus(b) !== 'confirmed') return false;
+      var bStart = parseTimeMinutes(bookingStart(b));
+      var bEnd = parseTimeMinutes(bookingEnd(b));
+      return bStart != null && bEnd != null && startMin < bEnd && endMin > bStart;
+    }) || null;
+  }
+
+  async function saveWalkinBooking(e) {
+    e.preventDefault();
+    if (!requirePermission('bookings', 'create')) return;
+
+    var customerId = $('walkin-customer-id').value;
+    var date = $('walkin-date').value;
+    var start = $('walkin-start').value;
+    var notes = $('walkin-notes').value.trim() || null;
+    var discountType = $('walkin-discount-type').value || 'percent';
+    var discountValue = Math.max(parseFloat($('walkin-discount-value').value) || 0, 0);
+    var services = walkinSelectedServices();
+
+    if (!customerId || !walkinState.customer) {
+      var newCustomerPanel = $('walkin-new-customer');
+      var newCustomerName = $('walkin-new-customer-name');
+      if (newCustomerPanel && !newCustomerPanel.classList.contains('crm-hidden')) {
+        try {
+          var created = await createWalkinCustomer();
+          customerId = String(created.id);
+        } catch (customerErr) {
+          console.error('Could not create walk-in customer:', customerErr);
+          walkinSetMessage(customerErr.message || 'Could not create the customer.', 'error'); return;
+        }
+      } else {
+        walkinSetMessage('Search and select a customer, or create a new customer when no match is found.', 'error'); return;
+      }
+    }
+    if (!date || !start || !services.length) {
+      walkinSetMessage('Please choose at least one service, date and start time.', 'error'); return;
+    }
+
+    var totalDuration = services.reduce(function(sum,s){ return sum + walkinServiceDuration(s); }, 0);
+    var currency = walkinBookingCurrency(services);
+    var originalPrice = services.reduce(function(sum,s){ var p=walkinServicePrice(s); return sum + (p==null?0:p); }, 0);
+    var unavailable = services.filter(function(s){ return walkinServicePrice(s)==null || !walkinServiceCurrency(s); });
+    var uniqueCurrencies = services.map(walkinServiceCurrency).filter(Boolean).filter(function(c,i,a){ return a.indexOf(c) === i; });
+    if (uniqueCurrencies.length > 1) {
+      walkinSetMessage('Cannot mix currencies in one booking. Please select services using the same currency.', 'error');
+      return;
+    }
+    var discountAmount = discountType === 'amount' ? discountValue : originalPrice * Math.min(discountValue, 100) / 100;
+    discountAmount = Math.min(discountAmount, originalPrice);
+    var totalPrice = Math.max(originalPrice - discountAmount, 0);
+    var end = walkinAddMinutes(start, totalDuration);
+    if (!end) {
+      walkinSetMessage('These services would extend past midnight. Choose an earlier start time.', 'error'); return;
+    }
+
+    var conflict = walkinBlockingOverlap(date, start, end);
+    if (conflict) {
+      var cc = bookingCustomer(conflict);
+      walkinSetMessage('This time overlaps the confirmed booking for ' + (cc.name || 'another customer') + '.', 'error');
+      return;
+    }
+
+    var saveButton = $('walkin-booking-save');
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
+
+    try {
+      var bookingResult = await window.salonSupabase.from('bookings').insert({
+        booking_date: date,
+        start_time: start,
+        end_time: end,
+        status: 'confirmed',
+        is_walkin: true,
+        total_price: totalPrice,
+        subtotal_price: originalPrice,
+        discount_type: discountAmount > 0 ? discountType : null,
+        discount_value: discountAmount > 0 ? discountValue : 0,
+        discount_amount: discountAmount,
+        total_duration_minutes: totalDuration,
+        customer_id: Number(customerId),
+        customer_notes: notes,
+      }).select('id').single();
+
+      if (bookingResult.error) throw bookingResult.error;
+
+      var bookingId = bookingResult.data.id;
+      var elapsed = 0;
+      var rows = services.map(function(service){
+        var itemStart = walkinAddMinutes(start, elapsed);
+        var duration = walkinServiceDuration(service);
+        var itemEnd = walkinAddMinutes(itemStart, duration);
+        elapsed += duration;
+        return {
+          booking_id: bookingId,
+          service_id: Number(service.id),
+          staff_id: null,
+          start_time: itemStart,
+          end_time: itemEnd,
+          price: walkinServicePrice(service),
+          currency: walkinServiceCurrency(service),
+          duration_minutes: duration
+        };
+      });
+      var serviceResult = await window.salonSupabase.from('booking_services').insert(rows);
+
+      if (serviceResult.error) {
+        await window.salonSupabase.from('bookings').delete().eq('id', bookingId);
+        throw serviceResult.error;
+      }
+
+      walkinSetMessage('Walk-in booking created successfully.', 'success');
+      await loadBookings();
+      if (state.selectedCustomerId && String(state.selectedCustomerId) === String(customerId)) {
+        await viewCustomer(customerId);
+      }
+      setTimeout(closeWalkinBooking, 500);
+    } catch (err) {
+      console.error('Could not create walk-in booking:', err);
+      walkinSetMessage(err.message || 'Could not create the walk-in booking.', 'error');
+    } finally {
+      if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'Save booking'; }
+    }
+  }
+
+  // CRM-wide keyboard policy: Enter must never submit/activate a form implicitly.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter' || e.isComposing)return;
+  var t=e.target;
+  if(!t || !t.closest || !t.closest('form'))return;
+  if(t.tagName==='TEXTAREA' || t.isContentEditable)return;
+  e.preventDefault();
+  e.stopPropagation();
+},true);
+
+document.addEventListener('DOMContentLoaded', function(){
+
+    var walkinTopBooking = $('booking-walkin-top');
+    if (walkinTopBooking) walkinTopBooking.addEventListener('click', function(){ openWalkinBooking(null); });
+
+    var walkinCancel = $('walkin-booking-cancel');
+    if (walkinCancel) walkinCancel.addEventListener('click', closeWalkinBooking);
+
+    var walkinSearch = $('walkin-customer-search');
+    if (walkinSearch) walkinSearch.addEventListener('click', function(){ searchWalkinCustomer().catch(function(err){ console.error(err); walkinSetMessage(err.message || 'Could not search customers.','error'); }); });
+
+    var walkinCustomerNumber = $('walkin-customer-number');
+    if (walkinCustomerNumber) {
+      walkinCustomerNumber.addEventListener('input', function(){
+        // Typing a new query always invalidates the previous customer selection.
+        clearWalkinCustomerSelection();
+        hideWalkinNewCustomer();
+        walkinSetMessage('');
+      });
+      walkinCustomerNumber.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') { e.preventDefault(); searchWalkinCustomer().catch(function(err){ console.error(err); walkinSetMessage(err.message || 'Could not search customers.','error'); }); }
+      });
+    }
+
+    var newCustomerPhone = $('walkin-new-customer-phone');
+    if (newCustomerPhone) newCustomerPhone.addEventListener('input', function(){
+      var v=this.value.replace(/[^0-9+]/g,'');
+      if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');
+      if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');
+      this.value=v;
+    });
+
+    var newCustomerName = $('walkin-new-customer-name');
+    if (newCustomerName) newCustomerName.addEventListener('input', function(){
+      if (walkinState.customer) clearWalkinCustomerSelection();
+    });
+
+    var walkinCustomerResults = $('walkin-customer-results');
+    if (walkinCustomerResults) walkinCustomerResults.addEventListener('click', function(e){
+      var button = e.target.closest('[data-walkin-customer-id]');
+      if (button) selectWalkinCustomer(button.getAttribute('data-walkin-customer-id'));
+    });
+
+    var walkinServices = $('walkin-services');
+    if (walkinServices) {
+      walkinServices.addEventListener('change', function(e){
+        if (!e.target.matches('input[data-walkin-service]')) return;
+        // A booking may contain multiple services, but never mixed currencies.
+        if (e.target.checked) {
+          var candidate = walkinState.services.find(function(s){ return String(s.id) === String(e.target.value); });
+          var selectedBefore = walkinSelectedServices().filter(function(s){ return String(s.id) !== String(e.target.value); });
+          var candidateCurrency = walkinServiceCurrency(candidate);
+          var existingCurrency = walkinBookingCurrency(selectedBefore);
+          if (existingCurrency && candidateCurrency && existingCurrency !== candidateCurrency) {
+            e.target.checked = false;
+            walkinSetMessage('Cannot mix currencies in one booking. This booking uses ' + existingCurrency + '. Please select a service priced in ' + existingCurrency + '.', 'error');
+          }
+        }
+        updateWalkinServiceDetails(); updateWalkinServiceCount();
+      });
+      walkinServices.addEventListener('input', function(e){
+        if (e.target.id === 'walkin-service-search') filterWalkinServices();
+      });
+    }
+
+
+
+    var walkinDiscountType = $('walkin-discount-type');
+    var walkinDiscountValue = $('walkin-discount-value');
+    if (walkinDiscountType) walkinDiscountType.addEventListener('change', updateWalkinServiceDetails);
+    if (walkinDiscountValue) walkinDiscountValue.addEventListener('input', updateWalkinServiceDetails);
+
+    var walkinStart = $('walkin-start');
+    if (walkinStart) walkinStart.addEventListener('change', updateWalkinEndTime);
+
+    var walkinForm = $('walkin-booking-form');
+    if (walkinForm) walkinForm.addEventListener('submit', saveWalkinBooking);
+
+
     var save=$('booking-settings-form'); if(save)save.addEventListener('submit',saveBookingSettings);
     var refresh=$('booking-config-refresh'); if(refresh)refresh.addEventListener('click',function(){loadBookingConfig().catch(function(e){message(e.message||'Could not load booking configuration.','error');});});
     var add=$('new-booking-rule'); if(add)add.addEventListener('click',function(){openBookingRuleForm(null);});
-    var cancel=$('cancel-booking-rule'); if(cancel)cancel.addEventListener('click',function(){$('booking-rule-form-card').classList.add('crm-hidden');bookingConfigState.editingRuleId=null;});
+    var cancel=$('cancel-booking-rule'); if(cancel)cancel.addEventListener('click',function(){closeCrmFormCardModal('booking-rule-form-card');bookingConfigState.editingRuleId=null;});
     var form=$('booking-rule-form'); if(form)form.addEventListener('submit',saveBookingRule);
     var translationForm=$('translation-form'); if(translationForm)translationForm.addEventListener('submit',saveTranslation);
     var translationAdd=$('translation-add-btn'); if(translationAdd)translationAdd.addEventListener('click',function(){ if(can('translations','create')) openTranslationForm(null); else message('You do not have permission to create translations.','error'); });
@@ -4455,6 +5467,7 @@
       });
     }
     document.querySelectorAll('[data-view="booking-config"]').forEach(function(btn){btn.addEventListener('click',function(){loadBookingConfig().catch(function(e){console.error(e);message(e.message||'Could not load booking configuration.','error');});});});
+    if($('journal-entries-body')) $('journal-entries-body').addEventListener('click',function(e){var v=e.target.closest('[data-view-journal]');if(v)viewJournalEntry(v.getAttribute('data-view-journal'));var edit=e.target.closest('[data-edit-journal]');if(edit)openJournalForm(edit.getAttribute('data-edit-journal'));var del=e.target.closest('[data-delete-journal]');if(del)deleteJournal(del.getAttribute('data-delete-journal'));var post=e.target.closest('[data-post-journal]');if(post)openJournalForm(post.getAttribute('data-post-journal'));});
     if($('journal-entry-add')) $('journal-entry-add').addEventListener('click',function(){openJournalForm(null);});
     if($('journal-entry-cancel')) $('journal-entry-cancel').addEventListener('click',resetJournalForm);
     if($('journal-line-add')) $('journal-line-add').addEventListener('click',function(){addJournalLine({});});
@@ -4462,13 +5475,30 @@
     if($('journal-entry-post')) $('journal-entry-post').addEventListener('click',function(e){saveJournalEntry(e,true);});
     if($('journal-lines-body')) $('journal-lines-body').addEventListener('input',updateJournalBalance);
     if($('journal-lines-body')) $('journal-lines-body').addEventListener('click',function(e){var b=e.target.closest('[data-remove-journal-line]');if(b){b.closest('[data-journal-line]').remove();updateJournalBalance();}});
+    if($('journal-lines-body')) $('journal-lines-body').addEventListener('input',function(e){
+      var search=e.target.closest('[data-journal-account-search]'); if(!search)return;
+      filterJournalAccountDropdown(search);
+    });
+    if($('journal-lines-body')) $('journal-lines-body').addEventListener('keyup',function(e){
+      var search=e.target.closest('[data-journal-account-search]'); if(!search)return;
+      filterJournalAccountDropdown(search);
+    });
+    if($('journal-lines-body')) $('journal-lines-body').addEventListener('change',function(e){
+      var radio=e.target.closest('[data-journal-account-radio]'); if(!radio)return;
+      var row=radio.closest('[data-journal-line]'); if(!row)return;
+      var account=state.chartOfAccounts.find(function(a){return String(a.account_code)===String(radio.value);});
+      var hidden=row.querySelector('[data-line-account]'); if(hidden)hidden.value=radio.value;
+      var label=row.querySelector('[data-journal-account-label]'); if(label)label.textContent=account?financeAccountLabel(account):'Select account';
+      var details=radio.closest('details'); if(details)details.removeAttribute('open');
+      var search=row.querySelector('[data-journal-account-search]'); if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}
+    });
     if($('journal-entries-body')) $('journal-entries-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-journal]');if(x)openJournalForm(x.dataset.editJournal);var d=e.target.closest('[data-delete-journal]');if(d)deleteJournal(d.dataset.deleteJournal);var p=e.target.closest('[data-post-journal]');if(p)postJournal(p.dataset.postJournal);});
     ['journal-search','journal-status-filter','journal-date-from','journal-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadJournalEntries);});
     ['ledger-search','ledger-account-filter','ledger-date-from','ledger-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadGeneralLedger);});
     ['trial-date-from','trial-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener('change',loadTrialBalance);});
     if($('trial-refresh')) $('trial-refresh').addEventListener('click',loadTrialBalance);
     if($('statement-map-add')) $('statement-map-add').addEventListener('click',function(){openMappingForm(null);});
-    if($('statement-map-cancel')) $('statement-map-cancel').addEventListener('click',function(){$('statement-map-form-card').classList.add('crm-hidden');});
+    if($('statement-map-cancel')) $('statement-map-cancel').addEventListener('click',function(){closeCrmFormCardModal('statement-map-form-card');});
     if($('statement-map-form')) $('statement-map-form').addEventListener('submit',saveMapping);
     if($('statement-map-search')) $('statement-map-search').addEventListener('input',renderStatementMappings);
     if($('statement-map-filter')) $('statement-map-filter').addEventListener('change',renderStatementMappings);
@@ -4489,15 +5519,119 @@
     if($('audit-export-csv')) $('audit-export-csv').addEventListener('click',function(){exportTableCsv('audit-trail-body','JASPremium_Audit_Trail.csv',false,'finance_audit_trail');});
     if($('audit-print-pdf')) $('audit-print-pdf').addEventListener('click',function(){downloadFinancePdf('audit-trail-body','Audit Trail','Finance audit history currently shown.',false,'finance_audit_trail');});
     if($('url-qr-add')) $('url-qr-add').addEventListener('click',function(){openUrlQrForm(null);});
-    if($('url-qr-cancel')) $('url-qr-cancel').addEventListener('click',function(){$('url-qr-form-card').classList.add('crm-hidden');state.editingUrlQrId=null;});
+    if($('url-qr-cancel')) $('url-qr-cancel').addEventListener('click',function(){closeCrmFormCardModal('url-qr-form-card');state.editingUrlQrId=null;});
     if($('url-qr-form')) $('url-qr-form').addEventListener('submit',saveUrlQr);
     if($('url-qr-search')) $('url-qr-search').addEventListener('input',renderUrlQrCodes);
-    if($('url-qr-body')) $('url-qr-body').addEventListener('click',function(e){var ed=e.target.closest('[data-url-qr-edit]');if(ed)openUrlQrForm(ed.dataset.urlQrEdit);var dl=e.target.closest('[data-url-qr-download]');if(dl)downloadUrlQr(dl.dataset.urlQrDownload);var pr=e.target.closest('[data-url-qr-print]');if(pr)printUrlQr(pr.dataset.urlQrPrint);});
+    if($('url-qr-body')) $('url-qr-body').addEventListener('click',function(e){var ed=e.target.closest('[data-url-qr-edit]');if(ed)openUrlQrForm(ed.dataset.urlQrEdit);var dl=e.target.closest('[data-url-qr-download]');if(dl)downloadUrlQr(dl.dataset.urlQrDownload);});
     if($('period-add')) $('period-add').addEventListener('click',function(){openPeriodForm(null);});
-    if($('period-cancel')) $('period-cancel').addEventListener('click',function(){$('period-form-card').classList.add('crm-hidden');});
+    if($('period-cancel')) $('period-cancel').addEventListener('click',function(){closeCrmFormCardModal('period-form-card');});
     if($('period-form')) $('period-form').addEventListener('submit',savePeriod);
     if($('periods-body')) $('periods-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-period]');if(x)openPeriodForm(x.dataset.editPeriod);var d=e.target.closest('[data-delete-period]');if(d)deletePeriod(d.dataset.deletePeriod);});
 
+  });
+
+
+  /* --- Global table pagination: 10 rows per page --- */
+  function crmInitTablePagination(root){
+    root = root || document;
+    var tables = root.querySelectorAll ? root.querySelectorAll('.crm-table') : [];
+    tables.forEach(function(table){
+      var tbody = table.tBodies && table.tBodies[0];
+      if(!tbody) return;
+      var wrap = table.closest('.crm-table-wrap') || table.parentElement;
+      if(!wrap) return;
+      var pager = wrap.parentElement && wrap.parentElement.querySelector(':scope > .crm-pagination');
+      if(!pager || pager.__crmPagerFor !== tbody){
+        pager = document.createElement('div');
+        pager.className = 'crm-pagination';
+        pager.__crmPagerFor = tbody;
+        wrap.insertAdjacentElement('afterend', pager);
+      }
+      if(tbody.__crmPaginationBound) return;
+      tbody.__crmPaginationBound = true;
+      tbody.__crmPage = 1;
+
+      function render(){
+        var allRows = Array.prototype.slice.call(tbody.querySelectorAll(':scope > tr'));
+        allRows.forEach(function(row){ row.classList.remove('crm-pagination-hidden'); });
+        var dataRows = allRows.filter(function(row){
+          if(row.classList.contains('crm-empty') || row.hasAttribute('data-pagination-ignore')) return false;
+          var cell = row.querySelector(':scope > td');
+          if(!cell) return false;
+          if(row.classList.contains('crm-hidden')) return false;
+          if(window.getComputedStyle && getComputedStyle(row).display === 'none') return false;
+          return true;
+        });
+
+        var total = dataRows.length;
+        var pageSize = 10;
+        var pages = Math.max(1, Math.ceil(total / pageSize));
+        tbody.__crmPage = Math.min(Math.max(1, Number(tbody.__crmPage)||1), pages);
+        var start = (tbody.__crmPage - 1) * pageSize;
+        var end = Math.min(start + pageSize, total);
+
+        dataRows.forEach(function(row, i){
+          if(i < start || i >= end) row.classList.add('crm-pagination-hidden');
+        });
+
+        if(total === 0){
+          pager.classList.add('crm-hidden');
+          pager.innerHTML = '';
+          return;
+        }
+        pager.classList.remove('crm-hidden');
+        pager.innerHTML =
+          '<div class="crm-pagination-info">Showing <strong>'+ (start+1) +'-'+end +'</strong> of <strong>'+total+'</strong></div>'+
+          '<div class="crm-pagination-controls">'+
+            '<button type="button" class="crm-pagination-btn" data-crm-page="prev" aria-label="Previous page"'+(tbody.__crmPage<=1?' disabled':'')+'>&lsaquo;</button>'+
+            '<span class="crm-pagination-page">Page '+tbody.__crmPage+' of '+pages+'</span>'+
+            '<button type="button" class="crm-pagination-btn" data-crm-page="next" aria-label="Next page"'+(tbody.__crmPage>=pages?' disabled':'')+'>&rsaquo;</button>'+
+          '</div>';
+        pager.querySelectorAll('[data-crm-page]').forEach(function(btn){
+          btn.addEventListener('click',function(){
+            if(btn.disabled) return;
+            tbody.__crmPage += btn.getAttribute('data-crm-page') === 'next' ? 1 : -1;
+            render();
+          });
+        });
+      }
+      tbody.__crmRenderPagination = render;
+      render();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    crmInitTablePagination(document);
+    if(window.MutationObserver){
+      var paginationRefreshQueued = false;
+      var paginationObserver = new MutationObserver(function(mutations){
+        var needsRefresh = false;
+        mutations.forEach(function(m){
+          if(m.type !== 'childList' || (!m.addedNodes.length && !m.removedNodes.length)) return;
+          var target = m.target && m.target.nodeType === 1 ? m.target : null;
+          if(target && target.closest && target.closest('.crm-pagination')) return;
+          var changedPaginationOnly = true;
+          Array.prototype.forEach.call(m.addedNodes, function(n){
+            if(n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
+          });
+          Array.prototype.forEach.call(m.removedNodes, function(n){
+            if(n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
+          });
+          if(!changedPaginationOnly) needsRefresh = true;
+        });
+        if(!needsRefresh || paginationRefreshQueued) return;
+        paginationRefreshQueued = true;
+        window.requestAnimationFrame(function(){
+          paginationRefreshQueued = false;
+          crmInitTablePagination(document);
+          document.querySelectorAll('.crm-table tbody').forEach(function(tbody){
+            if(tbody.__crmRenderPagination) tbody.__crmRenderPagination();
+          });
+        });
+      });
+      var app = document.getElementById('crm-app') || document.body;
+      paginationObserver.observe(app,{subtree:true,childList:true});
+    }
   });
 
 })();

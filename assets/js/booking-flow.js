@@ -54,10 +54,21 @@
     return state.lang === 'ar' ? `${value} ${symbol}` : `${value} ${symbol}`;
   }
 
+  function serviceCurrency(service){
+    return String((service && service.currency) || state.currency || 'USD').toUpperCase();
+  }
+
   function price(service){
-    if(service.prices && service.prices[state.currency] != null) return Number(service.prices[state.currency]);
-    if(service.price != null) return Number(service.price);
+    const currency = serviceCurrency(service);
+    if(service && service.prices && service.prices[currency] != null) return Number(service.prices[currency]);
+    if(service && service.price != null && (!service.prices || Object.keys(service.prices).length === 0)) return Number(service.price);
     return null;
+  }
+
+  function selectedBookingCurrency(){
+    const currencies = selectedServices().map(serviceCurrency).filter(Boolean);
+    const unique = currencies.filter((c,i,a)=>a.indexOf(c)===i);
+    return unique.length === 1 ? unique[0] : null;
   }
 
   function duration(service){
@@ -270,6 +281,9 @@
               USD: service.price_usd,
               QAR: service.price_qar
             },
+            // Snapshot the currency used by the public booking from the CRM/site default.
+            // The booking UI never asks the customer to choose a currency.
+            currency: String(service.currency || 'USD').toUpperCase(),
             durationMinutes: Number(service.duration_minutes || 30),
             active: service.active !== false,
             sortOrder: service.sort_order || 0
@@ -428,7 +442,7 @@
       state.currency=(appSettings && appSettings.display_currency) || 'USD';
       state.scheduleRules=bookingConfig.scheduleRules || [];
       state.categories=services.categories || [];
-      state.services=state.categories.flatMap(c => (c.services||[]).filter(s=>s.active).map(s=>({...s,category:c})));
+      state.services=state.categories.flatMap(c => (c.services||[]).filter(s=>s.active).map(s=>({...s,category:c, currency:String(s.currency || state.currency || 'USD').toUpperCase()})));
 
       // Supabase is the source of truth for services.
       // A missing/invalid service duration defaults to 30 minutes.
@@ -457,6 +471,7 @@
                 USD: source.price == null ? null : Number(source.price),
                 QAR: source.priceQar == null ? null : Number(source.priceQar)
               },
+              currency: String(state.currency || 'USD').toUpperCase(),
               durationMinutes:Number(source.durationMinutes || 30),
               image:source.image || '',
               active:true,
@@ -590,7 +605,21 @@
     const service=getService(sku);
     if(!service || duration(service)==null) return;
     if(state.selected.includes(sku)) state.selected=state.selected.filter(x=>x!==sku);
-    else state.selected.push(sku);
+    else {
+      const existingCurrency=selectedBookingCurrency();
+      const candidateCurrency=serviceCurrency(service);
+      if(existingCurrency && candidateCurrency !== existingCurrency){
+        const err=$('booking-error');
+        if(err) err.textContent=t(`You cannot mix ${existingCurrency} and ${candidateCurrency} services in one booking. Please choose services in ${existingCurrency}.`,`لا يمكن دمج خدمات بعملات مختلفة في حجز واحد. يرجى اختيار خدمات بعملة ${existingCurrency}.`);
+        return;
+      }
+      if(price(service)==null){
+        const err=$('booking-error');
+        if(err) err.textContent=t(`This service has no price configured in ${candidateCurrency}. Please choose another service.`,`لا يوجد سعر لهذه الخدمة بعملة ${candidateCurrency}. يرجى اختيار خدمة أخرى.`);
+        return;
+      }
+      state.selected.push(sku);
+    }
     state.date=null; state.start=null; saveDraft(); render();
     showStep(1);
   }
@@ -909,7 +938,7 @@
       'appointment_date': state.date,
       'appointment_time': `${formatTime(start)} - ${formatTime(end)}`,
       'services': serviceNames,
-      'total': `${total()} ${state.currency}`,
+      'total': `${total()} ${selectedBookingCurrency() || state.currency}`,
       'duration': `${totalMinutes()} minutes`,
       'status': 'Booking request received'
     };
@@ -956,7 +985,7 @@
     payload.set('appointment_date', state.date);
     payload.set('appointment_time', `${formatTime(start)} - ${formatTime(end)}`);
     payload.set('services', serviceNames);
-    payload.set('total', `${total()} ${state.currency}`);
+    payload.set('total', `${total()} ${selectedBookingCurrency() || state.currency}`);
     payload.set('duration', `${totalMinutes()} minutes`);
     payload.set('status', 'Booking request received');
 
@@ -1012,12 +1041,17 @@
     if(!state.date||!state.start){err.textContent=t('Please select a date and time.','يرجى اختيار التاريخ والوقت.');return;}
     if(!validStart(state.date,state.start)){err.textContent=t('That time is no longer available. Please choose another time.','هذا الوقت لم يعد متاحاً. يرجى اختيار وقت آخر.');showStep(2);return;}
 
+    const bookingCurrency=selectedBookingCurrency();
+    if(!bookingCurrency){
+      err.textContent=t('All selected services must use the same currency.','يجب أن تستخدم جميع الخدمات المختارة نفس العملة.');
+      return;
+    }
     const id='SAL-'+Date.now().toString().slice(-6);
     let cur=toMin(state.start);
     const items=selectedServices().map(s=>{
       const st=minutesToTime(cur),en=minutesToTime(cur+duration(s));
       cur+=duration(s);
-      return {serviceSku:s.sku,start:st,end:en};
+      return {serviceSku:s.sku,start:st,end:en,currency:serviceCurrency(s),price:price(s)};
     });
     const customer={name,phone,email,notes};
 
@@ -1033,7 +1067,7 @@
     let databaseBooking=null;
     try {
       databaseBooking=await createDatabaseBooking({
-        id,date:state.date,status:'pending',customer,items,total:total(),currency:state.currency
+        id,date:state.date,status:'pending',customer,items,total:total(),currency:bookingCurrency
       });
     } catch(e) {
       console.error('Could not create Supabase booking:',e);

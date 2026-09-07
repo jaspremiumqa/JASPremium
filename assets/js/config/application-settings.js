@@ -66,7 +66,7 @@
       homepage_hero_image: optionalImage(raw.homepage_hero_image),
       services_section_image: optionalImage(raw.services_section_image),
       contact_section_image: optionalImage(raw.contact_section_image),
-      footer_logo_image: optionalImage(raw.footer_logo_image)
+      footer_logo_image: (function(){ var shared = optionalImage(raw.other_pages_nav_logo_image || raw.nav_logo_image); var legacy = optionalImage(raw.footer_logo_image); return shared && shared.url ? Object.assign({}, shared, {width:(legacy && legacy.width) || '100%', height:(legacy && legacy.height) || 'auto'}) : legacy; })()
     };
   }
 
