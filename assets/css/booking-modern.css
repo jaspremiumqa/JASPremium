@@ -476,3 +476,13 @@ body.booking-modern-page .booking-app {
   .booking-times { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .booking-heading h1 { font-size: 22px; }
 }
+
+/* Voucher booking header: show voucher SKU instead of the generic "1" count. */
+.booking-category-head .category-count.voucher-sku {
+  min-width: auto;
+  width: auto;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: .08em;
+}

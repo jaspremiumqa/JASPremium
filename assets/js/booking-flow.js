@@ -68,9 +68,9 @@
   function serviceCurrency(service){
     if(!service) return null;
 
-    // Currency must always correspond to an actual price. Never send a
-    // currency with a null price: Supabase validates booking-service currency
-    // inside create_public_booking.
+    // Currency is always required for a booking line. A service or voucher
+    // with no configured price is still bookable and uses the booking currency;
+    // its price is treated as 0.
     const explicit = service.currency ? String(service.currency).toUpperCase() : '';
     const configured = String(state.currency || 'QAR').toUpperCase();
     const prices = service.prices || {};
@@ -81,13 +81,19 @@
     if(prices[configured] != null && Number.isFinite(Number(prices[configured]))) {
       return configured;
     }
+    // Prefer the configured booking currency even when its price is exactly 0.
+    if(configured === 'QAR' && service.price_qar != null && Number.isFinite(Number(service.price_qar))) return 'QAR';
+    if(configured === 'QAR' && service.priceQar != null && Number.isFinite(Number(service.priceQar))) return 'QAR';
+    if(configured === 'USD' && service.price_usd != null && Number.isFinite(Number(service.price_usd))) return 'USD';
+    if(configured === 'USD' && prices.USD != null && Number.isFinite(Number(prices.USD))) return 'USD';
     if(service.price_qar != null && Number.isFinite(Number(service.price_qar))) return 'QAR';
     if(service.priceQar != null && Number.isFinite(Number(service.priceQar))) return 'QAR';
     if(service.price_usd != null && Number.isFinite(Number(service.price_usd))) return 'USD';
     if(prices.USD != null && Number.isFinite(Number(prices.USD))) return 'USD';
     if(service.price != null && Number.isFinite(Number(service.price))) return configured;
 
-    return null;
+    // No price is a valid zero-price item. Use the booking currency.
+    return configured;
   }
 
   function price(service){
@@ -98,7 +104,7 @@
     if(currency === 'QAR' && service.priceQar != null) return Number(service.priceQar);
     if(currency === 'USD' && service.price_usd != null) return Number(service.price_usd);
     if(service.price != null) return Number(service.price);
-    return null;
+    return 0;
   }
 
   function selectedBookingCurrency(){
@@ -437,9 +443,12 @@
         ? window.salonDatabase.getVoucherImageUrl(v.image_path)
         : '',
       durationMinutes:Number(v.duration_minutes || 30),
-      price:v.price_usd == null ? null : Number(v.price_usd),
-      price_usd:v.price_usd == null ? null : Number(v.price_usd),
-      priceQar:v.price_qar == null ? null : Number(v.price_qar),
+      // Missing voucher prices are valid and are treated as zero.
+      price:v.price_usd == null ? 0 : Number(v.price_usd),
+      price_usd:v.price_usd == null ? 0 : Number(v.price_usd),
+      priceQar:v.price_qar == null ? 0 : Number(v.price_qar),
+      discountType:v.discount_type === 'fixed' ? 'fixed' : 'percentage',
+      discountValue:v.discount_value == null ? 0 : Number(v.discount_value),
       active:v.active !== false
     }));
   }
@@ -523,6 +532,8 @@
                 : (source.price != null ? 'USD' : null),
               durationMinutes:Number(source.durationMinutes || 30),
               image:source.image || '',
+              discountType:source.discountType || 'percentage',
+              discountValue:Number(source.discountValue || 0),
               active:true,
               isVoucher:true,
               voucherId:source.id,
@@ -612,13 +623,18 @@
       const s=state.voucher;
       const section=document.createElement('section');
       section.className='booking-category booking-voucher-category';
-      section.innerHTML=`<div class="booking-category-head"><div><span class="category-kicker">${esc(t('VOUCHER','قسيمة'))}</span><h2>${esc(s['name-'+state.lang]||s['name-en'])}</h2></div><span class="category-count">1</span></div>`;
+      section.innerHTML=`<div class="booking-category-head"><div><span class="category-kicker">${esc(t('VOUCHER','قسيمة'))}</span><h2>${esc(s['name-'+state.lang]||s['name-en'])}</h2></div><span class="category-count voucher-sku">${esc(s.sku || ('V-'+String(s.id || '').padStart(3,'0')))}</span></div>`;
       const grid=document.createElement('div'); grid.className='booking-service-grid';
       const card=document.createElement('button');
       card.type='button';
       card.className='booking-service-card is-selected';
       card.setAttribute('aria-pressed','true');
-      card.innerHTML=`<span class="service-check">✓</span><span class="service-card-content"><strong>${esc(s['name-'+state.lang]||s['name-en'])}</strong><small>${durationLabel(s)}</small></span><span class="service-price">${price(s)==null ? t('Voucher','قسيمة') : money(price(s))}</span>`;
+      const bookingVoucherCurrency = String(serviceCurrency(s) || state.currency || 'USD').toUpperCase();
+      const fixedVoucherPrice = bookingVoucherCurrency === 'QAR' ? Number(s.priceQar || 0) : Number(s.price_usd != null ? s.price_usd : (s.price || 0));
+      const discountText = s.discountType === 'fixed'
+        ? (fixedVoucherPrice.toFixed(2) + ' ' + bookingVoucherCurrency)
+        : (Number(s.discountValue || 0) > 0 ? Number(s.discountValue || 0).toFixed(2).replace(/\.00$/, '') + '% OFF' : '');
+      card.innerHTML=`<span class="service-check">✓</span><span class="service-card-content"><strong>${esc(s['name-'+state.lang]||s['name-en'])}</strong><small>${durationLabel(s)}${discountText ? ' · '+esc(discountText) : ''}</small></span><span class="service-price">${price(s)==null ? t('Voucher','قسيمة') : money(price(s))}</span>`;
       card.onclick=()=>{ state.selected=[s.sku]; state.date=null; state.start=null; saveDraft(); render(); showStep(2); };
       grid.appendChild(card);
       section.appendChild(grid);
@@ -1095,13 +1111,18 @@
     const selected = selectedServices();
     const currencies = selected.map(serviceCurrency);
     const invalidCurrency = currencies.some(c => !c);
-    const invalidPrice = selected.some(s => price(s) == null || !Number.isFinite(Number(price(s))));
+    // A missing service/voucher price is intentionally treated as 0.
+    // Only reject a genuinely invalid numeric value.
+    const invalidPrice = selected.some(s => {
+      const n = Number(price(s));
+      return !Number.isFinite(n);
+    });
     if(invalidCurrency){
-      err.textContent=t('One of the selected services has no valid currency. Please update its price in the CRM.','إحدى الخدمات المختارة لا تحتوي على عملة صالحة. يرجى تحديث سعرها في نظام إدارة الصالون.');
+      err.textContent=t('One of the selected services has no valid currency.','إحدى الخدمات المختارة لا تحتوي على عملة صالحة.');
       return;
     }
     if(invalidPrice){
-      err.textContent=t('One of the selected services has no valid price in its booking currency. Please update the service or voucher price in the CRM.','إحدى الخدمات المختارة لا تحتوي على سعر صالح بعملة الحجز. يرجى تحديث سعر الخدمة أو القسيمة في نظام إدارة الصالون.');
+      err.textContent=t('One of the selected services has an invalid price.','إحدى الخدمات المختارة تحتوي على سعر غير صالح.');
       return;
     }
 

@@ -34,6 +34,13 @@
         }
 
         const rows = await window.salonDatabase.getVouchers();
+        let mainCurrency = 'USD';
+        try {
+            if (window.getApplicationSettings) {
+                const settings = await window.getApplicationSettings();
+                mainCurrency = String((settings && settings.display_currency) || 'USD').toUpperCase();
+            }
+        } catch (e) {}
 
         container.innerHTML = rows.map(v => {
             const titleEn = v.title_en || v.title || 'Voucher';
@@ -49,6 +56,8 @@
                 durationMinutes: Number(v.duration_minutes || 30),
                 price: v.price_usd == null || v.price_usd === '' ? null : Number(v.price_usd),
                 priceQar: v.price_qar == null || v.price_qar === '' ? null : Number(v.price_qar),
+                discountType: v.discount_type === 'fixed' ? 'fixed' : 'percentage',
+                discountValue: v.discount_value == null ? 0 : Number(v.discount_value),
                 active: v.active !== false
             }).replace(/"/g, '&quot;');
 

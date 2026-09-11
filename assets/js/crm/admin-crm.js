@@ -2,7 +2,7 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], urlQrCodes:[], editingUrlQrId:null, editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingTypeFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], urlQrCodes:[], editingUrlQrId:null, editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
@@ -1580,6 +1580,63 @@
     return '';
   }
 
+  function voucherMainCurrency() {
+    return String(settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+  }
+
+  function voucherCurrencyLabel(currency) {
+    currency = String(currency || voucherMainCurrency()).toUpperCase();
+    var options = normalizeCurrencyOptions(settingValue('currency_options', {
+      USD: {en:'$', ar:'$'},
+      QAR: {en:'QAR', ar:'ريال'}
+    }));
+    var item = options[currency];
+    if (item) return String(item.en || item.ar || currency);
+    return currency === 'USD' ? '$' : currency;
+  }
+
+  function voucherDiscountDisplay(v) {
+    var type = v && v.discount_type === 'fixed' ? 'fixed' : 'percentage';
+    var value = Math.max(Number(v && v.discount_value != null ? v.discount_value : 0) || 0, 0);
+    if (type === 'percentage') return value.toFixed(2).replace(/\.00$/, '') + '%';
+    var currency = voucherMainCurrency();
+    return value.toFixed(2) + ' ' + voucherCurrencyLabel(currency);
+  }
+
+  function syncVoucherDiscountFields() {
+    var typeEl = $('voucher-discount-type');
+    var valueEl = $('voucher-discount-value');
+    if (!typeEl || !valueEl) return;
+    var fixed = typeEl.value === 'fixed';
+    var currency = voucherMainCurrency();
+    var symbol = voucherCurrencyLabel(currency);
+    var help = $('voucher-discount-value-help');
+    var typeHelp = $('voucher-discount-type-help');
+
+    if (fixed) {
+      // A fixed voucher discount is the voucher price in the CRM's main
+      // currency. Keep the Discount value field synchronized with that price.
+      var priceEl = currency === 'QAR' ? $('voucher-price-qar') : $('voucher-price-usd');
+      var fixedPrice = priceEl && priceEl.value !== '' ? Number(priceEl.value) : 0;
+      valueEl.max = '';
+      valueEl.step = '0.01';
+      valueEl.value = Number.isFinite(fixedPrice) ? fixedPrice.toFixed(2) : '0.00';
+      valueEl.readOnly = true;
+      valueEl.setAttribute('aria-readonly', 'true');
+      valueEl.placeholder = '0.00 ' + symbol;
+      if (help) help.textContent = 'Fixed discount follows the voucher price in the main currency (' + currency + ').';
+      if (typeHelp) typeHelp.textContent = 'Fixed = ' + currency + ' voucher price. Percentage = Discount value.';
+    } else {
+      valueEl.readOnly = false;
+      valueEl.removeAttribute('aria-readonly');
+      valueEl.max = '100';
+      valueEl.step = '0.01';
+      valueEl.placeholder = '0';
+      if (help) help.textContent = 'Enter the percentage, from 0% to 100%.';
+      if (typeHelp) typeHelp.textContent = 'Percentage discounts use Discount value.';
+    }
+  }
+
   function renderVouchers() {
     var tbody = $('voucher-table-body');
     if (!tbody) return;
@@ -1605,6 +1662,7 @@
       var prices = [];
       if (v.price_usd != null) prices.push('$' + v.price_usd);
       if (v.price_qar != null) prices.push(v.price_qar + ' QAR');
+      var discount = voucherDiscountDisplay(v);
 
       return '<tr>' +
         '<td><div class="crm-voucher-thumb">' +
@@ -1615,6 +1673,7 @@
           (arabic ? '<br><span class="crm-small">' + escapeHtml(arabic) + '</span>' : '') +
         '</td>' +
         '<td>' + escapeHtml(prices.join(' · ') || '—') + '</td>' +
+        '<td><strong>' + escapeHtml(discount) + '</strong></td>' +
         '<td>' + escapeHtml(v.duration_minutes || 30) + ' min</td>' +
         '<td>' + (v.active !== false ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '</td>' +
         '<td><div class="crm-actions-inline">' +
@@ -1622,7 +1681,7 @@
           (can('vouchers','delete') ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-voucher="' + escapeHtml(v.id) + '">Delete</button>' : '') +
         '</div></td>' +
       '</tr>';
-    }).join('') || '<tr><td colspan="7" class="crm-empty">No vouchers found.</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="crm-empty">No vouchers found.</td></tr>';
   }
 
   function nextVoucherSequence() {
@@ -1650,6 +1709,12 @@
     $('voucher-save').textContent = 'Add Voucher';
     $('voucher-active').checked = true;
     $('voucher-duration').value = 30;
+    // A voucher without a price is a valid zero-price voucher.
+    $('voucher-price-usd').value = 0;
+    $('voucher-price-qar').value = 0;
+    $('voucher-discount-type').value = 'percentage';
+    $('voucher-discount-value').value = 0;
+    syncVoucherDiscountFields();
     $('voucher-sku').readOnly = true;
     generateVoucherSku();
     $('voucher-current-image').innerHTML = '<div class="crm-image-empty">No image uploaded</div>';
@@ -1667,8 +1732,12 @@
     $('voucher-sku').value = v.sku || ''; $('voucher-sku').readOnly = true;
     $('voucher-title-en').value = v.title_en || v.title || '';
     $('voucher-title-ar').value = v.title_ar || '';
-    $('voucher-price-usd').value = v.price_usd == null ? '' : v.price_usd;
-    $('voucher-price-qar').value = v.price_qar == null ? '' : v.price_qar;
+    // Normalize missing legacy voucher prices to zero in the edit form.
+    $('voucher-price-usd').value = v.price_usd == null ? 0 : v.price_usd;
+    $('voucher-price-qar').value = v.price_qar == null ? 0 : v.price_qar;
+    $('voucher-discount-type').value = (v.discount_type === 'fixed' ? 'fixed' : 'percentage');
+    $('voucher-discount-value').value = v.discount_value == null ? 0 : v.discount_value;
+    syncVoucherDiscountFields();
     $('voucher-duration').value = v.duration_minutes || 30;
     $('voucher-active').checked = v.active !== false;
     $('voucher-image-file').value = '';
@@ -1743,11 +1812,19 @@
       sku: $('voucher-sku').value.trim(),
       title_en: $('voucher-title-en').value.trim(),
       title_ar: $('voucher-title-ar').value.trim() || null,
-      price_usd: $('voucher-price-usd').value === '' ? null : Number($('voucher-price-usd').value),
-      price_qar: $('voucher-price-qar').value === '' ? null : Number($('voucher-price-qar').value),
+      // Blank voucher prices are stored as 0, not NULL.
+      price_usd: $('voucher-price-usd').value === '' ? 0 : Number($('voucher-price-usd').value),
+      price_qar: $('voucher-price-qar').value === '' ? 0 : Number($('voucher-price-qar').value),
+      discount_type: $('voucher-discount-type').value === 'fixed' ? 'fixed' : 'percentage',
+      discount_value: Math.max(Number($('voucher-discount-value').value) || 0, 0),
       duration_minutes: Math.max(1, Number($('voucher-duration').value || 30)),
       active: $('voucher-active').checked
     };
+
+    if (payload.discount_type === 'percentage' && payload.discount_value > 100) {
+      message('Percentage discount cannot be greater than 100%.', 'error');
+      return;
+    }
 
     if (!payload.sku || !payload.title_en) {
       message('Please enter the voucher SKU and English title.', 'error');
@@ -1815,6 +1892,18 @@
 
         saved = insertResult.data[0];
       }
+
+      // The legacy voucher RPCs do not include discount fields in their signatures.
+      // Save the new discount fields separately so existing RPCs remain compatible.
+      var discountUpdate = await window.salonSupabase.from('vouchers').update({
+        discount_type: payload.discount_type,
+        discount_value: payload.discount_value
+      }).eq('id', saved.id);
+      if (discountUpdate.error) throw discountUpdate.error;
+
+      saved.discount_type = payload.discount_type;
+      saved.discount_value = payload.discount_value;
+
       var oldImage = existing && existing.image_path ? existing.image_path : null;
 
       if (file) {
@@ -2503,6 +2592,14 @@
     var status = bookingStatus(b);
     var selectedStatus = state.bookingFilter;
     if (selectedStatus !== 'all' && status !== selectedStatus) return false;
+    var typeFilter = state.bookingTypeFilter || 'all';
+    if (typeFilter !== 'all') {
+      var bookingItems = Array.isArray(b.items) ? b.items : [];
+      var hasVoucher = bookingItems.some(function(item){ return item && item.voucherId != null; });
+      var hasService = bookingItems.some(function(item){ return item && item.voucherId == null; });
+      if (typeFilter === 'voucher' && !hasVoucher) return false;
+      if (typeFilter === 'service' && !hasService) return false;
+    }
     var now = new Date(); now.setHours(0,0,0,0);
     var d = b.date ? new Date(b.date + 'T12:00:00') : null;
     if (state.bookingDateFilter === 'today' && (!d || d.toDateString() !== now.toDateString())) return false;
@@ -2511,7 +2608,7 @@
     var q = state.bookingSearch.trim().toLowerCase();
     if (q) {
       var c = bookingCustomer(b);
-      var hay = [b.id, c.name, c.phone, c.email].concat(bookingServiceNames(b)).join(' ').toLowerCase();
+      var hay = [b.id, b.publicReference, c.name, c.phone, c.email].concat(bookingServiceNames(b)).join(' ').toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
     return true;
@@ -2684,24 +2781,54 @@
     if(state.bookingView==='schedule')renderSchedule();
   }
 
+  function bookingVoucherValueText(item) {
+    if (!item || item.voucherId == null) return '';
+    var voucher = state.bookingVouchers.find(function(v){ return String(v.id) === String(item.voucherId); });
+    if (!voucher && item.voucherSku) {
+      voucher = state.bookingVouchers.find(function(v){ return String(v.sku || '') === String(item.voucherSku); });
+    }
+    if (!voucher) return item.price != null ? Number(item.price || 0).toFixed(2) + ' ' + String(item.currency || '').toUpperCase() : '';
+    var type = String(voucher.discount_type || voucher.discountType || 'percentage').toLowerCase() === 'fixed' ? 'fixed' : 'percentage';
+    if (type === 'fixed') {
+      var currency = String(item.currency || voucher.currency || '').toUpperCase();
+      var value = currency === 'QAR' ? Number(voucher.price_qar || 0) : Number(voucher.price_usd || voucher.price || 0);
+      return value.toFixed(2) + (currency ? ' ' + currency : '');
+    }
+    var discount = Math.max(Number(voucher.discount_value != null ? voucher.discount_value : voucher.discountValue || 0) || 0, 0);
+    return discount.toFixed(2).replace(/\.00$/, '') + '%';
+  }
+
   function renderBookings() {
     var body = $('bookings-table-body');
     if (!body) return;
     var visible = state.bookings.filter(bookingMatches);
     body.innerHTML = visible.map(function(b) {
       var c = bookingCustomer(b);
-      var names = bookingServiceNames(b);
+      var items = Array.isArray(b.items) ? b.items : [];
+      var serviceNames = items.filter(function(item){ return item && item.voucherId == null; }).map(function(item){ return serviceForBookingItem(item).name; });
+      var voucherItems = items.filter(function(item){ return item && item.voucherId != null; });
+      var voucherNames = voucherItems.map(function(item){ return serviceForBookingItem(item).name; });
+      var voucherSkus = voucherItems.map(function(item){
+        var resolved = serviceForBookingItem(item);
+        return (item && (item.voucherSku || item.serviceSku)) || resolved.sku || '—';
+      });
+      var voucherValues = voucherItems.map(function(item){
+        return bookingVoucherValueText(item);
+      });
       var first = bookingStart(b), last = bookingEnd(b);
       var dateText = b.date ? new Date(b.date + 'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—';
       var timeText = first ? first + (last ? ' – ' + last : '') : '—';
       var status = bookingStatus(b);
       var badgeClass = status === 'confirmed' ? 'active' : (status === 'cancelled' ? 'inactive' : 'crm-booking-status-' + status);
+      var reference = b.publicReference || b.id || '—';
       return '<tr class="crm-booking-row" data-booking-id="' + escapeHtml(b.id || '') + '">' +
         '<td><strong>' + escapeHtml(dateText) + '</strong><br><span class="crm-small">' + escapeHtml(timeText) + '</span></td>' +
-        '<td><strong>' + escapeHtml(c.name || 'Customer') + '</strong><br><span class="crm-small">' + escapeHtml(b.id || 'No reference') + '</span></td>' +
-        '<td><strong>' + escapeHtml(names.join(', ') || '—') + '</strong><br><span class="crm-small">' + (b.items ? b.items.length : 0) + ' service' + ((b.items && b.items.length === 1) ? '' : 's') + '</span></td>' +
+        '<td><strong class="crm-booking-reference">' + escapeHtml(reference) + '</strong></td>' +
+        '<td><strong>' + escapeHtml(c.name || 'Customer') + '</strong></td>' +
+        '<td><strong>' + escapeHtml(serviceNames.join(', ') || '—') + '</strong><br><span class="crm-small">' + serviceNames.length + ' service' + (serviceNames.length === 1 ? '' : 's') + '</span></td>' +
+        '<td><strong>' + escapeHtml(voucherNames.join(', ') || '—') + '</strong><br><span class="crm-small crm-booking-voucher-sku">' + escapeHtml(voucherSkus.join(', ') || '—') + '</span></td>' +
         '<td>' + escapeHtml(c.phone || '—') + '<br><span class="crm-small">' + escapeHtml(c.email || 'No email') + '</span></td>' +
-        '<td class="crm-price">' + bookingMoney(b) + '</td>' +
+        '<td class="crm-price">' + ((voucherItems.length && !serviceNames.length) ? escapeHtml(voucherValues.join(', ') || bookingMoney(b)) : bookingMoney(b)) + '</td>' +
         '<td><span class="crm-badge ' + badgeClass + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? ' <span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '</td>' +
         '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-booking="' + escapeHtml(b.id || '') + '">View</button></td>' +
       '</tr>';
@@ -2712,7 +2839,7 @@
   }
 
   function updateBookingCounts() {
-    var counts = {all:state.bookings.length,pending:0,confirmed:0,completed:0,cancelled:0};
+    var counts = {all:state.bookings.length,pending:0,confirmed:0,completed:0,cancelled:0,applied:0};
     state.bookings.forEach(function(b){ var s=bookingStatus(b); if (counts[s] != null) counts[s]++; });
     Object.keys(counts).forEach(function(k){ var el=$('booking-count-'+k); if(el) el.textContent=counts[k]; });
     document.querySelectorAll('[data-booking-filter]').forEach(function(b){ b.classList.toggle('is-active', b.getAttribute('data-booking-filter') === state.bookingFilter); });
@@ -2779,15 +2906,384 @@
     return state.bookings.find(function(b){ return String(b.id) === String(id); });
   }
 
+  function bookingVoucherLabel(row, sourceBooking, voucher, customer) {
+    var sku = voucher && voucher.sku ? voucher.sku : 'Voucher';
+    var title = voucher && (voucher.title_en || voucher.title) ? (voucher.title_en || voucher.title) : 'Voucher';
+    var ref = sourceBooking && (sourceBooking.public_reference || sourceBooking.publicReference) ? (sourceBooking.public_reference || sourceBooking.publicReference) : '';
+    var customerName = customer && customer.name ? customer.name : '';
+    var parts = [sku, title];
+    if (ref) parts.push(ref);
+    if (customerName) parts.push(customerName);
+    return parts.join(' • ');
+  }
+
+  function bookingVoucherSearchText(x) {
+    var v=x && x.voucher || {};
+    var b=x && x.booking || {};
+    var c=x && x.customer || {};
+    return [v.sku,v.title_en,v.title,b.public_reference,b.publicReference,c.name,c.phone].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  async function loadBookingVoucherApplicationData(targetBookingId) {
+    var appsResult = await window.salonSupabase
+      .from('booking_voucher_applications')
+      .select('id,voucher_booking_service_id,booking_id,service_booking_service_id,created_at')
+      .eq('booking_id', targetBookingId)
+      .order('created_at', {ascending:false});
+    if (appsResult.error) throw appsResult.error;
+
+    var applications = appsResult.data || [];
+    var sourceIds = applications.map(function(a){ return a.voucher_booking_service_id; }).filter(function(v){return v!=null;});
+    var serviceIds = applications.map(function(a){ return a.service_booking_service_id; }).filter(function(v){return v!=null;});
+
+    var sourceRowsPromise = sourceIds.length ? window.salonSupabase
+      .from('booking_services')
+      .select('id,booking_id,voucher_id,service_id,price,currency')
+      .in('id', sourceIds) : Promise.resolve({data:[],error:null});
+    var targetRowsPromise = serviceIds.length ? window.salonSupabase
+      .from('booking_services')
+      .select('id,booking_id,service_id,start_time,end_time,price,currency')
+      .in('id', serviceIds) : Promise.resolve({data:[],error:null});
+    var sourceRowsAndTarget = await Promise.all([sourceRowsPromise,targetRowsPromise]);
+    var sourceRows=sourceRowsAndTarget[0], targetRows=sourceRowsAndTarget[1];
+    if (sourceRows.error) throw sourceRows.error;
+    if (targetRows.error) throw targetRows.error;
+
+    var sourceBookingIds = (sourceRows.data||[]).map(function(r){return r.booking_id;}).filter(function(v){return v!=null;});
+    var sourceBookings = sourceBookingIds.length ? await window.salonSupabase
+      .from('bookings')
+      .select('id,public_reference,status,booking_date,customer_id,currency')
+      .in('id', Array.from(new Set(sourceBookingIds))) : {data:[],error:null};
+    if (sourceBookings.error) throw sourceBookings.error;
+
+    var customerIds = (sourceBookings.data||[]).map(function(b){return b.customer_id;}).filter(function(v){return v!=null;});
+    var customers = customerIds.length ? await window.salonSupabase
+      .from('customers')
+      .select('id,name,phone')
+      .in('id', Array.from(new Set(customerIds))) : {data:[],error:null};
+    if (customers.error) throw customers.error;
+
+    var sourceById={}; (sourceRows.data||[]).forEach(function(r){sourceById[String(r.id)]=r;});
+    var targetById={}; (targetRows.data||[]).forEach(function(r){targetById[String(r.id)]=r;});
+    var bookingById={}; (sourceBookings.data||[]).forEach(function(b){bookingById[String(b.id)]=b;});
+    var customerById={}; (customers.data||[]).forEach(function(c){customerById[String(c.id)]=c;});
+    var voucherById={}; state.vouchers.forEach(function(v){voucherById[String(v.id)]=v;});
+    var serviceById={}; state.services.forEach(function(v){serviceById[String(v.id)]=v;});
+
+    applications.forEach(function(a){
+      a.sourceRow=sourceById[String(a.voucher_booking_service_id)]||null;
+      a.targetRow=targetById[String(a.service_booking_service_id)]||null;
+      a.sourceBooking=a.sourceRow ? bookingById[String(a.sourceRow.booking_id)]||null : null;
+      a.customer=a.sourceBooking ? customerById[String(a.sourceBooking.customer_id)]||null : null;
+      a.voucher=a.sourceRow ? voucherById[String(a.sourceRow.voucher_id)]||null : null;
+      a.service=a.targetRow ? serviceById[String(a.targetRow.service_id)]||null : null;
+    });
+
+    var sourceResult = await window.salonSupabase
+      .from('booking_services')
+      .select('id,booking_id,voucher_id,service_id,price,currency')
+      .not('voucher_id','is',null)
+      .is('service_id',null)
+      .order('id',{ascending:false});
+    if (sourceResult.error) throw sourceResult.error;
+
+    var allSourceRows=sourceResult.data||[];
+    var allBookingIds=Array.from(new Set(allSourceRows.map(function(r){return r.booking_id;}).filter(function(v){return v!=null;})));
+    var allBookingsPromise=allBookingIds.length ? window.salonSupabase
+      .from('bookings')
+      .select('id,public_reference,status,booking_date,customer_id,currency')
+      .in('id',allBookingIds) : Promise.resolve({data:[],error:null});
+    var allAppsPromise=window.salonSupabase.from('booking_voucher_applications').select('voucher_booking_service_id');
+    var allMain=await Promise.all([allBookingsPromise,allAppsPromise]);
+    var allBookings=allMain[0], allAppsResult=allMain[1];
+    if (allBookings.error) throw allBookings.error;
+    if (allAppsResult.error) throw allAppsResult.error;
+    var allCustomerIds=Array.from(new Set((allBookings.data||[]).map(function(b){return b.customer_id;}).filter(function(v){return v!=null;})));
+    var allCustomers=allCustomerIds.length ? await window.salonSupabase
+      .from('customers').select('id,name,phone').in('id',allCustomerIds) : {data:[],error:null};
+    if (allCustomers.error) throw allCustomers.error;
+    var allBookingById={}; (allBookings.data||[]).forEach(function(b){allBookingById[String(b.id)]=b;});
+    var allCustomerById={}; (allCustomers.data||[]).forEach(function(c){allCustomerById[String(c.id)]=c;});
+    var appliedSourceIds={};
+    (allAppsResult.data||[]).forEach(function(a){
+      if(a && a.voucher_booking_service_id != null) appliedSourceIds[String(a.voucher_booking_service_id)]=true;
+    });
+
+    var available=allSourceRows.filter(function(r){
+      var sb=allBookingById[String(r.booking_id)];
+      if(!sb) return false;
+      var st=String(sb.status||'').toLowerCase();
+      return (st==='pending'||st==='confirmed') && !appliedSourceIds[String(r.id)] && String(r.booking_id)!==String(targetBookingId);
+    }).map(function(r){
+      var sb=allBookingById[String(r.booking_id)];
+      var customer=allCustomerById[String(sb.customer_id)]||null;
+      var voucher=voucherById[String(r.voucher_id)]||null;
+      return {row:r,booking:sb,customer:customer,voucher:voucher};
+    }).filter(function(x){return !!x.voucher;});
+
+    return {applications:applications, available:available};
+  }
+
+  function setBookingDetailLocked(locked) {
+    var content=$('booking-detail-content');
+    if(!content) return;
+    content.querySelectorAll('input, select, textarea').forEach(function(el){
+      el.disabled=!!locked;
+      el.readOnly=!!locked;
+      el.style.pointerEvents=locked?'none':'auto';
+    });
+    content.querySelectorAll('[data-save-booking-appointment],[data-save-booking-pricing],[data-booking-status]').forEach(function(el){
+      el.style.display=locked?'none':'';
+    });
+    content.querySelectorAll('.crm-booking-edit-section').forEach(function(el){ el.style.display=locked?'none':''; });
+    content.querySelectorAll('.crm-booking-editable-pricing').forEach(function(el){ el.style.display=locked?'none':''; });
+    if(locked) content.classList.add('crm-booking-detail-locked');
+    else content.classList.remove('crm-booking-detail-locked');
+  }
+
+  async function renderBookingVoucherSection(bookingId) {
+    var targetBooking=findBooking(bookingId);
+    var hasServiceBooking=!!targetBooking && Array.isArray(targetBooking.items) && targetBooking.items.some(function(item){ return item && item.voucherId == null; });
+    var area=$('booking-voucher-area');
+    if(!hasServiceBooking || !area) return;
+    area.innerHTML='<div class="crm-small">Loading available vouchers…</div>';
+    try {
+      var data=await loadBookingVoucherApplicationData(bookingId);
+      var hasApplied=data.applications.length>0;
+      var selectedLabel='Select a voucher';
+      var options=data.available.map(function(x){
+        var label=(x.booking && (x.booking.public_reference || x.booking.publicReference) ? (x.booking.public_reference || x.booking.publicReference) : 'No ref')+' • '+(x.voucher && (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) ? (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) : 'Voucher');
+        var search=bookingVoucherSearchText(x);
+        var voucherType=String(x.voucher.discount_type || 'percentage').toLowerCase()==='fixed' ? 'fixed' : 'percentage';
+        var voucherCurrency=String(x.row.currency || x.booking.currency || '').toUpperCase();
+        var voucherDiscountText=voucherType==='fixed'
+          ? (Number(voucherCurrency==='QAR' ? (x.voucher.price_qar || 0) : (x.voucher.price_usd || 0)).toFixed(2)+' '+(voucherCurrency || voucherMainCurrency()))
+          : (Number(x.voucher.discount_value || 0).toFixed(2).replace(/\.00$/,'')+'%');
+        return '<button type="button" class="crm-walkin-result crm-booking-voucher-option" data-voucher-option="'+escapeHtml(search)+'" data-voucher-source-id="'+escapeHtml(String(x.row.id))+'" data-voucher-id="'+escapeHtml(String(x.voucher.id))+'" data-voucher-discount-type="'+escapeHtml(voucherType)+'" data-voucher-discount-value="'+escapeHtml(String(x.voucher.discount_value == null ? 0 : x.voucher.discount_value))+'" data-voucher-fixed-usd="'+escapeHtml(String(x.voucher.price_usd == null ? 0 : x.voucher.price_usd))+'" data-voucher-fixed-qar="'+escapeHtml(String(x.voucher.price_qar == null ? 0 : x.voucher.price_qar))+'" data-voucher-currency="'+escapeHtml(voucherCurrency)+'" data-voucher-source-status="'+escapeHtml(String(x.booking.status || 'confirmed').toLowerCase())+'" data-voucher-source-booking-id="'+escapeHtml(String(x.booking.id))+'" data-voucher-display-label="'+escapeHtml(label)+'"><span><strong>'+escapeHtml(label)+'</strong><small class="crm-small">'+escapeHtml(voucherDiscountText)+'</small></span></button>';
+      }).join('');
+      var appliedHtml=data.applications.map(function(a){
+        var ref=a.sourceBooking && (a.sourceBooking.public_reference || a.sourceBooking.publicReference) ? (a.sourceBooking.public_reference || a.sourceBooking.publicReference) : 'No ref';
+        var voucherName=a.voucher && (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) ? (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) : 'Voucher';
+        return '<div class="crm-booking-voucher-linked crm-booking-voucher-applied"><div><strong>'+escapeHtml(ref+' • '+voucherName)+'</strong><span class="crm-small">Voucher applied to this booking</span></div></div>';
+      }).join('');
+      area.innerHTML=(hasApplied ? '<div class="crm-booking-voucher-linked-list crm-booking-voucher-applied-list">'+appliedHtml+'</div>' : '<div class="crm-booking-voucher-picker">'+
+        '<details class="crm-walkin-service-dropdown crm-booking-voucher-dropdown">'+
+          '<summary><span id="booking-voucher-selection-label">'+escapeHtml(selectedLabel)+'</span><span class="crm-walkin-service-count">'+data.available.length+' available</span></summary>'+
+          '<div class="crm-walkin-service-menu">'+
+            '<div class="crm-walkin-service-search"><span>⌕</span><input id="booking-voucher-search" type="search" placeholder="Search voucher by SKU, name or booking ref" autocomplete="off"></div>'+ 
+            '<div class="crm-walkin-service-list crm-booking-voucher-list">'+(options || '<div class="crm-small">No pending or confirmed vouchers are available.</div>')+'</div>'+ 
+          '</div>'+ 
+        '</details>'+ 
+        '<input type="hidden" id="booking-voucher-select" value="">'+
+        '<div class="crm-small crm-booking-voucher-help">Only vouchers from pending or confirmed bookings are shown. The booking reference is displayed for each voucher.</div>'+ 
+        '<div class="crm-form-actions crm-booking-voucher-actions"><button type="button" class="crm-btn crm-btn-primary" data-apply-booking-voucher="'+escapeHtml(String(bookingId))+'">Apply voucher</button></div>'+ 
+        '<div class="crm-booking-voucher-linked-list">'+(appliedHtml || '<div class="crm-small">No vouchers applied to this booking.</div>')+'</div>'+ 
+      '</div>');
+    } catch(err) {
+      console.error('Could not load booking vouchers:',err);
+      area.innerHTML='<div class="crm-small">Could not load vouchers.</div>';
+    }
+  }
+
+  function fillBookingDiscountFromVoucher(option) {
+    if (!option) return;
+    var typeEl = $('crm-booking-discount-type');
+    var valueEl = $('crm-booking-discount-value');
+    if (!typeEl || !valueEl) return;
+    var type = option.getAttribute('data-voucher-discount-type') === 'fixed' ? 'amount' : 'percent';
+    var booking=findBooking(window.__openBookingDetailId || '');
+    var currency=String((booking && booking.currency) || '').toUpperCase();
+    var value;
+    if(type === 'amount') {
+      var fixedAttr=currency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
+      value=Math.max(Number(option.getAttribute(fixedAttr) || 0),0);
+    } else {
+      value=Math.min(Math.max(Number(option.getAttribute('data-voucher-discount-value') || 0),0),100);
+    }
+    typeEl.value = type;
+    valueEl.value = value.toFixed(2);
+    updateBookingPricingPreview();
+  }
+
+  async function applyVoucherToBooking(bookingId, voucherBookingServiceId) {
+    if(!requirePermission('bookings','update')) return;
+    if(!voucherBookingServiceId) { message('Select a voucher first.','error'); return; }
+    try {
+      var option=document.querySelector('#booking-voucher-area [data-voucher-source-id=\"'+CSS.escape(String(voucherBookingServiceId))+'\"]');
+      var b=findBooking(bookingId);
+      if(!b) throw new Error('Booking not found.');
+      var voucherType=option && option.getAttribute('data-voucher-discount-type') === 'fixed' ? 'amount' : 'percent';
+      var bookingCurrency=String(b.currency || (b.items && b.items[0] && b.items[0].currency) || '').toUpperCase();
+      var voucherValue;
+      if(voucherType === 'amount') {
+        var fixedAttr=bookingCurrency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
+        voucherValue=Math.max(Number(option && option.getAttribute(fixedAttr) || 0),0);
+      } else {
+        voucherValue=Math.max(Number(option && option.getAttribute('data-voucher-discount-value') || 0),0);
+      }
+      var voucherCurrency=String(option && option.getAttribute('data-voucher-currency') || '').toUpperCase();
+      if(voucherType==='amount' && voucherCurrency && bookingCurrency && voucherCurrency!==bookingCurrency){
+        throw new Error('Fixed voucher currency ('+voucherCurrency+') does not match the booking currency ('+bookingCurrency+').');
+      }
+      if(voucherType==='percent') voucherValue=Math.min(voucherValue,100);
+      var subtotal=Number(b.subtotal_price != null ? b.subtotal_price : 0);
+      if(!subtotal) subtotal=(b.items||[]).filter(function(item){return item && item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.price)||0);},0);
+      var discountAmount=voucherType==='amount' ? Math.min(voucherValue,subtotal) : subtotal*voucherValue/100;
+      var finalPrice=Math.max(subtotal-discountAmount,0);
+
+      // A booking can have one voucher application only.
+      var existingApplication=await window.salonSupabase
+        .from('booking_voucher_applications')
+        .select('id')
+        .eq('booking_id',Number(bookingId))
+        .limit(1);
+      if(existingApplication.error) throw existingApplication.error;
+      if((existingApplication.data||[]).length){
+        throw new Error('Only one voucher can be applied to a booking.');
+      }
+
+      var result=await window.salonSupabase.from('booking_voucher_applications').insert({
+        voucher_booking_service_id:Number(voucherBookingServiceId),
+        booking_id:Number(bookingId),
+        source_previous_status:String(option && option.getAttribute('data-voucher-source-status') || 'confirmed').toLowerCase()
+      });
+      if(result.error) throw result.error;
+
+      // Once a voucher is redeemed, its original voucher booking becomes Applied.
+      var voucherSourceBookingId = option && option.getAttribute('data-voucher-source-booking-id');
+      if(voucherSourceBookingId){
+        var sourceStatusResult=await window.salonSupabase.from('bookings').update({status:'applied'}).eq('id',Number(voucherSourceBookingId));
+        if(sourceStatusResult.error){
+          await window.salonSupabase.from('booking_voucher_applications').delete().eq('voucher_booking_service_id',Number(voucherBookingServiceId)).eq('booking_id',Number(bookingId));
+          throw sourceStatusResult.error;
+        }
+      }
+
+      var pricing=await window.salonSupabase.from('bookings').update({
+        subtotal_price:subtotal,
+        discount_type:voucherType,
+        discount_value:voucherValue,
+        discount_amount:discountAmount,
+        total_price:finalPrice
+      }).eq('id',b.databaseId||bookingId);
+      if(pricing.error) throw pricing.error;
+
+      b.subtotal_price=subtotal; b.discount_type=voucherType; b.discount_value=voucherValue; b.discount_amount=discountAmount; b.total=finalPrice;
+      persistBookings();
+      message('Voucher applied and booking discount filled.','success');
+      await renderBookingVoucherSection(bookingId);
+      renderBookings();
+      renderBookingDetail(bookingId);
+    } catch(err) {
+      console.error('Could not apply voucher:',err);
+      message(err.message||'Could not apply the voucher.','error');
+      await renderBookingVoucherSection(bookingId);
+    }
+  }
+
+  async function unapplyVoucherFromBooking(applicationId, bookingId) {
+    if(!requirePermission('bookings','update')) return;
+    try {
+      var appResult=await window.salonSupabase.from('booking_voucher_applications').select('id,voucher_booking_service_id,source_previous_status').eq('id',applicationId).single();
+      if(appResult.error) throw appResult.error;
+      var app=appResult.data;
+      var sourceRowResult=await window.salonSupabase.from('booking_services').select('booking_id').eq('id',app.voucher_booking_service_id).single();
+      if(sourceRowResult.error) throw sourceRowResult.error;
+      var restoredStatus=String(app.source_previous_status || 'confirmed').toLowerCase();
+      if(restoredStatus!=='pending' && restoredStatus!=='confirmed') restoredStatus='confirmed';
+      var result=await window.salonSupabase.from('booking_voucher_applications').delete().eq('id',applicationId);
+      if(result.error) throw result.error;
+      var restoreResult=await window.salonSupabase.from('bookings').update({status:restoredStatus}).eq('id',sourceRowResult.data.booking_id);
+      if(restoreResult.error) throw restoreResult.error;
+      message('Voucher removed from the booking.','success');
+      await loadBookings();
+      await renderBookingVoucherSection(bookingId);
+    } catch(err) {
+      console.error('Could not remove voucher application:',err);
+      message(err.message||'Could not remove the voucher.','error');
+    }
+  }
+
+  function bookingServiceCurrency(service) {
+    return String(walkinServiceCurrency(service) || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+  }
+
+  function renderBookingServicePicker() {
+    var services = Array.isArray(state.services) ? state.services.slice() : [];
+    services.sort(function(a,b){ return String(a.name_en || a.name || '').localeCompare(String(b.name_en || b.name || '')); });
+    return services.map(function(service){
+      var currency = bookingServiceCurrency(service);
+      var price = Number(walkinServicePrice(service) || 0);
+      var duration = Number(walkinServiceDuration(service) || service.duration_minutes || 0);
+      var name = service.name_en || service.name || service.sku || 'Service';
+      var search = [service.sku,name,service.name_ar].filter(Boolean).join(' ').toLowerCase();
+      return '<button type="button" class="crm-walkin-result crm-booking-service-option" data-booking-service-option="' + escapeHtml(search) + '" data-service-id="' + escapeHtml(String(service.id)) + '" data-service-currency="' + escapeHtml(currency) + '" data-service-price="' + escapeHtml(String(price)) + '" data-service-duration="' + escapeHtml(String(duration)) + '"><span><strong>' + escapeHtml(name) + '</strong><small class="crm-small">' + escapeHtml(String(duration)) + ' min • ' + escapeHtml(price.toFixed(2) + ' ' + currency) + '</small></span></button>';
+    }).join('');
+  }
+
+  async function addServiceToBooking(bookingId) {
+    if(!requirePermission('bookings','update')) return;
+    var b=findBooking(bookingId); if(!b) return;
+    var selected=$('booking-add-service-id');
+    var priceInput=$('booking-add-service-price');
+    var msg=$('booking-add-service-message');
+    if(!selected || !selected.value){ if(msg) msg.textContent='Select a service first.'; return; }
+    var service=state.services.find(function(x){ return String(x.id)===String(selected.value); });
+    if(!service){ if(msg) msg.textContent='Selected service could not be found.'; return; }
+    var currency=bookingServiceCurrency(service);
+    var bookingCurrency=String(b.currency || (b.items&&b.items[0]&&b.items[0].currency) || settingValue('display_currency','USD') || 'USD').toUpperCase();
+    if(bookingCurrency && currency!==bookingCurrency){ if(msg) msg.textContent='Service currency ('+currency+') must match the booking currency ('+bookingCurrency+').'; return; }
+    var price=Number(priceInput && priceInput.value); if(!isFinite(price)||price<0){ if(msg) msg.textContent='Enter a valid non-negative service price.'; return; }
+    var duration=Number(walkinServiceDuration(service)||service.duration_minutes||0); if(!duration) duration=30;
+    var start=bookingEnd(b) || bookingStart(b);
+    if(!start){ if(msg) msg.textContent='The booking has no start time.'; return; }
+    var itemStart=start;
+    var totalMinutes=parseTimeMinutes(start)+duration;
+    if(totalMinutes>=24*60){ if(msg) msg.textContent='The added service cannot extend past midnight.'; return; }
+    var itemEnd=pad2(Math.floor(totalMinutes/60))+':'+pad2(totalMinutes%60);
+    try{
+      var result=await window.salonSupabase.from('booking_services').insert({
+        booking_id:Number(b.databaseId||bookingId), service_id:Number(service.id), staff_id:null,
+        start_time:itemStart, end_time:itemEnd, price:price, currency:currency, duration_minutes:duration
+      }).select('id,booking_id,service_id,staff_id,start_time,end_time,price,currency,duration_minutes,voucher_id').single();
+      if(result.error) throw result.error;
+      var newRow=result.data;
+      var newItem={id:newRow.id,serviceId:service.id,serviceSku:service.sku||'',serviceName:service.name_en||service.name||'',start:itemStart,end:itemEnd,price:price,currency:currency,duration_minutes:duration,voucherId:null};
+      b.items=Array.isArray(b.items)?b.items:[]; b.items.push(newItem);
+      var subtotal=b.items.filter(function(item){return item && item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.price)||0);},0);
+      var discountType=b.discount_type==='amount'?'amount':(b.discount_type==='percent'?'percent':null);
+      var discountValue=Math.max(Number(b.discount_value||0),0);
+      var discountAmount=discountType==='amount'?Math.min(discountValue,subtotal):discountType==='percent'?subtotal*Math.min(discountValue,100)/100:0;
+      var finalPrice=Math.max(subtotal-discountAmount,0);
+      var bookingUpdate=await window.salonSupabase.from('bookings').update({subtotal_price:subtotal,discount_type:discountAmount>0?discountType:null,discount_value:discountAmount>0?discountValue:0,discount_amount:discountAmount,total_price:finalPrice,total_duration_minutes:b.items.filter(function(item){return item&&item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.duration_minutes)||0);},0)}).eq('id',b.databaseId||bookingId);
+      if(bookingUpdate.error) throw bookingUpdate.error;
+      b.subtotal_price=subtotal; b.discount_amount=discountAmount; b.total=finalPrice;
+      persistBookings();
+      message('Service added to the booking.','success');
+      await loadBookings();
+      renderBookingDetail(bookingId);
+    }catch(e){
+      console.error('Could not add service to booking:',e);
+      if(msg) msg.textContent='Could not add the service: '+(e.message||'Unknown error');
+    }
+  }
+
   function renderBookingDetail(id) {
     var b = findBooking(id); if (!b) return;
     window.__openBookingDetailId = id;
+    var bookingItems = Array.isArray(b.items) ? b.items : [];
+    var isVoucherBooking = bookingItems.length > 0 && bookingItems.every(function(item){ return item && item.voucherId != null; });
+    var hasServiceBooking = bookingItems.some(function(item){ return item && item.voucherId == null; });
     var c = bookingCustomer(b), status = bookingStatus(b);
-    var dateText = b.date ? new Date(b.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : '—';
+        var dateText = b.date ? new Date(b.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : '—';
     var items = (b.items || []).map(function(item, idx) {
       var s = serviceForBookingItem(item);
       var price = item.price != null ? Number(item.price) : (s.price == null ? 0 : Number(s.price));
       var itemCurrency = String(item.currency || s.currency || b.currency || settingValue('display_currency', 'USD')).toUpperCase();
+      if (item && item.voucherId != null) {
+        var voucherValue = bookingVoucherValueText(item);
+        return '<div class="crm-detail-item crm-booking-price-item crm-booking-voucher-item"><div><strong>' + escapeHtml(s.name) + '</strong><span>' + escapeHtml(item.start || '') + (item.end ? ' – ' + escapeHtml(item.end) : '') + '</span></div><div class="crm-price-readonly"><span>Voucher amount / discount</span><strong>' + escapeHtml(voucherValue || (price.toFixed(2) + ' ' + itemCurrency)) + '</strong><small class="crm-small">Not editable</small></div></div>';
+      }
       return '<div class="crm-detail-item crm-booking-price-item"><div><strong>' + escapeHtml(s.name) + '</strong><span>' + escapeHtml(item.start || '') + (item.end ? ' – ' + escapeHtml(item.end) : '') + '</span></div><label class="crm-price-edit"><span>Price (' + escapeHtml(itemCurrency) + ')</span><input type="number" min="0" step="0.01" value="' + escapeHtml(price.toFixed(2)) + '" data-booking-item-price="' + escapeHtml(String(item.id || idx)) + '"></label></div>';
     }).join('');
     var lineSubtotal = (b.items || []).reduce(function(sum,item){ var v=Number(item.price); return sum + (isFinite(v)?v:0); },0);
@@ -2801,7 +3297,7 @@
       return '<button type="button" class="crm-btn ' + (s==='cancelled'?'crm-btn-danger':'crm-btn-secondary') + '" data-booking-status="' + s + '" data-booking-id="' + escapeHtml(b.id) + '">' + statusLabel(s) + '</button>';
     }).join('');
     $('booking-detail-content').innerHTML =
-      '<div class="crm-detail-status"><span class="crm-badge ' + (status==='confirmed'?'active':status==='cancelled'?'inactive':'crm-booking-status-'+status) + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? '<span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '<span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
+      '<div class="crm-detail-status"><span class="crm-detail-reference"><span class="crm-detail-label">Booking ref</span><strong>' + escapeHtml(b.publicReference || b.id || '—') + '</strong></span><span class="crm-badge ' + (status==='confirmed'?'active':status==='cancelled'?'inactive':'crm-booking-status-'+status) + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? '<span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '<span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
       '<div class="crm-detail-grid">' +
         '<div><span class="crm-detail-label">Customer</span><strong>' + escapeHtml(c.name || '—') + '</strong></div>' +
         '<div><span class="crm-detail-label">Phone / WhatsApp</span><strong>' + escapeHtml(c.phone || '—') + '</strong></div>' +
@@ -2818,20 +3314,27 @@
         '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-appointment="' + escapeHtml(b.id) + '">Save date & time</button>' +
         '<span id="crm-edit-booking-message" class="crm-small"></span>' +
       '</div>' +
-      '<div class="crm-detail-section"><div class="crm-section-label">Services & pricing</div>' + items +
-        '<div class="crm-booking-price-summary">' +
+      (hasServiceBooking ? '<div class="crm-detail-section crm-booking-voucher-section"><div class="crm-section-label">Voucher</div><h3>Apply a voucher</h3><p class="crm-small">Select a pending or confirmed voucher to apply to this booking.</p><div id="booking-voucher-area"><div class="crm-small">Loading available vouchers…</div></div></div>' : '') +
+      (hasServiceBooking ? '<div class="crm-detail-section crm-booking-add-service-section"><div class="crm-section-label">Services & pricing</div><h3>Add service</h3><p class="crm-small">Search for a service, select it, then enter the price for this booking.</p><details class="crm-walkin-service-dropdown crm-booking-service-dropdown"><summary><span id="booking-add-service-label">Select a service</span><span class="crm-walkin-service-count">'+state.services.length+' services</span></summary><div class="crm-walkin-service-menu"><div class="crm-walkin-service-search"><span>⌕</span><input id="booking-add-service-search" type="search" placeholder="Search service by name or SKU" autocomplete="off"></div><div class="crm-walkin-service-list crm-booking-add-service-list">'+(renderBookingServicePicker() || '<div class="crm-small">No services available.</div>')+'</div></div></details><input type="hidden" id="booking-add-service-id" value=""><div class="crm-field crm-booking-add-service-price-row"><label for="booking-add-service-price">Price</label><input id="booking-add-service-price" type="number" min="0" step="0.01" placeholder="0.00" disabled></div><div class="crm-form-actions crm-booking-add-service-actions"><button type="button" class="crm-btn crm-btn-primary" data-add-booking-service="'+escapeHtml(b.id)+'">Add service</button><span id="booking-add-service-message" class="crm-small"></span></div></div>' : '') +
+      '<div class="crm-detail-section"><div class="crm-section-label">'+(isVoucherBooking ? 'Voucher details' : 'Current services')+'</div>' + items +
+        (isVoucherBooking ? '<div class="crm-small">Voucher amount/discount is fixed and cannot be edited.</div>' : '<div class="crm-booking-price-summary">' +
           '<div><span>Original price</span><strong id="crm-booking-subtotal">' + savedSubtotal.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
           '<div class="crm-booking-discount-row"><label>Discount</label><select id="crm-booking-discount-type"><option value="percent"' + (discountType==='percent'?' selected':'') + '>%</option><option value="amount"' + (discountType==='amount'?' selected':'') + '>Fixed amount</option></select><input id="crm-booking-discount-value" type="number" min="0" step="0.01" value="' + escapeHtml(discountValue.toFixed(2)) + '"><span id="crm-booking-discount-amount">−' + discountAmount.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</span></div>' +
           '<div class="crm-booking-final-row"><span>Final price</span><strong id="crm-booking-final-price">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
-        '</div>' +
-        '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-pricing="' + escapeHtml(b.id) + '">Save pricing</button><span id="crm-edit-booking-pricing-message" class="crm-small"></span>' +
+        '</div><button type="button" class="crm-btn crm-btn-secondary" data-save-booking-pricing="' + escapeHtml(b.id) + '">Save pricing</button><span id="crm-edit-booking-pricing-message" class="crm-small"></span>') +
       '</div>' +
-      '<div class="crm-detail-total"><span>Total</span><strong id="crm-booking-total-display">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
+      (isVoucherBooking ? '' : '<div class="crm-detail-total"><span>Total</span><strong id="crm-booking-total-display">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>') +
       (b.bookingComment ? '<div class="crm-detail-section"><div class="crm-section-label">Customer comment</div><p class="crm-detail-notes">' + escapeHtml(b.bookingComment) + '</p></div>' : '') +
       (c.notes ? '<div class="crm-detail-section"><div class="crm-section-label">Internal CRM notes</div><p class="crm-detail-notes">' + escapeHtml(c.notes) + '</p></div>' : '') +
       '<div class="crm-detail-actions">' + nextStatuses + '</div>';
     $('booking-detail-modal').classList.remove('crm-hidden');
     $('booking-detail-modal').setAttribute('aria-hidden','false');
+    // Only the voucher purchase booking is locked after its voucher is applied.
+    // A normal service booking remains fully editable even after receiving a voucher.
+    var pricingSave = document.querySelector('[data-save-booking-pricing=\"' + CSS.escape(String(id)) + '\"]');
+    if (pricingSave) pricingSave.style.display = isVoucherBooking ? 'none' : '';
+    setBookingDetailLocked(isVoucherBooking && status === 'applied');
+    if (hasServiceBooking) renderBookingVoucherSection(id);
   }
 
   async function saveBookingAppointment(id) {
@@ -4553,6 +5056,7 @@
     $('booking-search').addEventListener('input',function(e){state.bookingSearch=e.target.value;renderBookings();});
     $('booking-date-filter').addEventListener('change',function(e){state.bookingDateFilter=e.target.value;renderBookings();});
     if($('booking-status-filter')) $('booking-status-filter').addEventListener('change',function(e){state.bookingFilter=e.target.value;renderBookings();});
+    if($('booking-type-filter')) $('booking-type-filter').addEventListener('change',function(e){state.bookingTypeFilter=e.target.value;renderBookings();});
 
     $('bookings-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-view-booking]');if(b)renderBookingDetail(b.getAttribute('data-view-booking'));});
     document.querySelectorAll('[data-close-booking]').forEach(function(el){el.addEventListener('click',closeBookingDetail);});
@@ -4562,9 +5066,59 @@
       var saveButton=e.target.closest('[data-save-booking-appointment]');
       if(saveButton) { saveBookingAppointment(saveButton.getAttribute('data-save-booking-appointment')); return; }
       var pricingButton=e.target.closest('[data-save-booking-pricing]');
-      if(pricingButton) saveBookingPricing(pricingButton.getAttribute('data-save-booking-pricing'));
+      if(pricingButton) { saveBookingPricing(pricingButton.getAttribute('data-save-booking-pricing')); return; }
+      var voucherOption=e.target.closest('[data-voucher-source-id]');
+      if(voucherOption) {
+        var hidden=$('booking-voucher-select');
+        var label=$('booking-voucher-selection-label');
+        if(hidden) hidden.value=voucherOption.getAttribute('data-voucher-source-id') || '';
+        if(label) label.textContent=voucherOption.getAttribute('data-voucher-display-label') || (voucherOption.querySelector('strong') ? voucherOption.querySelector('strong').textContent : 'Voucher selected');
+        fillBookingDiscountFromVoucher(voucherOption);
+        var dropdown=voucherOption.closest('details');
+        if(dropdown) dropdown.removeAttribute('open');
+        return;
+      }
+      var applyButton=e.target.closest('[data-apply-booking-voucher]');
+      if(applyButton) {
+        var voucherSelect=$('booking-voucher-select');
+        applyVoucherToBooking(applyButton.getAttribute('data-apply-booking-voucher'), voucherSelect && voucherSelect.value);
+        return;
+      }
+      var addServiceButton=e.target.closest('[data-add-booking-service]');
+      if(addServiceButton) { addServiceToBooking(addServiceButton.getAttribute('data-add-booking-service')); return; }
+      var serviceOption=e.target.closest('[data-service-id]');
+      if(serviceOption && serviceOption.closest('#booking-add-service-list, .crm-booking-add-service-list')) {
+        var sid=serviceOption.getAttribute('data-service-id') || '';
+        var hidden=$('booking-add-service-id'); var label=$('booking-add-service-label'); var price=$('booking-add-service-price');
+        if(hidden) hidden.value=sid;
+        if(label) label.textContent=(serviceOption.querySelector('strong') ? serviceOption.querySelector('strong').textContent : 'Service selected');
+        if(price) { price.disabled=false; price.value=Number(serviceOption.getAttribute('data-service-price')||0).toFixed(2); }
+        var dd=serviceOption.closest('details'); if(dd) dd.removeAttribute('open');
+        var addMsg=$('booking-add-service-message'); if(addMsg) addMsg.textContent='';
+        return;
+      }
+      var unapplyButton=e.target.closest('[data-unapply-booking-voucher]');
+      if(unapplyButton) {
+        unapplyVoucherFromBooking(unapplyButton.getAttribute('data-unapply-booking-voucher'), window.__openBookingDetailId);
+        return;
+      }
     });
-    $('booking-detail-content').addEventListener('input',function(e){ if(e.target.matches('[data-booking-item-price],#crm-booking-discount-value')) updateBookingPricingPreview(); });
+    $('booking-detail-content').addEventListener('input',function(e){
+      if(e.target.id==='booking-add-service-search'){
+        var q=String(e.target.value||'').trim().toLowerCase();
+        var opts=Array.prototype.slice.call(document.querySelectorAll('#booking-add-service-list [data-service-id], .crm-booking-add-service-list [data-service-id]'));
+        var visible=0; opts.forEach(function(o){var hay=o.getAttribute('data-booking-service-option')||'';var match=!q||hay.indexOf(q)!==-1;o.classList.toggle('crm-walkin-service-hidden',!match);if(match)visible++;});
+      }
+      if(e.target.id==='booking-voucher-search'){
+        var q=String(e.target.value||'').trim().toLowerCase();
+        var opts=Array.prototype.slice.call(document.querySelectorAll('#booking-voucher-area [data-voucher-option]'));
+        var visible=0;
+        opts.forEach(function(o){var hay=o.getAttribute('data-voucher-option')||'';var match=!q||hay.indexOf(q)!==-1;o.classList.toggle('crm-walkin-service-hidden',!match);if(match)visible++;});
+        var list=document.querySelector('#booking-voucher-area .crm-booking-voucher-list');
+        if(list){var empty=list.querySelector('.crm-booking-voucher-no-results');if(!visible&&q){if(!empty){empty=document.createElement('div');empty.className='crm-small crm-booking-voucher-no-results';list.appendChild(empty);}empty.textContent='No vouchers found for “'+q+'”.';}else if(empty)empty.remove();}
+      }
+      if(e.target.matches('[data-booking-item-price],#crm-booking-discount-value')) updateBookingPricingPreview();
+    });
     $('booking-detail-content').addEventListener('change',function(e){ if(e.target.matches('#crm-booking-discount-type')) updateBookingPricingPreview(); });
     document.querySelectorAll('[data-booking-view]').forEach(function(b){b.addEventListener('click',function(){setBookingView(b.getAttribute('data-booking-view'));});});
     $('schedule-prev').addEventListener('click',function(){state.scheduleDate.setDate(state.scheduleDate.getDate()-7);renderSchedule();});
@@ -4575,7 +5129,7 @@
 
     $('service-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-edit-service]');if(b)editService(b.getAttribute('data-edit-service'));var d=e.target.closest('[data-delete-service]');if(d)deleteService(d.getAttribute('data-delete-service'));});
     $('category-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-edit-category]');if(b)editCategory(b.getAttribute('data-edit-category'));var d=e.target.closest('[data-delete-category]');if(d)deleteCategory(d.getAttribute('data-delete-category'));}); $('users-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-user]');if(edit){editUser(edit.getAttribute('data-edit-user'));return;}var toggle=e.target.closest('[data-toggle-user]');if(toggle){toggleUser(toggle.getAttribute('data-toggle-user'));return;}var reset=e.target.closest('[data-reset-password]');if(reset){resetUserPassword(reset.getAttribute('data-reset-password'));return;}var del=e.target.closest('[data-delete-user]');if(del)deleteUser(del.getAttribute('data-delete-user'));});
-    $('voucher-form').addEventListener('submit',saveVoucher);
+    $('voucher-form').addEventListener('submit',saveVoucher);$('voucher-discount-type').addEventListener('change',syncVoucherDiscountFields);$('voucher-price-usd').addEventListener('input',syncVoucherDiscountFields);$('voucher-price-qar').addEventListener('input',syncVoucherDiscountFields);$('app-setting-currency').addEventListener('change',function(){syncVoucherDiscountFields();renderVouchers();});
     $('voucher-reset').addEventListener('click',resetVoucherForm);
     $('voucher-cancel').addEventListener('click',function(){closeCrmFormCardModal('voucher-form-card');state.editingVoucherId=null;});
     $('new-voucher-top').addEventListener('click',function(){resetVoucherForm();openCrmFormCardModal('voucher-form-card');$('voucher-sku').focus();window.scrollTo({top:0,behavior:'smooth'});});
@@ -5302,6 +5856,10 @@
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
 
     try {
+      // Generate and persist the same customer-facing style of booking reference
+      // for CRM walk-in bookings. Public website bookings already pass their
+      // generated SAL-XXXXXX reference to the RPC.
+      var bookingReference = 'SAL-' + Date.now().toString().slice(-6);
       var bookingResult = await window.salonSupabase.from('bookings').insert({
         booking_date: date,
         start_time: start,
@@ -5316,6 +5874,7 @@
         total_duration_minutes: totalDuration,
         customer_id: Number(customerId),
         customer_notes: notes,
+        public_reference: bookingReference,
       }).select('id').single();
 
       if (bookingResult.error) throw bookingResult.error;

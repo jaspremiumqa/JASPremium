@@ -1577,3 +1577,72 @@ body.crm-form-modal-open{overflow:hidden;}
     width:100%!important;
   }
 }
+
+.crm-bookings-table{min-width:1180px}.crm-bookings-table th:nth-child(2),.crm-bookings-table td:nth-child(2){min-width:125px}.crm-bookings-table th:nth-child(4),.crm-bookings-table td:nth-child(4),.crm-bookings-table th:nth-child(5),.crm-bookings-table td:nth-child(5){min-width:150px;max-width:240px;white-space:normal}.crm-booking-reference{letter-spacing:.04em;font-variant-numeric:tabular-nums}.crm-detail-reference{display:flex;flex-direction:column;gap:3px;margin-right:18px}.crm-detail-reference strong{font-size:15px;letter-spacing:.04em}
+
+
+/* Booking voucher application UI */
+.crm-booking-voucher-section h3{margin:4px 0 6px;font-size:18px}
+.crm-booking-voucher-form{margin-top:14px}
+.crm-booking-voucher-actions{margin-top:12px;padding-top:12px;border-top:1px solid rgba(43,35,33,.10)}
+.crm-booking-voucher-linked-list{margin-top:18px;padding-top:14px;border-top:1px solid rgba(43,35,33,.10)}
+.crm-booking-voucher-linked{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid rgba(43,35,33,.08)}
+.crm-booking-voucher-linked:last-child{border-bottom:0}
+.crm-booking-voucher-linked>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.crm-booking-voucher-linked strong{overflow-wrap:anywhere}
+@media(max-width:640px){
+  .crm-booking-voucher-linked{align-items:flex-start;flex-direction:column}
+  .crm-booking-voucher-linked .crm-btn{width:100%}
+}
+
+/* Booking voucher picker: same searchable selector treatment as front-desk controls. */
+.crm-booking-voucher-picker{margin-top:14px}
+.crm-booking-voucher-dropdown{position:relative;border:1px solid var(--crm-line,#e7ddd8);border-radius:12px;background:#fff}
+.crm-booking-voucher-dropdown>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 13px;cursor:pointer;font-size:14px;font-weight:600}
+.crm-booking-voucher-dropdown>summary::-webkit-details-marker{display:none}
+.crm-booking-voucher-dropdown>summary:after{content:'⌄';font-size:16px;color:var(--crm-muted,#7a706b);transition:transform .15s}
+.crm-booking-voucher-dropdown[open]>summary:after{transform:rotate(180deg)}
+.crm-booking-voucher-dropdown .crm-walkin-service-menu{position:absolute;z-index:120;left:0;right:0;top:calc(100% + 6px);padding:8px;background:#fff;border:1px solid var(--crm-line,#e7ddd8);border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.12)}
+.crm-booking-voucher-list{max-height:260px;overflow-y:auto;overflow-x:hidden}
+.crm-booking-voucher-option{margin-bottom:6px;display:flex!important;width:100%;box-sizing:border-box}
+.crm-booking-voucher-option:last-child{margin-bottom:0}
+.crm-booking-voucher-option strong{display:block;white-space:normal;overflow-wrap:anywhere}
+.crm-booking-voucher-option small{display:block}
+.crm-booking-voucher-help{display:block;margin-top:8px}
+.crm-booking-voucher-linked-list{margin-top:18px;padding-top:14px;border-top:1px solid rgba(43,35,33,.10)}
+
+/* Booking detail controls are intentionally editable. */
+#booking-detail-modal .crm-modal-panel { pointer-events:auto; }
+#booking-detail-content input,
+#booking-detail-content select,
+#booking-detail-content textarea { pointer-events:auto; }
+.crm-booking-status-applied { background:#eadcc8 !important; color:#5b4328 !important; }
+
+/* Voucher search results use the same hidden-state behavior as service selectors. */
+.crm-booking-voucher-option.crm-walkin-service-hidden{display:none!important}
+.crm-booking-voucher-applied-list{margin-top:0}
+.crm-booking-voucher-applied{border-top:0;padding-top:0}
+.crm-booking-detail-locked .crm-booking-price-item input:disabled,
+.crm-booking-detail-locked .crm-booking-discount-row input:disabled,
+.crm-booking-detail-locked .crm-booking-discount-row select:disabled{opacity:.72;cursor:not-allowed}
+
+.crm-price-readonly{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:150px}.crm-price-readonly strong{font-size:15px}.crm-price-readonly .crm-small{opacity:.7}.crm-booking-voucher-item .crm-price-readonly{pointer-events:none}
+
+
+/* Booking type filter and service additions */
+.crm-booking-add-service-section h3{margin:4px 0 6px;font-size:18px}
+.crm-booking-service-dropdown{position:relative;border:1px solid var(--crm-line,#e7ddd8);border-radius:12px;background:#fff;margin-top:12px}
+.crm-booking-service-dropdown>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 13px;cursor:pointer;font-size:14px;font-weight:600}
+.crm-booking-service-dropdown>summary::-webkit-details-marker{display:none}
+.crm-booking-service-dropdown>summary:after{content:'⌄';font-size:16px;color:var(--crm-muted,#7a706b)}
+.crm-booking-service-dropdown[open]>summary:after{transform:rotate(180deg)}
+.crm-booking-service-dropdown .crm-walkin-service-menu{position:absolute;z-index:120;left:0;right:0;top:calc(100% + 6px);padding:8px;background:#fff;border:1px solid var(--crm-line,#e7ddd8);border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.12)}
+.crm-booking-add-service-list{max-height:260px;overflow-y:auto}
+.crm-booking-service-option{margin-bottom:6px;display:flex!important;width:100%;box-sizing:border-box}
+.crm-booking-service-option:last-child{margin-bottom:0}
+.crm-booking-add-service-price-row{margin-top:12px;align-items:center}
+.crm-booking-add-service-price-row label{font-weight:600;min-width:55px}
+.crm-booking-add-service-price-row input{flex:1}
+.crm-booking-add-service-actions{margin-top:12px;padding-top:12px;border-top:1px solid rgba(43,35,33,.10);align-items:center}
+.crm-booking-add-service-actions .crm-small{margin-left:4px}
+@media(max-width:900px){.crm-booking-add-service-price-row{display:grid;grid-template-columns:1fr}.crm-booking-add-service-price-row label{min-width:0}}

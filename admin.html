@@ -271,17 +271,32 @@
             <input id="voucher-title-ar" dir="rtl">
           </div>
           <div class="crm-field">
-            <label for="voucher-duration">Duration (minutes)</label>
-            <input id="voucher-duration" type="number" min="1" value="30">
-            <small>Defaults to 30 minutes.</small>
-          </div>
-          <div class="crm-field">
             <label for="voucher-price-usd">USD price</label>
             <input id="voucher-price-usd" type="number" min="0" step="0.01">
+            <small>Voucher purchase price in USD.</small>
           </div>
           <div class="crm-field">
             <label for="voucher-price-qar">QAR price</label>
             <input id="voucher-price-qar" type="number" min="0" step="0.01">
+            <small>Voucher purchase price in QAR.</small>
+          </div>
+          <div class="crm-field">
+            <label for="voucher-discount-type">Discount type</label>
+            <select id="voucher-discount-type">
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed amount</option>
+            </select>
+            <small id="voucher-discount-type-help">Percentage discounts use Discount value.</small>
+          </div>
+          <div class="crm-field">
+            <label for="voucher-discount-value">Discount value</label>
+            <input id="voucher-discount-value" type="number" min="0" step="0.01" value="0">
+            <small id="voucher-discount-value-help">Enter the percentage, from 0% to 100%.</small>
+          </div>
+          <div class="crm-field">
+            <label for="voucher-duration">Duration (minutes)</label>
+            <input id="voucher-duration" type="number" min="1" value="30">
+            <small>Defaults to 30 minutes.</small>
           </div>
           <label class="crm-check">
             <input id="voucher-active" type="checkbox" checked>
@@ -327,7 +342,7 @@
     <div class="crm-table-wrap">
       <table class="crm-table crm-vouchers-table">
         <thead>
-          <tr><th>Image</th><th>SKU</th><th>Voucher</th><th>Prices</th><th>Duration</th><th>Status</th><th></th></tr>
+          <tr><th>Image</th><th>SKU</th><th>Voucher</th><th>Prices</th><th>Discount</th><th>Duration</th><th>Status</th><th></th></tr>
         </thead>
         <tbody id="voucher-table-body"></tbody>
       </table>
@@ -502,6 +517,9 @@
               <select id="booking-status-filter" class="crm-booking-filter" aria-label="Filter bookings by status">
                 <option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
               </select>
+              <select id="booking-type-filter" class="crm-booking-filter" aria-label="Filter bookings by type">
+                <option value="all">All bookings</option><option value="service">Services</option><option value="voucher">Vouchers</option>
+              </select>
               <select id="booking-date-filter" class="crm-booking-filter"><option value="all">All dates</option><option value="today">Today</option><option value="upcoming">Upcoming</option><option value="past">Past</option></select>
               <div class="crm-view-toggle" role="group" aria-label="Booking view">
                 <button type="button" data-booking-view="schedule">Schedule</button>
@@ -523,7 +541,7 @@
             <div id="booking-list" class="crm-booking-list-view">
               <div class="crm-table-wrap">
               <table class="crm-table crm-bookings-table">
-                <thead><tr><th>Date & time</th><th>Customer</th><th>Service</th><th>Contact</th><th>Total</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Date & time</th><th>Booking ref</th><th>Customer</th><th>Service</th><th>Voucher</th><th>Contact</th><th>Total</th><th>Status</th><th></th></tr></thead>
                 <tbody id="bookings-table-body"></tbody>
               </table>
               </div>
@@ -1281,7 +1299,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v51-currency-fix"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v52-booking-voucher"></script>
 
 <div id="crm-confirm-modal" class="crm-confirm-modal crm-hidden" role="dialog" aria-modal="true" aria-labelledby="crm-confirm-title">
   <div class="crm-confirm-card">
