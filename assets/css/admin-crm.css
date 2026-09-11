@@ -1291,3 +1291,289 @@ body.crm-form-modal-open{overflow:hidden;}
 .crm-journal-account-option.crm-journal-account-hidden{display:none!important;}
 .crm-journal-account-list{overflow-x:hidden!important;}
 .crm-form-actions{border-top:1px solid var(--crm-line,#e7ddd8)!important;padding-top:18px!important;margin-top:20px!important;}
+
+
+/* v52: category/service popups need a real viewport scroll so the lower
+   fields (Sort order + Active) are always reachable on desktop and mobile. */
+.crm-form-modal{
+  align-items:center!important;
+  justify-content:center!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding:18px!important;
+}
+.crm-form-modal-panel{
+  width:min(760px,calc(100vw - 36px))!important;
+  max-height:calc(100vh - 36px)!important;
+  height:auto!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  flex:0 0 auto!important;
+  box-sizing:border-box!important;
+  scrollbar-width:thin;
+}
+.crm-form-modal-panel .crm-form-actions{
+  position:sticky!important;
+  bottom:0!important;
+  background:#fff!important;
+  padding-bottom:2px!important;
+  z-index:5!important;
+}
+@media(max-width:620px){
+  .crm-form-modal{padding:10px!important;align-items:flex-start!important;}
+  .crm-form-modal-panel{width:100%!important;max-height:calc(100vh - 20px)!important;}
+}
+
+
+/* ============================================================
+   Category + Service modal UI cleanup
+   Keep the popup centered, let the whole popup scroll naturally,
+   and never let the footer actions cover Sort order / Active.
+   ============================================================ */
+.crm-form-modal{
+  position:fixed!important;
+  inset:0!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding:28px 20px!important;
+  box-sizing:border-box!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+
+.crm-form-modal-panel{
+  position:relative!important;
+  width:min(760px,100%)!important;
+  max-width:760px!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  flex:0 0 auto!important;
+  margin:0 auto 28px!important;
+  padding:30px!important;
+  box-sizing:border-box!important;
+  border-radius:20px!important;
+}
+
+/* Do not overlay the form's lower fields with the action bar. */
+.crm-form-modal-panel .crm-form-actions{
+  position:static!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  margin-top:24px!important;
+  padding:18px 0 0!important;
+  border-top:1px solid var(--crm-line,#e7ddd8)!important;
+  background:transparent!important;
+  z-index:auto!important;
+}
+
+/* Give the final grid row a little breathing room before the buttons. */
+.crm-form-modal-panel .crm-form-grid{
+  margin-bottom:2px!important;
+}
+
+/* Active checkbox aligns cleanly with Sort order on desktop. */
+.crm-form-modal-panel .crm-form-grid > .crm-check{
+  align-self:end!important;
+  margin-top:0!important;
+  min-height:44px!important;
+  box-sizing:border-box!important;
+}
+
+/* Keep the close button inside the card and above all content. */
+.crm-form-modal-panel > .crm-modal-close{
+  position:absolute!important;
+  top:18px!important;
+  right:18px!important;
+  z-index:20!important;
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  height:38px!important;
+  padding:0!important;
+  border:1px solid #e5d9d2!important;
+  border-radius:50%!important;
+  background:#f4efeb!important;
+  color:#514740!important;
+  font-size:24px!important;
+  line-height:1!important;
+  cursor:pointer!important;
+}
+
+.crm-form-modal-panel > .crm-modal-close:hover{
+  background:#ece4df!important;
+}
+
+/* The category image editor stays compact instead of stretching the modal. */
+.crm-form-modal-panel .crm-category-image-editor{
+  min-height:108px!important;
+  box-sizing:border-box!important;
+}
+
+@media(max-width:760px){
+  .crm-form-modal{
+    align-items:flex-start!important;
+    padding:12px 10px!important;
+  }
+  .crm-form-modal-panel{
+    width:100%!important;
+    max-width:none!important;
+    margin-bottom:18px!important;
+    padding:22px 16px!important;
+    border-radius:17px!important;
+  }
+  .crm-form-modal-panel .crm-form-actions{
+    flex-direction:column-reverse!important;
+  }
+  .crm-form-modal-panel .crm-form-actions .crm-btn{
+    width:100%!important;
+  }
+  .crm-form-modal-panel > .crm-modal-close{
+    top:12px!important;
+    right:12px!important;
+    width:34px!important;
+    height:34px!important;
+    font-size:22px!important;
+  }
+}
+
+/* ============================================================
+   v53 — Category / Service forms: booking-style modal layout
+   Header stays fixed, fields scroll inside the modal, and the
+   action bar never covers the final fields.
+   ============================================================ */
+.crm-form-modal{
+  position:fixed!important;
+  inset:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:24px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+.crm-form-modal-panel{
+  position:relative!important;
+  display:flex!important;
+  flex-direction:column!important;
+  width:min(760px,calc(100vw - 48px))!important;
+  max-width:760px!important;
+  height:min(900px,calc(100vh - 48px))!important;
+  max-height:calc(100vh - 48px)!important;
+  margin:0!important;
+  padding:30px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  border-radius:22px!important;
+  background:#fff!important;
+  box-shadow:0 24px 70px rgba(36,31,29,.22)!important;
+}
+
+/* The form fills the card. */
+.crm-form-modal-panel > .crm-standard-form{
+  display:flex!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  flex-direction:column!important;
+}
+
+/* Only the fields scroll, exactly like a long booking form. */
+.crm-form-modal-panel > .crm-standard-form > .crm-form-grid{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding:4px 6px 18px 0!important;
+  margin:0!important;
+  scrollbar-width:thin!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+
+/* Keep the action buttons visible at the bottom. */
+.crm-form-modal-panel > .crm-standard-form > .crm-form-actions{
+  flex:0 0 auto!important;
+  position:relative!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin:0!important;
+  padding:18px 0 0!important;
+  border-top:1px solid var(--crm-line,#e7ddd8)!important;
+  background:#fff!important;
+  z-index:5!important;
+}
+
+/* Give the last row enough space so it is never hidden behind the footer. */
+.crm-form-modal-panel > .crm-standard-form > .crm-form-grid::after{
+  content:"";
+  display:block;
+  height:8px;
+}
+
+/* Booking-style comfortable form fields. */
+.crm-form-modal-panel .crm-field input,
+.crm-form-modal-panel .crm-field select,
+.crm-form-modal-panel .crm-field textarea{
+  box-sizing:border-box!important;
+}
+
+.crm-form-modal-panel .crm-category-image-editor{
+  min-height:108px!important;
+}
+
+.crm-form-modal-panel .crm-check{
+  align-self:end!important;
+  min-height:44px!important;
+  box-sizing:border-box!important;
+}
+
+@media(max-width:760px){
+  .crm-form-modal{
+    align-items:center!important;
+    padding:12px!important;
+  }
+
+  .crm-form-modal-panel{
+    width:100%!important;
+    max-width:none!important;
+    height:min(94vh,900px)!important;
+    max-height:94vh!important;
+    padding:22px 16px!important;
+    border-radius:20px!important;
+  }
+
+  .crm-form-modal-panel > .crm-standard-form > .crm-form-grid{
+    grid-template-columns:1fr!important;
+    padding-right:2px!important;
+  }
+
+  .crm-form-modal-panel > .crm-standard-form > .crm-form-actions{
+    flex-direction:row!important;
+  }
+
+  .crm-form-modal-panel > .crm-standard-form > .crm-form-actions .crm-btn{
+    flex:1 1 0!important;
+    width:auto!important;
+  }
+
+  .crm-form-modal-panel > .crm-modal-close{
+    top:12px!important;
+    right:12px!important;
+    width:36px!important;
+    height:36px!important;
+  }
+}
+
+@media(max-width:420px){
+  .crm-form-modal-panel > .crm-standard-form > .crm-form-actions{
+    flex-direction:column-reverse!important;
+  }
+  .crm-form-modal-panel > .crm-standard-form > .crm-form-actions .crm-btn{
+    width:100%!important;
+  }
+}

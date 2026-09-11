@@ -1541,12 +1541,13 @@
       var imageHtml=image?'<div class="crm-category-thumb"><img src="'+escapeHtml(image)+'" alt="'+escapeHtml(c.name_en||'Category')+'" onerror="this.parentNode.style.display=&quot;none&quot;"></div>':'<span class="crm-small">No image</span>';
       return '<tr><td><strong>'+escapeHtml(c.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(c.name_ar)+'</span></td>'+
       '<td>'+imageHtml+'</td><td>'+escapeHtml(c.image_width||'')+' × '+escapeHtml(c.image_height||'')+'</td>'+
+      '<td>'+escapeHtml(c.sort_order==null?'':c.sort_order)+'</td>'+
       '<td>'+(c.active?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'</td>'+
       '<td><div class="crm-row-actions">'+
       (can('services','update')?'<button class="crm-btn crm-btn-secondary" data-edit-category="'+c.id+'">Edit</button>':'')+
       (can('services','delete')?'<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-category="'+c.id+'">Delete</button>':'')+
       '</div></td></tr>';
-    }).join('') || '<tr><td colspan="5" class="crm-empty">No categories found.</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="crm-empty">No categories found.</td></tr>';
   }
 
   function renderServices() {
@@ -2031,8 +2032,10 @@
     var category=state.categories.find(function(c){return String(c.id)===String(categoryId);});
     var prefix=serviceSkuPrefix(category && category.name_en);
     var max=0;
+    /* SKU numbering is GLOBAL per prefix, not per category.
+       Example: Hair Cut = HC-001, Hair Color = HC-002.
+       This prevents duplicate SKUs when two category names share initials. */
     state.services.forEach(function(s){
-      if(String(s.category_id)!==String(categoryId)) return;
       var match=String(s.sku||'').match(/^([A-Z0-9]+)-(\d+)$/i);
       if(!match || String(match[1]).toUpperCase()!==String(prefix).toUpperCase()) return;
       max=Math.max(max,Number(match[2])||0);
@@ -2050,8 +2053,8 @@
     }
     var sequence=nextServiceSequence(categoryId);
     var sku=prefix+'-'+String(sequence).padStart(3,'0');
-    var existing=state.services.some(function(s){return String(s.category_id)===String(categoryId) && String(s.sku||'').toLowerCase()===sku.toLowerCase();});
-    while(existing){sequence++;sku=prefix+'-'+String(sequence).padStart(3,'0');existing=state.services.some(function(s){return String(s.category_id)===String(categoryId) && String(s.sku||'').toLowerCase()===sku.toLowerCase();});}
+    var existing=state.services.some(function(s){return String(s.sku||'').toLowerCase()===sku.toLowerCase();});
+    while(existing){sequence++;sku=prefix+'-'+String(sequence).padStart(3,'0');existing=state.services.some(function(s){return String(s.sku||'').toLowerCase()===sku.toLowerCase();});}
     $('service-sku').value=sku;
   }
   function resetServiceForm(){

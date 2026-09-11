@@ -146,7 +146,7 @@
                   <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
                 </select>
               </div>
-              <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Category</th><th>Image</th><th>Size</th><th>Status</th><th>Actions</th></tr></thead><tbody id="category-table-body"></tbody></table></div>
+              <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Category</th><th>Image</th><th>Size</th><th>Sort order</th><th>Status</th><th>Actions</th></tr></thead><tbody id="category-table-body"></tbody></table></div>
             </div>
           </div>
 
@@ -188,7 +188,7 @@
               <button type="button" class="crm-modal-close" data-close-service-form aria-label="Close">×</button>
               <div class="crm-section-label">Service</div><h2 id="service-form-title">Add Service</h2><p class="crm-small">Use real USD/QAR prices. Duration can stay empty.</p>
               <form id="service-form" class="crm-standard-form"><div class="crm-form-grid">
-                <div class="crm-field"><label>Category</label><select id="service-category" required></select></div><div class="crm-field"><label>SKU</label><input id="service-sku" placeholder="HS-001" required readonly aria-readonly="true"><small>Generated from the category name and next number in that category.</small></div>
+                <div class="crm-field"><label>Category</label><select id="service-category" required></select></div><div class="crm-field"><label>SKU</label><input id="service-sku" placeholder="HS-001" required readonly aria-readonly="true"><small>Generated automatically from the category name and next available global number.</small></div>
                 <div class="crm-field"><label>English name</label><input id="service-name-en" required></div><div class="crm-field"><label>Arabic name</label><input id="service-name-ar" required dir="rtl"></div>
                 <div class="crm-field"><label>English description</label><textarea id="service-description-en"></textarea></div><div class="crm-field"><label>Arabic description</label><textarea id="service-description-ar" dir="rtl"></textarea></div>
                 <div class="crm-field"><label>USD price</label><input id="service-price-usd" type="number" min="0" step="0.01"></div><div class="crm-field"><label>QAR price</label><input id="service-price-qar" type="number" min="0" step="0.01"></div>

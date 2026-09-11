@@ -66,27 +66,38 @@
   }
 
   function serviceCurrency(service){
-    const explicit = service && service.currency ? String(service.currency).toUpperCase() : '';
-    if(explicit) return explicit;
+    if(!service) return null;
 
-    // The CRM's Display currency controls the public booking currency.
-    // Services store both USD and QAR prices, so use the configured currency
-    // whenever that price exists instead of silently defaulting to USD.
-    const configured = String(state.currency || 'USD').toUpperCase();
-    if(service && service.prices && service.prices[configured] != null) return configured;
-    if(service && configured === 'USD' && service.price_usd != null) return 'USD';
-    if(service && configured === 'QAR' && service.priceQar != null) return 'QAR';
-    if(service && service.priceQar != null && service.price == null) return 'QAR';
-    if(service && service.price != null && (!service.prices || Object.keys(service.prices).length === 0)) return configured;
-    return configured;
+    // Currency must always correspond to an actual price. Never send a
+    // currency with a null price: Supabase validates booking-service currency
+    // inside create_public_booking.
+    const explicit = service.currency ? String(service.currency).toUpperCase() : '';
+    const configured = String(state.currency || 'QAR').toUpperCase();
+    const prices = service.prices || {};
+
+    if(explicit && prices[explicit] != null && Number.isFinite(Number(prices[explicit]))) {
+      return explicit;
+    }
+    if(prices[configured] != null && Number.isFinite(Number(prices[configured]))) {
+      return configured;
+    }
+    if(service.price_qar != null && Number.isFinite(Number(service.price_qar))) return 'QAR';
+    if(service.priceQar != null && Number.isFinite(Number(service.priceQar))) return 'QAR';
+    if(service.price_usd != null && Number.isFinite(Number(service.price_usd))) return 'USD';
+    if(prices.USD != null && Number.isFinite(Number(prices.USD))) return 'USD';
+    if(service.price != null && Number.isFinite(Number(service.price))) return configured;
+
+    return null;
   }
 
   function price(service){
     const currency = serviceCurrency(service);
-    if(service && service.prices && service.prices[currency] != null) return Number(service.prices[currency]);
-    if(service && currency === 'QAR' && service.priceQar != null) return Number(service.priceQar);
-    if(service && currency === 'USD' && service.price_usd != null) return Number(service.price_usd);
-    if(service && service.price != null && (!service.prices || Object.keys(service.prices).length === 0)) return Number(service.price);
+    if(!service || !currency) return null;
+    if(service.prices && service.prices[currency] != null) return Number(service.prices[currency]);
+    if(currency === 'QAR' && service.price_qar != null) return Number(service.price_qar);
+    if(currency === 'QAR' && service.priceQar != null) return Number(service.priceQar);
+    if(currency === 'USD' && service.price_usd != null) return Number(service.price_usd);
+    if(service.price != null) return Number(service.price);
     return null;
   }
 
@@ -507,7 +518,9 @@
                 USD: source.price == null ? null : Number(source.price),
                 QAR: source.priceQar == null ? null : Number(source.priceQar)
               },
-              currency: String(state.currency || 'USD').toUpperCase(),
+              currency: (source.priceQar != null && String(state.currency || 'QAR').toUpperCase() === 'QAR')
+                ? 'QAR'
+                : (source.price != null ? 'USD' : null),
               durationMinutes:Number(source.durationMinutes || 30),
               image:source.image || '',
               active:true,
@@ -656,8 +669,10 @@
       }
       state.selected.push(sku);
     }
-    state.date=null; state.start=null; saveDraft(); render();
-    showStep(1);
+    state.date=null; state.start=null; saveDraft();
+    /* Keep the user's current scroll position while selecting services.
+       showStep(1) used to force the page back to the top after every click. */
+    render();
   }
 
   function setViewMonth(year, month){
@@ -1077,6 +1092,19 @@
     if(!state.date||!state.start){err.textContent=t('Please select a date and time.','يرجى اختيار التاريخ والوقت.');return;}
     if(!validStart(state.date,state.start)){err.textContent=t('That time is no longer available. Please choose another time.','هذا الوقت لم يعد متاحاً. يرجى اختيار وقت آخر.');showStep(2);return;}
 
+    const selected = selectedServices();
+    const currencies = selected.map(serviceCurrency);
+    const invalidCurrency = currencies.some(c => !c);
+    const invalidPrice = selected.some(s => price(s) == null || !Number.isFinite(Number(price(s))));
+    if(invalidCurrency){
+      err.textContent=t('One of the selected services has no valid currency. Please update its price in the CRM.','إحدى الخدمات المختارة لا تحتوي على عملة صالحة. يرجى تحديث سعرها في نظام إدارة الصالون.');
+      return;
+    }
+    if(invalidPrice){
+      err.textContent=t('One of the selected services has no valid price in its booking currency. Please update the service or voucher price in the CRM.','إحدى الخدمات المختارة لا تحتوي على سعر صالح بعملة الحجز. يرجى تحديث سعر الخدمة أو القسيمة في نظام إدارة الصالون.');
+      return;
+    }
+
     const bookingCurrency=selectedBookingCurrency();
     if(!bookingCurrency){
       err.textContent=t('All selected services must use the same currency.','يجب أن تستخدم جميع الخدمات المختارة نفس العملة.');
@@ -1084,10 +1112,20 @@
     }
     const id='SAL-'+Date.now().toString().slice(-6);
     let cur=toMin(state.start);
-    const items=selectedServices().map(s=>{
+    const items=selected.map(s=>{
       const st=minutesToTime(cur),en=minutesToTime(cur+duration(s));
       cur+=duration(s);
-      return {serviceSku:s.sku,start:st,end:en,currency:serviceCurrency(s),price:price(s)};
+      const itemCurrency=serviceCurrency(s);
+      const itemPrice=price(s);
+      return {
+        serviceSku:s.sku,
+        start:st,
+        end:en,
+        currency:itemCurrency,
+        service_currency:itemCurrency,
+        serviceCurrency:itemCurrency,
+        price:itemPrice
+      };
     });
     const customer={name,phone,email,notes};
 
@@ -1107,10 +1145,14 @@
       });
     } catch(e) {
       console.error('Could not create Supabase booking:',e);
-      const unavailable=/TIME_SLOT_UNAVAILABLE|overlap|already booked|not available/i.test(String(e.message||''));
+      const message=String(e.message||'');
+      const unavailable=/TIME_SLOT_UNAVAILABLE|overlap|already booked|not available/i.test(message);
+      const currencyError=/BOOKING_SERVICE_CURRENCY_REQUIRED|currency is required/i.test(message);
       err.textContent=unavailable
         ? t('That time was just booked. Please choose another time.','تم حجز هذا الوقت للتو. يرجى اختيار وقت آخر.')
-        : t('We could not save your booking. Please try again.','تعذر حفظ الحجز. يرجى المحاولة مرة أخرى.');
+        : currencyError
+          ? t('The selected service or voucher does not have a valid booking currency/price. Please update its price in the CRM.','الخدمة أو القسيمة المختارة لا تحتوي على عملة/سعر صالح للحجز. يرجى تحديث السعر في نظام إدارة الصالون.')
+          : t('We could not save your booking. Please try again.','تعذر حفظ الحجز. يرجى المحاولة مرة أخرى.');
       if(unavailable) showStep(2);
       if(submitButton){
         submitButton.disabled=false;
