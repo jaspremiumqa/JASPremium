@@ -509,6 +509,42 @@ div#date-picker-container {
   max-height: 40px;
 }
 
+/* ── Vertically center hamburger toggle + logo in the fixed/mobile navbar panel ── */
+.rd-navbar-fixed .rd-navbar-panel {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.rd-navbar-fixed .rd-navbar-toggle {
+  position: static;
+  flex-shrink: 0;
+}
+
+.rd-navbar-fixed .rd-navbar-brand {
+  position: static;
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  overflow: visible;
+}
+
+.rd-navbar-fixed .rd-navbar-brand .brand-name {
+  display: flex;
+  align-items: center;
+}
+
+.rd-navbar-fixed .rd-navbar-brand .brand-mobile,
+.rd-navbar-fixed .rd-navbar-brand .brand-desktop {
+  display: flex;
+  align-items: center;
+}
+
+html[lang="ar"] .rd-navbar-fixed .rd-navbar-brand {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
 /* Desktop header: hide the site logo/brand mark and let the controls use the full header width. */
 @media (min-width: 992px) {
   .rd-navbar-sidebar-linked .page-header-perspective .page-header-right {
