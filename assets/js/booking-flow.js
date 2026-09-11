@@ -47,20 +47,45 @@
     }
   }
 
-  function money(value){
+  function currencyLabel(currency){
+    currency = String(currency || state.currency || 'USD').toUpperCase();
+    const options = state.config && state.config.currencyOptions;
+    const item = options && options[currency];
+    if(item){
+      return String(item[state.lang] || item.en || item.ar || currency);
+    }
+    if(currency === 'QAR') return state.lang === 'ar' ? 'ريال' : 'QAR';
+    if(currency === 'USD') return '$';
+    return currency;
+  }
+
+  function money(value, currency){
     if (value === null || value === undefined || value === '') return '—';
-    const symbol = (state.config && state.config.currencyOptions && state.config.currencyOptions[state.currency])
-      ? state.config.currencyOptions[state.currency][state.lang] : (state.currency === 'QAR' ? (state.lang==='ar'?'ريال':'QAR') : '$');
-    return state.lang === 'ar' ? `${value} ${symbol}` : `${value} ${symbol}`;
+    const label = currencyLabel(currency || state.currency);
+    return `${value} ${label}`;
   }
 
   function serviceCurrency(service){
-    return String((service && service.currency) || state.currency || 'USD').toUpperCase();
+    const explicit = service && service.currency ? String(service.currency).toUpperCase() : '';
+    if(explicit) return explicit;
+
+    // The CRM's Display currency controls the public booking currency.
+    // Services store both USD and QAR prices, so use the configured currency
+    // whenever that price exists instead of silently defaulting to USD.
+    const configured = String(state.currency || 'USD').toUpperCase();
+    if(service && service.prices && service.prices[configured] != null) return configured;
+    if(service && configured === 'USD' && service.price_usd != null) return 'USD';
+    if(service && configured === 'QAR' && service.priceQar != null) return 'QAR';
+    if(service && service.priceQar != null && service.price == null) return 'QAR';
+    if(service && service.price != null && (!service.prices || Object.keys(service.prices).length === 0)) return configured;
+    return configured;
   }
 
   function price(service){
     const currency = serviceCurrency(service);
     if(service && service.prices && service.prices[currency] != null) return Number(service.prices[currency]);
+    if(service && currency === 'QAR' && service.priceQar != null) return Number(service.priceQar);
+    if(service && currency === 'USD' && service.price_usd != null) return Number(service.price_usd);
     if(service && service.price != null && (!service.prices || Object.keys(service.prices).length === 0)) return Number(service.price);
     return null;
   }
@@ -255,7 +280,9 @@
 
   function convertSupabaseServices(categories, services){
     return {
-      displayCurrency: 'USD',
+      // The public booking currency is resolved from application_settings
+      // after the CRM Display currency is loaded.
+      displayCurrency: null,
       categories: (categories || []).map(category => ({
         id: category.id,
         'name-en': category.name_en,
@@ -281,9 +308,10 @@
               USD: service.price_usd,
               QAR: service.price_qar
             },
-            // Snapshot the currency used by the public booking from the CRM/site default.
-            // The booking UI never asks the customer to choose a currency.
-            currency: String(service.currency || 'USD').toUpperCase(),
+            // Do not default this to USD. The CRM Display currency is loaded
+            // separately and is the public default when the service has no
+            // explicit currency field.
+            currency: service.currency ? String(service.currency).toUpperCase() : '',
             durationMinutes: Number(service.duration_minutes || 30),
             active: service.active !== false,
             sortOrder: service.sort_order || 0
@@ -399,6 +427,7 @@
         : '',
       durationMinutes:Number(v.duration_minutes || 30),
       price:v.price_usd == null ? null : Number(v.price_usd),
+      price_usd:v.price_usd == null ? null : Number(v.price_usd),
       priceQar:v.price_qar == null ? null : Number(v.price_qar),
       active:v.active !== false
     }));
@@ -442,7 +471,14 @@
       state.currency=(appSettings && appSettings.display_currency) || 'USD';
       state.scheduleRules=bookingConfig.scheduleRules || [];
       state.categories=services.categories || [];
-      state.services=state.categories.flatMap(c => (c.services||[]).filter(s=>s.active).map(s=>({...s,category:c, currency:String(s.currency || state.currency || 'USD').toUpperCase()})));
+      // Resolve each service's effective currency only after the CRM
+      // application setting has been loaded. This is what makes changing
+      // Display currency in admin.html immediately affect booking.html.
+      state.services=state.categories.flatMap(c => (c.services||[]).filter(s=>s.active).map(s=>({
+        ...s,
+        category:c,
+        currency:String(s.currency || '').toUpperCase()
+      })));
 
       // Supabase is the source of truth for services.
       // A missing/invalid service duration defaults to 30 minutes.
