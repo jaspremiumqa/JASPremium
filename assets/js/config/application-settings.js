@@ -281,7 +281,7 @@
       img.removeAttribute('height');
       img.style.setProperty('width', navLogo.width || '125px', 'important');
       img.style.setProperty('height', navLogo.height || 'auto', 'important');
-      img.style.setProperty('max-width', '100%', 'important');
+      img.style.setProperty('max-width', '100px', 'important');
       img.style.setProperty('object-fit', 'contain', 'important');
       img.hidden = false;
     });
@@ -302,7 +302,7 @@
             img.removeAttribute("height");
             img.style.setProperty("width", otherNavLogo.width || "125px", "important");
             img.style.setProperty("height", otherNavLogo.height || "auto", "important");
-            img.style.setProperty("max-width", "88px", "important");
+            img.style.setProperty("max-width", "100px", "important");
             img.style.setProperty("object-fit", "contain", "important");
             img.hidden = false;
           });
