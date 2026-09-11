@@ -3293,7 +3293,8 @@
     var discountAmount = Number(b.discount_amount || 0);
     var bookingCurrency = String(((b.items && b.items[0] && b.items[0].currency) || b.currency || settingValue('display_currency', 'USD')) || 'USD').toUpperCase();
     var finalPrice = Number(b.total != null ? b.total : Math.max(savedSubtotal-discountAmount,0));
-    var nextStatuses = ['pending','confirmed','completed','cancelled'].filter(function(s){return s!==status;}).map(function(s){
+    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g,' ') === 'staff';
+    var nextStatuses = (isStaffRole && status === 'cancelled') ? '' : ['pending','confirmed','completed','cancelled'].filter(function(s){return s!==status;}).map(function(s){
       return '<button type="button" class="crm-btn ' + (s==='cancelled'?'crm-btn-danger':'crm-btn-secondary') + '" data-booking-status="' + s + '" data-booking-id="' + escapeHtml(b.id) + '">' + statusLabel(s) + '</button>';
     }).join('');
     $('booking-detail-content').innerHTML =
@@ -3470,6 +3471,15 @@
     if(!requirePermission('bookings','update')) return;
     var b = findBooking(id); if (!b) return;
     status = String(status || 'pending').toLowerCase();
+
+    // Staff can cancel a booking, but once it is cancelled they cannot move it
+    // back to another status. Managers/administrators retain the normal status controls.
+    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g,' ') === 'staff';
+    if (isStaffRole && bookingStatus(b) === 'cancelled') {
+      message('Staff cannot change a cancelled booking to another status.', 'error');
+      renderBookingDetail(id);
+      return;
+    }
 
     if (status === 'pending' || status === 'confirmed') {
       var conflict = hasBlockingOverlap(b, id);
@@ -5586,9 +5596,13 @@
     if (!panel) return;
     if (!can('customers', 'create')) {
       panel.classList.add('crm-hidden');
+      var blockedName = $('walkin-new-customer-name');
+      if (blockedName) blockedName.required = false;
       return;
     }
     panel.classList.remove('crm-hidden');
+    var requiredName = $('walkin-new-customer-name');
+    if (requiredName) requiredName.required = true;
     // Always reset the new-customer fields when a new search has no match.
     // This prevents a previous phone/name from being carried into a different search.
     var name = $('walkin-new-customer-name');
@@ -5605,7 +5619,17 @@
   function hideWalkinNewCustomer() {
     var panel = $('walkin-new-customer');
     if (panel) panel.classList.add('crm-hidden');
+    var name = $('walkin-new-customer-name');
+    if (name) name.required = false;
   }
+
+  // The new-customer name is required only while the new-customer panel is visible.
+  // Keeping it non-required while hidden prevents the browser from blocking form submission.
+  (function syncWalkinNewCustomerRequiredState(){
+    var panel = $('walkin-new-customer');
+    var name = $('walkin-new-customer-name');
+    if (name) name.required = !!(panel && !panel.classList.contains('crm-hidden'));
+  })();
 
   async function createWalkinCustomer() {
     if (!can('customers', 'create')) throw new Error('You do not have permission to create customers.');
