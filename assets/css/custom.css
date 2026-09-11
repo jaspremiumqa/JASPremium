@@ -534,8 +534,7 @@ div#date-picker-container {
   align-items: center;
 }
 
-.rd-navbar-fixed .rd-navbar-brand .brand-mobile,
-.rd-navbar-fixed .rd-navbar-brand .brand-desktop {
+.rd-navbar-fixed .rd-navbar-brand .brand-mobile {
   display: flex;
   align-items: center;
 }
