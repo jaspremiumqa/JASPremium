@@ -55,6 +55,7 @@
       default_language: String(defaultLanguage).toLowerCase(),
       website_name: String(websiteName).trim(),
       contact_phone: String(contactPhone).trim(),
+      logo_image: optionalImage(raw.logo_image),
       header_image: requireImage(raw.header_image || raw.headerImage, 'header_image'),
       main_page_nav_logo_image: optionalImage(raw.main_page_nav_logo_image),
       other_pages_nav_logo_image: optionalImage(raw.other_pages_nav_logo_image || raw.nav_logo_image),
@@ -72,23 +73,44 @@
 
   async function loadFromSupabase() {
     if (!window.salonSupabase) throw new Error('Application data service is not available.');
-    var result = await window.salonSupabase
-      .from('application_settings')
-      .select('setting_key, setting_value')
-      .eq('active', true);
-    if (result.error) throw result.error;
+    var results = await Promise.all([
+      window.salonSupabase.from('application_settings').select('setting_key, setting_value').eq('active', true),
+      window.salonSupabase.from('currencies').select('id,code,en_label,ar_label,active,display_currency,sort_order').eq('active', true).order('sort_order',{ascending:true}).order('code',{ascending:true}),
+      window.salonSupabase.from('languages').select('id,code,en_label,native_label,active,is_default,sort_order').eq('active', true).order('sort_order',{ascending:true}).order('code',{ascending:true}),
+      window.salonSupabase.from('social_media').select('id,platform,slug,url,active,sort_order').eq('active', true).order('sort_order',{ascending:true}).order('platform',{ascending:true})
+    ]);
+    if (results[0].error) throw results[0].error;
+    if (results[1].error) throw results[1].error;
+    if (results[2].error) throw results[2].error;
+    if (results[3].error) throw results[3].error;
 
     var settings = {};
-    (result.data || []).forEach(function (row) {
+    (results[0].data || []).forEach(function (row) {
+      // These settings are now maintained in dedicated tables.
+      if (row.setting_key === 'currency_options' || String(row.setting_key || '').indexOf('social_') === 0) return;
       settings[row.setting_key] = parseValue(row.setting_value);
     });
+    settings.currency_options = {};
+    var displayCurrencyRow = (results[1].data || []).find(function(row){ return row.display_currency === true; });
+    (results[1].data || []).forEach(function (row) {
+      settings.currency_options[String(row.code).toUpperCase()] = {en:String(row.en_label || ''), ar:String(row.ar_label || '')};
+    });
+    // display_currency is now maintained by the currencies table, not application_settings.
+    settings.display_currency = displayCurrencyRow && displayCurrencyRow.code
+      ? String(displayCurrencyRow.code).toUpperCase()
+      : ((results[1].data || [])[0] && String((results[1].data || [])[0].code || '').toUpperCase());
+    var defaultLanguageRow = (results[2].data || []).find(function(row){ return row.is_default === true; });
+    settings.default_language = defaultLanguageRow && defaultLanguageRow.code
+      ? String(defaultLanguageRow.code).toLowerCase()
+      : ((results[2].data || [])[0] && String((results[2].data || [])[0].code || 'en').toLowerCase());
     var normalized = normalizeSettings(settings);
+    normalized.__currencies = results[1].data || [];
+    normalized.__languages = results[2].data || [];
     normalized.__social = {};
-    (result.data || []).forEach(function (row) {
-      var key = String(row.setting_key || '');
-      if (key.indexOf('social_') === 0) {
-        normalized.__social[key] = { setting_value: parseValue(row.setting_value), active: row.active !== false };
-      }
+    (results[3].data || []).forEach(function (row) {
+      var slug = String(row.slug || '').toLowerCase();
+      if (!slug) return;
+      normalized.__social['social_' + slug] = { setting_value: {url:String(row.url || '')}, active: row.active !== false };
     });
     return normalized;
   }

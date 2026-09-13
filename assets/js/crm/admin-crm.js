@@ -2,12 +2,15 @@
   'use strict';
 
   var passwordSetupMode = 'invite';
-  var state = { authStatuses: {}, customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingTypeFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId:null, statementMappings:[], urlQrCodes:[], editingUrlQrId:null, editingMappingId:null, accountingPeriods:[], editingPeriodId:null, auditTrail:[], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false };
+  var state = {
+    currencies: [], languages: [],
+    socialMedia: [], authStatuses: {}, loyaltyTiers: [], loyaltyBookingPoints: [], customers: [], editingCustomerId: null, selectedCustomerId: null, categories: [], services: [], vouchers: [], users: [], roles: [], permissions: [], access: {}, rolePermissions: [], appSettings: [], bookings: [], bookingFilter: 'all', bookingTypeFilter: 'all', bookingDateFilter: 'all', bookingSearch: '', bookingVouchers: [], bookingView: 'list', scheduleDate: new Date(), customerLoyaltyFilter: 'all', userSearch: '', userRoleFilter: 'all', userStatusFilter: 'all', roleSearch: '', roleTypeFilter: 'all', editingServiceId: null, editingCategoryId: null, editingVoucherId: null, editingUserId: null, editingFaqId: null, faqs: [], translations: [], editingTranslationKey: null, contactMessages: [], chartOfAccounts: [], chartAccountSearch: '', chartStatementFilter: 'all', chartTypeFilter: 'all', editingChartAccountCode: null, financialStatements: [], financialStatementSearch: '', financialStatementFilter: 'all', editingJournalEntryId: null, statementMappings: [], urlQrCodes: [], editingUrlQrId: null, editingMappingId: null, accountingPeriods: [], editingPeriodId: null, auditTrail: [], contactMessageSearch: '', contactMessageStatusFilter: 'all', currentView: 'dashboard', currentRole: null, currentUserId: null, mustChangePassword: false
+  };
   var CRM_INVITE_REDIRECT = window.location.origin + window.location.pathname + '?invite=1';
 
   function $(id) { return document.getElementById(id); }
   function escapeHtml(value) {
-    return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
   var crmToastTimer = null;
   function getToast() {
@@ -43,22 +46,22 @@
     if (crmToastTimer) { clearTimeout(crmToastTimer); crmToastTimer = null; }
     var toast = $('crm-toast');
     if (toast) { toast.classList.remove('show'); }
-    ['app-message','login-message'].forEach(function(id){ var el=$(id); if(el){el.textContent='';el.className='crm-message';} });
+    ['app-message', 'login-message'].forEach(function (id) { var el = $(id); if (el) { el.textContent = ''; el.className = 'crm-message'; } });
   }
-  function crmConfirm(title, messageText){
-    return new Promise(function(resolve){
-      var modal=$('crm-confirm-modal');
-      var titleEl=$('crm-confirm-title'), msgEl=$('crm-confirm-message'), ok=$('crm-confirm-ok'), cancel=$('crm-confirm-cancel');
-      if(!modal||!ok||!cancel){ resolve(window.confirm(messageText)); return; }
-      if(titleEl) titleEl.textContent=title||'Confirm action';
-      if(msgEl) msgEl.textContent=messageText||'Are you sure you want to continue?';
+  function crmConfirm(title, messageText) {
+    return new Promise(function (resolve) {
+      var modal = $('crm-confirm-modal');
+      var titleEl = $('crm-confirm-title'), msgEl = $('crm-confirm-message'), ok = $('crm-confirm-ok'), cancel = $('crm-confirm-cancel');
+      if (!modal || !ok || !cancel) { resolve(window.confirm(messageText)); return; }
+      if (titleEl) titleEl.textContent = title || 'Confirm action';
+      if (msgEl) msgEl.textContent = messageText || 'Are you sure you want to continue?';
       modal.classList.remove('crm-hidden');
       document.body.classList.add('crm-confirm-open');
-      var done=false;
-      function finish(value){ if(done)return; done=true; modal.classList.add('crm-hidden'); document.body.classList.remove('crm-confirm-open'); ok.removeEventListener('click',yes); cancel.removeEventListener('click',no); modal.removeEventListener('click',backdrop); document.removeEventListener('keydown',escape); resolve(value); }
-      function yes(){finish(true);} function no(){finish(false);} function backdrop(e){if(e.target===modal)no();} function escape(e){if(e.key==='Escape')no();}
-      ok.addEventListener('click',yes); cancel.addEventListener('click',no); modal.addEventListener('click',backdrop); document.addEventListener('keydown',escape);
-      setTimeout(function(){cancel.focus();},0);
+      var done = false;
+      function finish(value) { if (done) return; done = true; modal.classList.add('crm-hidden'); document.body.classList.remove('crm-confirm-open'); ok.removeEventListener('click', yes); cancel.removeEventListener('click', no); modal.removeEventListener('click', backdrop); document.removeEventListener('keydown', escape); resolve(value); }
+      function yes() { finish(true); } function no() { finish(false); } function backdrop(e) { if (e.target === modal) no(); } function escape(e) { if (e.key === 'Escape') no(); }
+      ok.addEventListener('click', yes); cancel.addEventListener('click', no); modal.addEventListener('click', backdrop); document.addEventListener('keydown', escape);
+      setTimeout(function () { cancel.focus(); }, 0);
     });
   }
   window.crmConfirm = crmConfirm;
@@ -112,7 +115,7 @@
     state.currentUserId = access.user_id || state.currentUserId;
     state.mustChangePassword = access.must_change_password === true;
     state.access = {};
-    (access.permissions || []).forEach(function(permission){
+    (access.permissions || []).forEach(function (permission) {
       if (typeof permission === 'string') {
         state.access[permission] = true;
       } else if (permission && permission.section && permission.action) {
@@ -125,7 +128,7 @@
     // Chart of Accounts is a read-only reference catalogue for administrators.
     // Keep it visible to administrators even on deployments that predate its
     // permission rows; the migration still adds the full permission set for roles.
-    if (['chart-of-accounts','financial-statements','audit-trail','url-qr-codes'].indexOf(section)>=0 && state.currentRole && ['admin','administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
+    if (['chart-of-accounts', 'financial-statements', 'audit-trail', 'url-qr-codes'].indexOf(section) >= 0 && state.currentRole && ['admin', 'administrator'].indexOf(String(state.currentRole).toLowerCase()) >= 0) return true;
     return !!state.access[section + '.' + action];
   }
   function requirePermission(section, action, messageText) {
@@ -134,17 +137,17 @@
     return false;
   }
   var ROLE_PERMISSION_SECTIONS = [
-    ['dashboard','Dashboard'],['url-qr-codes','URL QR Codes'],['services','Services'],['vouchers','Vouchers'],['faqs','FAQs'],['chart-of-accounts','Chart of Accounts'],['journal-entries','Journal Entries'],['general-ledger','General Ledger'],['trial-balance','Trial Balance'],['financial-statements','Financial Statements'],['statement-mapping','Statement Mapping'],['accounting-periods','Accounting Periods'],['audit-trail','Audit Trail'],
-    ['bookings','Bookings'],['booking-config','Booking Setup'],['contact-messages','Contact Us'],['customers','Customers'],
-    ['settings','Settings'],['translations','Translation'],['users','Users & Access'],['roles','Roles & Permissions']
+    ['dashboard', 'Dashboard'], ['url-qr-codes', 'URL QR Codes'], ['services', 'Services'], ['vouchers', 'Vouchers'], ['faqs', 'FAQs'], ['chart-of-accounts', 'Chart of Accounts'], ['journal-entries', 'Journal Entries'], ['general-ledger', 'General Ledger'], ['trial-balance', 'Trial Balance'], ['financial-statements', 'Financial Statements'], ['statement-mapping', 'Statement Mapping'], ['accounting-periods', 'Accounting Periods'], ['audit-trail', 'Audit Trail'],
+    ['bookings', 'Bookings'], ['booking-config', 'Booking Setup'], ['contact-messages', 'Contact Us'], ['customers', 'Customers'],
+    ['settings', 'Settings'], ['translations', 'Translation'], ['users', 'Users & Access'], ['roles', 'Roles & Permissions']
   ];
-  var ROLE_ACTIONS = ['read','create','update','delete','post'];
+  var ROLE_ACTIONS = ['read', 'create', 'update', 'delete', 'post'];
 
   // CRM table lists use descending order by default: newest/highest first.
   function crmDesc(a, b) {
     var av = a == null ? '' : String(a);
     var bv = b == null ? '' : String(b);
-    return bv.localeCompare(av, undefined, {numeric:true, sensitivity:'base'});
+    return bv.localeCompare(av, undefined, { numeric: true, sensitivity: 'base' });
   }
   function crmIdDesc(a, b) { return Number(b || 0) - Number(a || 0); }
   function crmDateDesc(a, b) { return String(b || '').localeCompare(String(a || '')); }
@@ -158,18 +161,18 @@
   }
 
   async function loadRoles() {
-    if (!can('roles','read')) { state.roles=[]; state.permissions=[]; state.rolePermissions=[]; return; }
+    if (!can('roles', 'read')) { state.roles = []; state.permissions = []; state.rolePermissions = []; return; }
     var results = await Promise.all([
-      window.salonSupabase.from('crm_roles').select('id,name,description,is_system,created_at,updated_at').order('created_at',{ascending:false}).order('name',{ascending:false}),
-      window.salonSupabase.from('crm_permissions').select('id,section,action,description').order('section',{ascending:true}).order('action',{ascending:true}),
+      window.salonSupabase.from('crm_roles').select('id,name,description,is_system,created_at,updated_at').order('created_at', { ascending: false }).order('name', { ascending: false }),
+      window.salonSupabase.from('crm_permissions').select('id,section,action,description').order('section', { ascending: true }).order('action', { ascending: true }),
       window.salonSupabase.from('crm_role_permissions').select('role_id,permission_id')
     ]);
     if (results[0].error) throw results[0].error;
     if (results[1].error) throw results[1].error;
     if (results[2].error) throw results[2].error;
-    state.roles=results[0].data||[];
-    state.permissions=results[1].data||[];
-    state.rolePermissions=results[2].data||[];
+    state.roles = results[0].data || [];
+    state.permissions = results[1].data || [];
+    state.rolePermissions = results[2].data || [];
     syncUserRoleFilter();
     renderRoles();
     renderRolePermissionEditor();
@@ -181,141 +184,143 @@
   }
 
   function roleNameById(id, legacyRole) {
-    var role = state.roles.find(function(r){ return String(r.id) === String(id); });
+    var role = state.roles.find(function (r) { return String(r.id) === String(id); });
     if (role) return role.name;
-    if (legacyRole) return String(legacyRole).replace(/[-_]+/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase();});
+    if (legacyRole) return String(legacyRole).replace(/[-_]+/g, ' ').replace(/\b\w/g, function (ch) { return ch.toUpperCase(); });
     return 'Unassigned';
   }
 
-  function populateRoleSelects(){
-    var selects=[$('user-role'),$('edit-user-role')].filter(Boolean);
-    selects.forEach(function(select){
-      var current=select.value;
-      select.innerHTML=state.roles.map(function(r){
-        return '<option value="'+escapeHtml(r.id)+'">'+escapeHtml(r.name)+'</option>';
+  function populateRoleSelects() {
+    var selects = [$('user-role'), $('edit-user-role')].filter(Boolean);
+    selects.forEach(function (select) {
+      var current = select.value;
+      select.innerHTML = state.roles.map(function (r) {
+        return '<option value="' + escapeHtml(r.id) + '">' + escapeHtml(r.name) + '</option>';
       }).join('');
-      if(current && state.roles.some(function(r){return String(r.id)===String(current);})){ select.value=current; }
+      if (current && state.roles.some(function (r) { return String(r.id) === String(current); })) { select.value = current; }
       else {
-        var preferred=state.roles.find(function(r){return String(r.name).toLowerCase()==='staff';}) || state.roles[0];
-        if(preferred) select.value=preferred.id;
+        var preferred = state.roles.find(function (r) { return String(r.name).toLowerCase() === 'staff'; }) || state.roles[0];
+        if (preferred) select.value = preferred.id;
       }
     });
   }
 
-  function renderRoles(){
-    var body=$('roles-table-body'); if(!body)return;
-    var q=String(($('role-search')&&$('role-search').value)||state.roleSearch||'').trim().toLowerCase();
-    var type=String(($('role-type-filter')&&$('role-type-filter').value)||state.roleTypeFilter||'all');
-    var rows=state.roles.filter(function(r){
-      var matchesQuery=!q || [r.name,r.description].join(' ').toLowerCase().indexOf(q)!==-1;
-      var matchesType=type==='all' || (type==='system' ? !!r.is_system : !r.is_system);
+  function renderRoles() {
+    var body = $('roles-table-body'); if (!body) return;
+    var q = String(($('role-search') && $('role-search').value) || state.roleSearch || '').trim().toLowerCase();
+    var type = String(($('role-type-filter') && $('role-type-filter').value) || state.roleTypeFilter || 'all');
+    var rows = state.roles.filter(function (r) {
+      var matchesQuery = !q || [r.name, r.description].join(' ').toLowerCase().indexOf(q) !== -1;
+      var matchesType = type === 'all' || (type === 'system' ? !!r.is_system : !r.is_system);
       return matchesQuery && matchesType;
-    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmDesc(a.name,b.name); });
-    body.innerHTML=rows.map(function(r){
-      var count=state.rolePermissions.filter(function(x){return String(x.role_id)===String(r.id);}).length;
-      return '<tr><td><strong>'+escapeHtml(r.name)+'</strong></td>'+
-        '<td>'+escapeHtml(r.description||'—')+'</td>'+
-        '<td>'+(r.is_system?'<span class="crm-role-badge">System</span>':'<span class="crm-role-badge">Custom</span>')+'</td>'+
-        '<td>'+count+' permissions</td><td><div class="crm-actions-inline">'+
-        (can('roles','update')?'<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-role="'+escapeHtml(r.id)+'">Edit</button>':'')+
-        (r.is_system?'':' '+(can('roles','delete')?'<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-role="'+escapeHtml(r.id)+'">Delete</button>':''))+ 
+    }).sort(function (a, b) { return crmDateDesc(a.created_at, b.created_at) || crmDesc(a.name, b.name); });
+    body.innerHTML = rows.map(function (r) {
+      var count = state.rolePermissions.filter(function (x) { return String(x.role_id) === String(r.id); }).length;
+      return '<tr><td><strong>' + escapeHtml(r.name) + '</strong></td>' +
+        '<td>' + escapeHtml(r.description || '—') + '</td>' +
+        '<td>' + (r.is_system ? '<span class="crm-role-badge">System</span>' : '<span class="crm-role-badge">Custom</span>') + '</td>' +
+        '<td>' + count + ' permissions</td><td><div class="crm-actions-inline">' +
+        (can('roles', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-role="' + escapeHtml(r.id) + '">Edit</button>' : '') +
+        (r.is_system ? '' : ' ' + (can('roles', 'delete') ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-role="' + escapeHtml(r.id) + '">Delete</button>' : '')) +
         '</div></td></tr>';
     }).join('') || '<tr><td colspan="5" class="crm-empty">No roles found.</td></tr>';
   }
 
-  function renderRolePermissionEditor(selected){
-    var grid=$('role-permissions-grid'); if(!grid)return;
-    var selectedKeys=selected || [];
+  function renderRolePermissionEditor(selected) {
+    var grid = $('role-permissions-grid'); if (!grid) return;
+    var selectedKeys = selected || [];
     var available = {};
-    state.permissions.forEach(function(p){ available[p.section+'.'+p.action] = p.id; });
-    var sections = ROLE_PERMISSION_SECTIONS.filter(function(pair){
-      return state.permissions.some(function(p){ return p.section === pair[0]; });
+    state.permissions.forEach(function (p) { available[p.section + '.' + p.action] = p.id; });
+    var sections = ROLE_PERMISSION_SECTIONS.filter(function (pair) {
+      return state.permissions.some(function (p) { return p.section === pair[0]; });
     });
-    grid.innerHTML=sections.map(function(pair){
-      var section=pair[0], label=pair[1];
-      var writeChecked=['create','update','delete'].every(function(action){return selectedKeys.indexOf(section+'.'+action)!==-1;});
-      return '<div class="crm-role-permission-card"><h4>'+escapeHtml(label)+'</h4><div class="crm-role-permission-actions">'+
-        '<label><input type="checkbox" data-role-write="'+escapeHtml(section)+'" '+(writeChecked?'checked':'')+'> Write</label>'+ 
-        ROLE_ACTIONS.filter(function(action){return available[section+'.'+action] != null;}).map(function(action){
-          var key=section+'.'+action, checked=selectedKeys.indexOf(key)!==-1;
-          return '<label><input type="checkbox" data-role-permission="'+escapeHtml(key)+'" '+(checked?'checked':'')+'> '+action.charAt(0).toUpperCase()+action.slice(1)+'</label>';
-        }).join('')+'</div></div>';
+    grid.innerHTML = sections.map(function (pair) {
+      var section = pair[0], label = pair[1];
+      var writeChecked = ['create', 'update', 'delete'].every(function (action) { return selectedKeys.indexOf(section + '.' + action) !== -1; });
+      return '<div class="crm-role-permission-card"><h4>' + escapeHtml(label) + '</h4><div class="crm-role-permission-actions">' +
+        '<label><input type="checkbox" data-role-write="' + escapeHtml(section) + '" ' + (writeChecked ? 'checked' : '') + '> Write</label>' +
+        ROLE_ACTIONS.filter(function (action) { return available[section + '.' + action] != null; }).map(function (action) {
+          var key = section + '.' + action, checked = selectedKeys.indexOf(key) !== -1;
+          return '<label><input type="checkbox" data-role-permission="' + escapeHtml(key) + '" ' + (checked ? 'checked' : '') + '> ' + action.charAt(0).toUpperCase() + action.slice(1) + '</label>';
+        }).join('') + '</div></div>';
     }).join('');
-    var all=$('role-select-all');
-    if(all){
-      var allKeys=Object.keys(available);
-      all.checked=allKeys.length>0 && allKeys.every(function(key){return selectedKeys.indexOf(key)!==-1;});
+    var all = $('role-select-all');
+    if (all) {
+      var allKeys = Object.keys(available);
+      all.checked = allKeys.length > 0 && allKeys.every(function (key) { return selectedKeys.indexOf(key) !== -1; });
     }
-    grid.querySelectorAll('[data-role-write]').forEach(function(box){box.addEventListener('change',function(){
-      var section=box.getAttribute('data-role-write');
-      ['create','update','delete'].forEach(function(action){var el=grid.querySelector('[data-role-permission="'+section+'.'+action+'"]');if(el)el.checked=box.checked;});
-    });});
+    grid.querySelectorAll('[data-role-write]').forEach(function (box) {
+      box.addEventListener('change', function () {
+        var section = box.getAttribute('data-role-write');
+        ['create', 'update', 'delete'].forEach(function (action) { var el = grid.querySelector('[data-role-permission="' + section + '.' + action + '"]'); if (el) el.checked = box.checked; });
+      });
+    });
   }
 
-  function startRoleCreate(){
-    if(!can('roles','create')){message('You do not have permission to create roles.','error');return;}
-    state.editingRoleId=null; $('role-form').reset(); $('role-form-title').textContent='Create role'; $('role-save').textContent='Create role'; $('role-name').disabled=false; renderRolePermissionEditor([]); openCrmFormCardModal('role-form-card'); $('role-name').focus();
+  function startRoleCreate() {
+    if (!can('roles', 'create')) { message('You do not have permission to create roles.', 'error'); return; }
+    state.editingRoleId = null; $('role-form').reset(); $('role-form-title').textContent = 'Create role'; $('role-save').textContent = 'Create role'; $('role-name').disabled = false; renderRolePermissionEditor([]); openCrmFormCardModal('role-form-card'); $('role-name').focus();
   }
 
-  function editRole(id){
-    if(!requirePermission('roles','update','You do not have permission to update roles.'))return;
-    var role=state.roles.find(function(r){return String(r.id)===String(id);}); if(!role)return;
-    state.editingRoleId=role.id;
-    $('role-name').value=role.name;
-    $('role-description').value=role.description||'';
-    $('role-name').disabled=role.is_system===true;
-    $('role-form-title').textContent='Edit role';
-    $('role-save').textContent='Save role';
-    var keys=state.rolePermissions.filter(function(x){return String(x.role_id)===String(role.id);}).map(function(x){
-      var p=state.permissions.find(function(permission){return String(permission.id)===String(x.permission_id);});
-      return p ? p.section+'.'+p.action : null;
+  function editRole(id) {
+    if (!requirePermission('roles', 'update', 'You do not have permission to update roles.')) return;
+    var role = state.roles.find(function (r) { return String(r.id) === String(id); }); if (!role) return;
+    state.editingRoleId = role.id;
+    $('role-name').value = role.name;
+    $('role-description').value = role.description || '';
+    $('role-name').disabled = role.is_system === true;
+    $('role-form-title').textContent = 'Edit role';
+    $('role-save').textContent = 'Save role';
+    var keys = state.rolePermissions.filter(function (x) { return String(x.role_id) === String(role.id); }).map(function (x) {
+      var p = state.permissions.find(function (permission) { return String(permission.id) === String(x.permission_id); });
+      return p ? p.section + '.' + p.action : null;
     }).filter(Boolean);
     renderRolePermissionEditor(keys); openCrmFormCardModal('role-form-card'); $('role-name').focus();
   }
 
-  async function saveRole(e){
+  async function saveRole(e) {
     e.preventDefault(); clearMessage();
-    var action=state.editingRoleId?'update':'create';
-    if(!requirePermission('roles',action)) return;
-    var name=$('role-name').value.trim(), description=$('role-description').value.trim()||null;
-    if(!name){message('Please enter a role name.','error');return;}
+    var action = state.editingRoleId ? 'update' : 'create';
+    if (!requirePermission('roles', action)) return;
+    var name = $('role-name').value.trim(), description = $('role-description').value.trim() || null;
+    if (!name) { message('Please enter a role name.', 'error'); return; }
 
     var result;
-    if(state.editingRoleId){
-      result=await window.salonSupabase.from('crm_roles').update({name:name,description:description}).eq('id',state.editingRoleId).select().maybeSingle();
+    if (state.editingRoleId) {
+      result = await window.salonSupabase.from('crm_roles').update({ name: name, description: description }).eq('id', state.editingRoleId).select().maybeSingle();
     } else {
-      result=await window.salonSupabase.from('crm_roles').insert({name:name,description:description,is_system:false}).select().single();
+      result = await window.salonSupabase.from('crm_roles').insert({ name: name, description: description, is_system: false }).select().single();
     }
-    if(result.error){message(result.error.message,'error');return;}
-    var role=result.data;
-    if(!role){message('The role was not returned after saving.','error');return;}
+    if (result.error) { message(result.error.message, 'error'); return; }
+    var role = result.data;
+    if (!role) { message('The role was not returned after saving.', 'error'); return; }
 
-    var selected=[];
-    document.querySelectorAll('[data-role-permission]:checked').forEach(function(el){
-      var key=el.getAttribute('data-role-permission');
-      var permission=state.permissions.find(function(p){return p.section+'.'+p.action===key;});
-      if(permission) selected.push(permission.id);
+    var selected = [];
+    document.querySelectorAll('[data-role-permission]:checked').forEach(function (el) {
+      var key = el.getAttribute('data-role-permission');
+      var permission = state.permissions.find(function (p) { return p.section + '.' + p.action === key; });
+      if (permission) selected.push(permission.id);
     });
 
-    var clearResult=await window.salonSupabase.from('crm_role_permissions').delete().eq('role_id',role.id);
-    if(clearResult.error){message(clearResult.error.message,'error');return;}
-    if(selected.length){
-      var ins=await window.salonSupabase.from('crm_role_permissions').insert(selected.map(function(permissionId){return {role_id:role.id,permission_id:permissionId};}));
-      if(ins.error){message(ins.error.message,'error');return;}
+    var clearResult = await window.salonSupabase.from('crm_role_permissions').delete().eq('role_id', role.id);
+    if (clearResult.error) { message(clearResult.error.message, 'error'); return; }
+    if (selected.length) {
+      var ins = await window.salonSupabase.from('crm_role_permissions').insert(selected.map(function (permissionId) { return { role_id: role.id, permission_id: permissionId }; }));
+      if (ins.error) { message(ins.error.message, 'error'); return; }
     }
-    closeCrmFormCardModal('role-form-card'); state.editingRoleId=null; await loadRoles(); await loadAccess(); message('Role saved successfully.','success');
+    closeCrmFormCardModal('role-form-card'); state.editingRoleId = null; await loadRoles(); await loadAccess(); message('Role saved successfully.', 'success');
   }
 
-  async function deleteRole(id){
-    if(!requirePermission('roles','delete','You do not have permission to delete roles.'))return;
-    var role=state.roles.find(function(r){return String(r.id)===String(id);}); if(!role || role.is_system)return;
-    if(!await crmConfirm('Delete role', 'Delete the role \"'+(role.name||'this role')+'\"? Users using it must be reassigned first.'))return;
-    var usersUsing=await window.salonSupabase.from('admin_users').select('user_id',{count:'exact',head:true}).eq('role_id',role.id);
-    if(usersUsing.error){message(usersUsing.error.message,'error');return;}
-    if(usersUsing.count){message('This role is assigned to '+usersUsing.count+' user(s). Reassign them before deleting the role.','error');return;}
-    var result=await window.salonSupabase.from('crm_roles').delete().eq('id',role.id);
-    if(result.error){message(result.error.message,'error');return;}
-    await loadRoles(); message('Role deleted.','success');
+  async function deleteRole(id) {
+    if (!requirePermission('roles', 'delete', 'You do not have permission to delete roles.')) return;
+    var role = state.roles.find(function (r) { return String(r.id) === String(id); }); if (!role || role.is_system) return;
+    if (!await crmConfirm('Delete role', 'Delete the role \"' + (role.name || 'this role') + '\"? Users using it must be reassigned first.')) return;
+    var usersUsing = await window.salonSupabase.from('admin_users').select('user_id', { count: 'exact', head: true }).eq('role_id', role.id);
+    if (usersUsing.error) { message(usersUsing.error.message, 'error'); return; }
+    if (usersUsing.count) { message('This role is assigned to ' + usersUsing.count + ' user(s). Reassign them before deleting the role.', 'error'); return; }
+    var result = await window.salonSupabase.from('crm_roles').delete().eq('id', role.id);
+    if (result.error) { message(result.error.message, 'error'); return; }
+    await loadRoles(); message('Role deleted.', 'success');
   }
 
   async function loadCustomers() {
@@ -323,11 +328,11 @@
       .from('customers')
       .select('id,name,phone,email,notes,created_at,is_deleted,loyalty_points,loyalty_lifetime_points,loyalty_tier')
       .eq('is_deleted', false)
-      .order('id', {ascending:false});
+      .order('id', { ascending: false });
     if (result.error) throw result.error;
     state.customers = result.data || [];
     renderCustomers();
-    $('stat-customers') && ($('stat-customers').textContent=String(state.customers.length));
+    $('stat-customers') && ($('stat-customers').textContent = String(state.customers.length));
   }
 
   function renderCustomers() {
@@ -335,33 +340,33 @@
     if (!tbody) return;
     var q = (($('customer-search') && $('customer-search').value) || '').trim().toLowerCase();
     var loyalty = String(($('customer-loyalty-filter') && $('customer-loyalty-filter').value) || state.customerLoyaltyFilter || 'all');
-    var rows = state.customers.filter(function(c) {
-      var matchesQuery=!q ||
-        String(c.name||'').toLowerCase().includes(q) ||
-        String(c.phone||'').toLowerCase().includes(q) ||
-        String(c.email||'').toLowerCase().includes(q);
-      var tier=String(c.loyalty_tier||'Member');
-      return matchesQuery && (loyalty==='all' || tier===loyalty);
-    }).sort(function(a,b){ return crmIdDesc(a.id,b.id); });
+    var rows = state.customers.filter(function (c) {
+      var matchesQuery = !q ||
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.phone || '').toLowerCase().includes(q) ||
+        String(c.email || '').toLowerCase().includes(q);
+      var tier = customerLoyaltyTierForPoints(c.loyalty_lifetime_points);
+      return matchesQuery && (loyalty === 'all' || tier === loyalty);
+    }).sort(function (a, b) { return crmIdDesc(a.id, b.id); });
 
-    tbody.innerHTML = rows.map(function(c) {
+    tbody.innerHTML = rows.map(function (c) {
       return '<tr>' +
-        '<td><strong>'+escapeHtml(c.name||'—')+'</strong></td>' +
-        '<td>'+escapeHtml(c.phone||'—')+'</td>' +
-        '<td>'+escapeHtml(c.email||'—')+'</td>' +
-        '<td><span class="crm-role-badge">'+escapeHtml(c.loyalty_tier||'Member')+'</span> <strong>'+Number(c.loyalty_points||0)+' pts</strong></td>' +
-        '<td>'+escapeHtml(c.notes||'—')+'</td>' +
+        '<td><strong>' + escapeHtml(c.name || '—') + '</strong></td>' +
+        '<td>' + escapeHtml(c.phone || '—') + '</td>' +
+        '<td>' + escapeHtml(c.email || '—') + '</td>' +
+        '<td><span class="crm-role-badge">' + escapeHtml(customerLoyaltyTierForPoints(c.loyalty_lifetime_points)) + '</span> <strong>' + Number(c.loyalty_points || 0) + ' pts</strong></td>' +
+        '<td>' + escapeHtml(c.notes || '—') + '</td>' +
         '<td>' +
-        '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="viewCustomer('+Number(c.id)+')">View</button> ' +
-        (can('customers','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="editCustomer('+Number(c.id)+')">Edit</button>' : '') +
-        (can('customers','delete') ? ' <button type="button" class="crm-btn crm-btn-danger crm-btn-sm" onclick="deleteCustomer('+Number(c.id)+')">Delete</button>' : '') + '</td>' +
+        '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="viewCustomer(' + Number(c.id) + ')">View</button> ' +
+        (can('customers', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" onclick="editCustomer(' + Number(c.id) + ')">Edit</button>' : '') +
+        (can('customers', 'delete') ? ' <button type="button" class="crm-btn crm-btn-danger crm-btn-sm" onclick="deleteCustomer(' + Number(c.id) + ')">Delete</button>' : '') + '</td>' +
         '</tr>';
     }).join('') || '<tr><td colspan="6" class="crm-empty">No customers found.</td></tr>';
   }
 
   function escapeHtml(value) {
-    return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[ch];
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[ch];
     });
   }
 
@@ -374,7 +379,7 @@
   }
 
   function editCustomer(id) {
-    var c = state.customers.find(function(x){ return String(x.id) === String(id); });
+    var c = state.customers.find(function (x) { return String(x.id) === String(id); });
     if (!c) return;
     state.editingCustomerId = c.id;
     $('customer-name').value = c.name || '';
@@ -387,7 +392,7 @@
   }
 
   async function saveCustomer(e) {
-    if(!requirePermission('customers', state.editingCustomerId?'update':'create')) return;
+    if (!requirePermission('customers', state.editingCustomerId ? 'update' : 'create')) return;
     e.preventDefault();
     clearMessage();
     var payload = {
@@ -397,11 +402,11 @@
       notes: state.editingCustomerId ? ($('customer-notes').value.trim() || null) : null
     };
     if (!payload.name) {
-      message('Please enter the customer name.','error');
+      message('Please enter the customer name.', 'error');
       return;
     }
     if (payload.phone && !/^\+?[0-9]+$/.test(payload.phone)) {
-      message('Phone can contain only numbers, with an optional + at the beginning.','error');
+      message('Phone can contain only numbers, with an optional + at the beginning.', 'error');
       return;
     }
 
@@ -413,24 +418,24 @@
       result = await window.salonSupabase.from('customers').insert(payload);
     }
     if (result.error) {
-      message(result.error.message,'error');
+      message(result.error.message, 'error');
       return;
     }
-    message(state.editingCustomerId ? 'Customer updated.' : 'Customer added.','success');
+    message(state.editingCustomerId ? 'Customer updated.' : 'Customer added.', 'success');
     state.editingCustomerId = null;
     closeCrmFormCardModal('customer-form-card');
     await loadCustomers();
   }
 
   async function deleteCustomer(id) {
-    if (!requirePermission('customers','delete','You do not have permission to delete customers.')) return;
-    var customer = state.customers.find(function(x){ return String(x.id) === String(id); });
+    if (!requirePermission('customers', 'delete', 'You do not have permission to delete customers.')) return;
+    var customer = state.customers.find(function (x) { return String(x.id) === String(id); });
     if (!customer) return;
     if (!await crmConfirm('Delete customer', 'Delete ' + (customer.name || 'this customer') + '? The customer will be hidden from the CRM, but their booking history will be preserved.')) return;
     var result = await window.salonSupabase.rpc('crm_delete_customer', { p_id: Number(id) });
-    if (result.error) { message(result.error.message || 'Could not delete customer.','error'); return; }
+    if (result.error) { message(result.error.message || 'Could not delete customer.', 'error'); return; }
     if (state.selectedCustomerId && String(state.selectedCustomerId) === String(id)) closeCustomerDetails();
-    message('Customer deleted. Their booking history was preserved.','success');
+    message('Customer deleted. Their booking history was preserved.', 'success');
     await loadCustomers();
   }
 
@@ -440,7 +445,7 @@
   }
 
   async function viewCustomer(id) {
-    var c = state.customers.find(function(x){ return String(x.id) === String(id); });
+    var c = state.customers.find(function (x) { return String(x.id) === String(id); });
     if (!c) return;
     state.selectedCustomerId = c.id;
     $('customer-detail-name').textContent = c.name || 'Customer';
@@ -452,31 +457,31 @@
     var results = await Promise.all([
       window.salonSupabase
         .from('bookings')
-        .select('id,booking_date,start_time,end_time,status,total_price,total_duration_minutes,customer_notes')
+        .select('id,booking_date,start_time,end_time,status,total_price,total_duration_minutes,customer_notes,currency')
         .eq('customer_id', c.id)
-        .order('booking_date', {ascending:false})
-        .order('start_time', {ascending:false}),
+        .order('booking_date', { ascending: false })
+        .order('start_time', { ascending: false }),
       window.salonSupabase
         .from('booking_services')
         .select('id,booking_id,service_id,start_time,end_time,price,duration_minutes,voucher_id')
-        .order('start_time', {ascending:true}),
+        .order('start_time', { ascending: true }),
       window.salonSupabase
         .from('customer_loyalty_transactions')
         .select('id,points,transaction_type,description,source_booking_id,created_at')
         .eq('customer_id', c.id)
-        .order('created_at', {ascending:false})
+        .order('created_at', { ascending: false })
     ]);
 
     if (results[0].error) {
-      message(results[0].error.message,'error');
+      message(results[0].error.message, 'error');
       return;
     }
     if (results[1].error) {
-      message(results[1].error.message,'error');
+      message(results[1].error.message, 'error');
       return;
     }
     if (results[2].error) {
-      message(results[2].error.message,'error');
+      message(results[2].error.message, 'error');
       return;
     }
 
@@ -484,23 +489,43 @@
     var bookingServices = results[1].data || [];
     var loyaltyTransactions = results[2].data || [];
     var servicesById = {};
-    state.services.forEach(function(service){ servicesById[String(service.id)] = service; });
+    state.services.forEach(function (service) { servicesById[String(service.id)] = service; });
     var vouchersById = {};
-    state.vouchers.forEach(function(voucher){ vouchersById[String(voucher.id)] = voucher; });
+    state.vouchers.forEach(function (voucher) { vouchersById[String(voucher.id)] = voucher; });
     var itemsByBooking = {};
 
-    bookingServices.forEach(function(bs) {
+    bookingServices.forEach(function (bs) {
       var key = String(bs.booking_id);
       if (!itemsByBooking[key]) itemsByBooking[key] = [];
       itemsByBooking[key].push(bs);
     });
 
     $('customer-booking-count').textContent = bookings.length;
-    var total = bookings.reduce(function(sum,b){ return sum + Number(b.total_price||0); },0);
-    $('customer-total-spent').textContent = total.toFixed(2);
+    // Total spent is based only on completed bookings and is displayed in the
+    // booking's own currency. Never convert currencies or default to USD.
+    var completedBookings = bookings.filter(function (b) {
+      return String(b.status || '').toLowerCase() === 'completed';
+    });
+    var totalsByCurrency = {};
+    completedBookings.forEach(function (b) {
+      var currency = String(b.currency || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+      if (!totalsByCurrency[currency]) totalsByCurrency[currency] = 0;
+      totalsByCurrency[currency] += Number(b.total_price || 0);
+    });
 
-    $('customer-booking-history').innerHTML = bookings.map(function(b){
-      var names=(itemsByBooking[String(b.id)]||[]).map(function(bs){
+    function customerCurrencyLabel(currency) {
+      var code = String(currency || 'USD').toUpperCase();
+      if (code === 'USD') return '$';
+      return code;
+    }
+
+    var totalLabels = Object.keys(totalsByCurrency).sort().map(function (currency) {
+      return customerCurrencyLabel(currency) + ' ' + totalsByCurrency[currency].toFixed(2);
+    });
+    $('customer-total-spent').textContent = totalLabels.length ? totalLabels.join(' • ') : '0.00';
+
+    $('customer-booking-history').innerHTML = bookings.map(function (b) {
+      var names = (itemsByBooking[String(b.id)] || []).map(function (bs) {
         if (bs.voucher_id != null) {
           var voucher = vouchersById[String(bs.voucher_id)];
           return voucher ? (voucher.title_en || voucher.title || 'Voucher') : 'Voucher';
@@ -509,11 +534,11 @@
         return service ? (service.name_en || service.name || 'Service') : 'Service';
       }).join(', ');
 
-      return '<tr><td>'+escapeHtml(b.booking_date||'—')+'</td><td>'+escapeHtml((b.start_time||'')+' – '+(b.end_time||''))+'</td><td>'+escapeHtml(names||'—')+'</td><td>'+escapeHtml(b.status||'—')+'</td><td>'+Number(b.total_price||0).toFixed(2)+'</td></tr>';
+      return '<tr><td>' + escapeHtml(b.booking_date || '—') + '</td><td>' + escapeHtml((b.start_time || '') + ' – ' + (b.end_time || '')) + '</td><td>' + escapeHtml(names || '—') + '</td><td>' + escapeHtml(b.status || '—') + '</td><td>' + Number(b.total_price || 0).toFixed(2) + '</td></tr>';
     }).join('') || '<tr><td colspan="5" class="crm-empty">No bookings yet.</td></tr>';
 
     var runningBalance = Number(c.loyalty_points || 0);
-    $('customer-loyalty-history').innerHTML = loyaltyTransactions.map(function(tx){
+    $('customer-loyalty-history').innerHTML = loyaltyTransactions.map(function (tx) {
       var afterBalance = runningBalance;
       var points = Number(tx.points || 0);
       runningBalance -= points;
@@ -521,20 +546,20 @@
       var pointsLabel = (points > 0 ? '+' : '') + points + ' pts';
       var date = tx.created_at ? new Date(tx.created_at).toLocaleString() : '—';
       var rowClass = tx.transaction_type === 'reward_redeemed' ? ' class="crm-loyalty-redeemed"' : '';
-      return '<tr'+rowClass+'><td>'+escapeHtml(date)+'</td><td><strong>'+escapeHtml(typeLabel)+'</strong><div class="crm-small">'+escapeHtml(tx.description || '—')+'</div></td><td><strong>'+escapeHtml(pointsLabel)+'</strong></td><td>'+escapeHtml(String(afterBalance))+' pts</td></tr>';
+      return '<tr' + rowClass + '><td>' + escapeHtml(date) + '</td><td><strong>' + escapeHtml(typeLabel) + '</strong><div class="crm-small">' + escapeHtml(tx.description || '—') + '</div></td><td><strong>' + escapeHtml(pointsLabel) + '</strong></td><td>' + escapeHtml(String(afterBalance)) + ' pts</td></tr>';
     }).join('') || '<tr><td colspan="4" class="crm-empty">No loyalty activity yet.</td></tr>';
   }
 
   function closeCustomerDetails() {
     state.selectedCustomerId = null;
     $('customer-detail-card').classList.add('crm-hidden');
-    $('customer-detail-card').setAttribute('aria-hidden','true');
+    $('customer-detail-card').setAttribute('aria-hidden', 'true');
     document.body.classList.remove('crm-form-modal-open');
   }
 
   function renderCustomerLoyalty(c) {
     var points = Number(c.loyalty_points || 0);
-    var tier = c.loyalty_tier || 'Member';
+    var tier = customerLoyaltyTierForPoints(c.loyalty_lifetime_points);
     $('customer-loyalty-points').textContent = String(points);
     $('customer-loyalty-tier').textContent = tier + ' • ' + Number(c.loyalty_lifetime_points || 0) + ' lifetime pts';
     $('customer-loyalty-badge').textContent = tier;
@@ -543,29 +568,36 @@
 
   async function changeCustomerLoyalty(points, description, type) {
     if (!state.selectedCustomerId) return;
-    if (!requirePermission('customers','update','You do not have permission to manage customer loyalty.')) return;
+    if (!requirePermission('customers', 'update', 'You do not have permission to manage customer loyalty.')) return;
     var result = await window.salonSupabase.rpc('crm_adjust_customer_loyalty', {
       p_customer_id: Number(state.selectedCustomerId),
       p_points: Number(points),
       p_description: description,
       p_transaction_type: type || 'manual_adjustment'
     });
-    if (result.error) { message(result.error.message || 'Could not update loyalty points.','error'); return; }
+    if (result.error) { message(result.error.message || 'Could not update loyalty points.', 'error'); return; }
     var data = result.data || {};
-    var c = state.customers.find(function(x){ return String(x.id) === String(state.selectedCustomerId); });
+    var c = state.customers.find(function (x) { return String(x.id) === String(state.selectedCustomerId); });
     if (c) {
       c.loyalty_points = Number(data.points || 0);
       c.loyalty_lifetime_points = Number(data.lifetime_points || c.loyalty_lifetime_points || 0);
-      c.loyalty_tier = data.tier || c.loyalty_tier || 'Member';
+      c.loyalty_tier = data.tier || customerLoyaltyTierForPoints(c.loyalty_lifetime_points);
       renderCustomerLoyalty(c); renderCustomers();
       viewCustomer(c.id);
     }
-    message(description + '.','success');
+    message(description + '.', 'success');
   }
 
 
   function settingValue(key, fallback) {
-    var row = state.appSettings.find(function(x){ return x.setting_key === key && x.active !== false; });
+    // Display currency is now owned by the currencies table.
+    if (key === 'display_currency') {
+      var displayRow = (state.currencies || []).find(function (x) { return x.display_currency === true && x.active !== false; });
+      if (displayRow && displayRow.code) return String(displayRow.code).toUpperCase();
+      var firstActive = (state.currencies || []).find(function (x) { return x.active !== false && x.code; });
+      return firstActive ? String(firstActive.code).toUpperCase() : fallback;
+    }
+    var row = state.appSettings.find(function (x) { return x.setting_key === key && x.active !== false; });
     if (!row) return fallback;
     return row.setting_value;
   }
@@ -601,30 +633,30 @@
   }
 
   var WEBSITE_IMAGE_SLOTS = [
-    {key:'who_we_are_image_1', inputId:'who-we-are-image-1-file', previewId:'who-we-are-image-1-preview', uploadId:'upload-who-we-are-image-1', label:'Who We Are image 1'},
-    {key:'who_we_are_image_2', inputId:'who-we-are-image-2-file', previewId:'who-we-are-image-2-preview', uploadId:'upload-who-we-are-image-2', label:'Who We Are image 2'},
-    {key:'who_we_are_image_3', inputId:'who-we-are-image-3-file', previewId:'who-we-are-image-3-preview', uploadId:'upload-who-we-are-image-3', label:'Who We Are image 3'},
-    {key:'homepage_hero_image', inputId:'homepage-hero-image-file', previewId:'homepage-hero-image-preview', uploadId:'upload-homepage-hero-image', label:'Homepage hero'},
-    {key:'services_section_image', inputId:'services-section-image-file', previewId:'services-section-image-preview', uploadId:'upload-services-section-image', label:'Services section'},
-    {key:'contact_section_image', inputId:'contact-section-image-file', previewId:'contact-section-image-preview', uploadId:'upload-contact-section-image', label:'Contact section'}
+    { key: 'who_we_are_image_1', inputId: 'who-we-are-image-1-file', previewId: 'who-we-are-image-1-preview', uploadId: 'upload-who-we-are-image-1', label: 'Who We Are image 1' },
+    { key: 'who_we_are_image_2', inputId: 'who-we-are-image-2-file', previewId: 'who-we-are-image-2-preview', uploadId: 'upload-who-we-are-image-2', label: 'Who We Are image 2' },
+    { key: 'who_we_are_image_3', inputId: 'who-we-are-image-3-file', previewId: 'who-we-are-image-3-preview', uploadId: 'upload-who-we-are-image-3', label: 'Who We Are image 3' },
+    { key: 'homepage_hero_image', inputId: 'homepage-hero-image-file', previewId: 'homepage-hero-image-preview', uploadId: 'upload-homepage-hero-image', label: 'Homepage hero' },
+    { key: 'services_section_image', inputId: 'services-section-image-file', previewId: 'services-section-image-preview', uploadId: 'upload-services-section-image', label: 'Services section' },
+    { key: 'contact_section_image', inputId: 'contact-section-image-file', previewId: 'contact-section-image-preview', uploadId: 'upload-contact-section-image', label: 'Contact section' }
   ];
 
   function websiteImagePayload(slot) {
     var value = settingValue(slot.key, null);
-    if (!value) return {path:'',url:'',width:'100%',height:'auto'};
+    if (!value) return { path: '', url: '', width: '100%', height: 'auto' };
     try { return normalizeBrandingImage(value, slot.key); }
-    catch (e) { return {path:'',url:'',width:'100%',height:'auto'}; }
+    catch (e) { return { path: '', url: '', width: '100%', height: 'auto' }; }
   }
 
   function renderWebsiteImages() {
-    WEBSITE_IMAGE_SLOTS.forEach(function(slot){
+    WEBSITE_IMAGE_SLOTS.forEach(function (slot) {
       var payload = websiteImagePayload(slot);
       var preview = $(slot.previewId);
       if (preview) {
         if (payload.url) {
           preview.src = payload.url;
           preview.hidden = false;
-          preview.onerror = function(){ preview.removeAttribute('src'); preview.hidden = true; };
+          preview.onerror = function () { preview.removeAttribute('src'); preview.hidden = true; };
         } else {
           preview.removeAttribute('src');
           preview.hidden = true;
@@ -634,18 +666,18 @@
   }
 
   async function uploadWebsiteImage(slot) {
-    if (!requirePermission('settings','update')) return;
+    if (!requirePermission('settings', 'update')) return;
     var input = $(slot.inputId);
     var file = input && input.files ? input.files[0] : null;
-    if (!file) { message('Choose an image first.','error'); return; }
-    if (!/^image\//i.test(file.type)) { message('Please choose an image file.','error'); return; }
-    if (file.size > 5 * 1024 * 1024) { message('Image must be 5 MB or smaller.','error'); return; }
+    if (!file) { message('Choose an image first.', 'error'); return; }
+    if (!/^image\//i.test(file.type)) { message('Please choose an image file.', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { message('Image must be 5 MB or smaller.', 'error'); return; }
 
-    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
     if (!/^(jpg|jpeg|png|webp|gif|ico)$/.test(ext)) ext = 'jpg';
-    var path = 'website/' + slot.key + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
+    var path = 'website/' + slot.key + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
     var old = websiteImagePayload(slot);
-    var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, {upsert:false, contentType:file.type || undefined});
+    var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, { upsert: false, contentType: file.type || undefined });
     if (upload.error) throw upload.error;
     var publicUrlResult = window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
     var publicUrl = publicUrlResult && publicUrlResult.data ? publicUrlResult.data.publicUrl : '';
@@ -653,12 +685,12 @@
 
     try {
       var result = await window.salonSupabase.from('application_settings').upsert({
-        setting_key:slot.key,
-        setting_value:{path:path,url:publicUrl,width:old.width || '100%',height:old.height || 'auto'},
-        description:slot.label + ' used by the public website.',
-        active:true,
-        updated_at:new Date().toISOString()
-      }, {onConflict:'setting_key'});
+        setting_key: slot.key,
+        setting_value: { path: path, url: publicUrl, width: old.width || '100%', height: old.height || 'auto' },
+        description: slot.label + ' used by the public website.',
+        active: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'setting_key' });
       if (result.error) throw result.error;
       await loadApplicationSettings();
     } catch (err) {
@@ -667,26 +699,37 @@
     }
     if (old.path && old.path.indexOf('website/') === 0) await window.salonSupabase.storage.from('site-assets').remove([old.path]);
     if (input) input.value = '';
-    message(slot.label + ' uploaded.','success');
+    message(slot.label + ' uploaded.', 'success');
   }
 
 
   function renderBrandingSettings() {
     var header = imageSettingPayload('header_image');
+    var applicationLogo = optionalImageSettingPayload('logo_image');
     var mainNavLogo = optionalImageSettingPayload('main_page_nav_logo_image');
     var otherNavLogo = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
     var banner = imageSettingPayload('banner_image');
     var favicon = optionalImageSettingPayload('favicon_image');
     var footerLogoStored = optionalImageSettingPayload('footer_logo_image');
-    var footerLogo = otherNavLogo && otherNavLogo.url ? Object.assign({}, otherNavLogo, {width: (footerLogoStored && footerLogoStored.width) || '100%', height: (footerLogoStored && footerLogoStored.height) || 'auto'}) : footerLogoStored;
+    var footerLogo = otherNavLogo && otherNavLogo.url ? Object.assign({}, otherNavLogo, { width: (footerLogoStored && footerLogoStored.width) || '100%', height: (footerLogoStored && footerLogoStored.height) || 'auto' }) : footerLogoStored;
     var mainNavLogoPreview = $('main-page-nav-logo-image-preview');
     var otherNavLogoPreview = $('other-pages-nav-logo-image-preview');
     var sidebarLogo = $('crm-sidebar-logo');
     if (sidebarLogo) {
-      sidebarLogo.src = header.url;
-      sidebarLogo.hidden = false;
-      sidebarLogo.style.objectFit = 'contain';
-      sidebarLogo.onerror = function(){ sidebarLogo.removeAttribute('src'); sidebarLogo.hidden = true; };
+      // The CRM branding logo is driven by Application Settings -> Logo.
+      // Fall back to the legacy header image only when no application logo exists.
+      var crmLogo = (applicationLogo && applicationLogo.url) ? applicationLogo : header;
+      if (crmLogo && crmLogo.url) {
+        sidebarLogo.src = crmLogo.url;
+        sidebarLogo.hidden = false;
+        sidebarLogo.style.width = crmLogo.width || '125px';
+        sidebarLogo.style.height = crmLogo.height || 'auto';
+        sidebarLogo.style.objectFit = 'contain';
+      } else {
+        sidebarLogo.removeAttribute('src');
+        sidebarLogo.hidden = true;
+      }
+      sidebarLogo.onerror = function () { sidebarLogo.removeAttribute('src'); sidebarLogo.hidden = true; };
     }
     function renderNavLogoPreview(preview, image) {
       if (!preview) return;
@@ -699,7 +742,20 @@
         preview.removeAttribute('src');
         preview.hidden = true;
       }
-      preview.onerror = function(){ preview.removeAttribute('src'); preview.hidden = true; };
+      preview.onerror = function () { preview.removeAttribute('src'); preview.hidden = true; };
+    }
+    var applicationLogoPreview = $('application-logo-image-preview');
+    if (applicationLogoPreview) {
+      if (applicationLogo && applicationLogo.url) {
+        applicationLogoPreview.src = applicationLogo.url;
+        applicationLogoPreview.hidden = false;
+        applicationLogoPreview.style.width = applicationLogo.width || '125px';
+        applicationLogoPreview.style.height = applicationLogo.height || 'auto';
+      } else {
+        applicationLogoPreview.removeAttribute('src');
+        applicationLogoPreview.hidden = true;
+      }
+      applicationLogoPreview.onerror = function () { applicationLogoPreview.removeAttribute('src'); applicationLogoPreview.hidden = true; };
     }
     renderNavLogoPreview(mainNavLogoPreview, mainNavLogo);
     renderNavLogoPreview(otherNavLogoPreview, otherNavLogo);
@@ -709,6 +765,8 @@
       bannerPreview.style.width = banner.width;
       bannerPreview.style.minHeight = banner.height;
     }
+    if ($('application-logo-image-width')) $('application-logo-image-width').value = applicationLogo ? (applicationLogo.width || '125px') : '125px';
+    if ($('application-logo-image-height')) $('application-logo-image-height').value = applicationLogo ? (applicationLogo.height || 'auto') : 'auto';
     if ($('main-page-nav-logo-image-width')) $('main-page-nav-logo-image-width').value = mainNavLogo ? (mainNavLogo.width || '125px') : '125px';
     if ($('main-page-nav-logo-image-height')) $('main-page-nav-logo-image-height').value = mainNavLogo ? (mainNavLogo.height || 'auto') : 'auto';
     if ($('other-pages-nav-logo-image-width')) $('other-pages-nav-logo-image-width').value = otherNavLogo ? (otherNavLogo.width || '125px') : '125px';
@@ -726,7 +784,7 @@
         footerLogoPreview.removeAttribute('src');
         footerLogoPreview.hidden = true;
       }
-      footerLogoPreview.onerror = function(){ footerLogoPreview.removeAttribute('src'); footerLogoPreview.hidden = true; };
+      footerLogoPreview.onerror = function () { footerLogoPreview.removeAttribute('src'); footerLogoPreview.hidden = true; };
     }
     if ($('footer-logo-image-width')) $('footer-logo-image-width').value = footerLogo ? (footerLogo.width || '100%') : '100%';
     if ($('footer-logo-image-height')) $('footer-logo-image-height').value = footerLogo ? (footerLogo.height || 'auto') : 'auto';
@@ -734,10 +792,10 @@
     if (faviconPreview) {
       if (favicon && favicon.url) { faviconPreview.src = favicon.url; faviconPreview.hidden = false; }
       else { faviconPreview.removeAttribute('src'); faviconPreview.hidden = true; }
-      faviconPreview.onerror = function(){ faviconPreview.removeAttribute('src'); faviconPreview.hidden = true; };
+      faviconPreview.onerror = function () { faviconPreview.removeAttribute('src'); faviconPreview.hidden = true; };
     }
     renderWebsiteImages();
-    document.querySelectorAll('.crm-welcome').forEach(function(hero){
+    document.querySelectorAll('.crm-welcome').forEach(function (hero) {
       hero.style.backgroundImage = 'linear-gradient(120deg, rgba(48,40,36,.82), rgba(87,70,62,.72)), url("' + String(banner.url).replace(/"/g, '\\"') + '")';
       hero.style.backgroundSize = 'cover';
       hero.style.backgroundPosition = 'center';
@@ -760,36 +818,36 @@
       description: (key === 'main_page_nav_logo_image' ? 'Main Home page navigation logo and display dimensions.' : (key === 'other_pages_nav_logo_image' ? 'Other website pages navigation logo and display dimensions.' : (key === 'nav_logo_image' ? 'Legacy website navigation logo and display dimensions.' : (key === 'header_image' ? 'CRM/header reference image and display dimensions.' : (key === 'banner_image' ? 'Website page banner image and display dimensions.' : 'Website footer logo and display dimensions.'))))),
       active: true,
       updated_at: new Date().toISOString()
-    }, {onConflict:'setting_key'});
+    }, { onConflict: 'setting_key' });
     if (result.error) throw result.error;
     await loadApplicationSettings();
   }
 
   async function uploadBrandingImage(key, fileInputId, maxMb) {
-    if (!requirePermission('settings','update')) return;
+    if (!requirePermission('settings', 'update')) return;
     var input = $(fileInputId);
     var file = input && input.files ? input.files[0] : null;
-    if (!file) { message('Choose an image first.','error'); return; }
-    if (!/^image\//i.test(file.type)) { message('Please choose an image file.','error'); return; }
+    if (!file) { message('Choose an image first.', 'error'); return; }
+    if (!/^image\//i.test(file.type)) { message('Please choose an image file.', 'error'); return; }
     maxMb = Number(maxMb || 5);
-    if (file.size > maxMb * 1024 * 1024) { message('Image must be ' + maxMb + ' MB or smaller.','error'); return; }
+    if (file.size > maxMb * 1024 * 1024) { message('Image must be ' + maxMb + ' MB or smaller.', 'error'); return; }
 
-    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
     if (!/^(jpg|jpeg|png|webp|gif|ico)$/.test(ext)) ext = 'jpg';
-    var path = 'branding/' + key.replace('_image','') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
-    var old = key === 'favicon_image' ? (optionalImageSettingPayload(key) || {path:'',url:'',width:'32px',height:'32px'}) : ((key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:(key === 'footer_logo_image' ? '100%' : '125px'),height:'auto'}) : imageSettingPayload(key));
+    var path = 'branding/' + key.replace('_image', '') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    var old = key === 'favicon_image' ? (optionalImageSettingPayload(key) || { path: '', url: '', width: '32px', height: '32px' }) : ((key === 'logo_image' || key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || { path: '', url: '', width: (key === 'footer_logo_image' ? '100%' : '125px'), height: 'auto' }) : imageSettingPayload(key));
     var oldFooterForShared = key === 'other_pages_nav_logo_image' ? optionalImageSettingPayload('footer_logo_image') : null;
-    var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, {upsert:false, contentType:file.type || undefined});
+    var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, { upsert: false, contentType: file.type || undefined });
     if (upload.error) throw upload.error;
     var publicUrlResult = window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
     var publicUrl = publicUrlResult && publicUrlResult.data ? publicUrlResult.data.publicUrl : '';
     if (!publicUrl) throw new Error('Could not create a public URL for the uploaded image.');
 
     try {
-      var sharedPayload = {path:path, url:publicUrl, width:old.width, height:old.height};
+      var sharedPayload = { path: path, url: publicUrl, width: old.width, height: old.height };
       await persistBrandingSetting(key, sharedPayload);
       if (key === 'other_pages_nav_logo_image') {
-        await persistBrandingSetting('footer_logo_image', {path:path, url:publicUrl, width:(oldFooterForShared && oldFooterForShared.width) || '100%', height:(oldFooterForShared && oldFooterForShared.height) || 'auto'});
+        await persistBrandingSetting('footer_logo_image', { path: path, url: publicUrl, width: (oldFooterForShared && oldFooterForShared.width) || '100%', height: (oldFooterForShared && oldFooterForShared.height) || 'auto' });
       }
     } catch (err) {
       await window.salonSupabase.storage.from('site-assets').remove([path]);
@@ -803,48 +861,53 @@
       await window.salonSupabase.storage.from('site-assets').remove(oldPaths);
     }
     if (input) input.value = '';
-    var uploadMessage = 'Favicon uploaded.';
+    var uploadMessage = key === 'logo_image' ? 'Application logo uploaded.' : 'Favicon uploaded.';
     if (key === 'main_page_nav_logo_image') uploadMessage = 'Main page Nav logo uploaded.';
     else if (key === 'other_pages_nav_logo_image') uploadMessage = 'Other pages Nav logo uploaded.';
     else if (key === 'nav_logo_image') uploadMessage = 'Nav logo uploaded.';
     else if (key === 'header_image') uploadMessage = 'Header image uploaded.';
     else if (key === 'banner_image') uploadMessage = 'Page banner image uploaded.';
     else if (key === 'footer_logo_image') uploadMessage = 'Footer logo uploaded.';
-    message(uploadMessage,'success');
+    message(uploadMessage, 'success');
   }
 
   async function deleteBrandingImage(key) {
-    if (!requirePermission('settings','update')) return;
-    var current = (key === 'favicon_image' || key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || {path:'',url:'',width:key === 'footer_logo_image' ? '100%' : (key === 'favicon_image' ? '32px' : '125px'),height:key === 'favicon_image' ? '32px' : 'auto'}) : imageSettingPayload(key);
-    var deleteLabel = key === 'favicon_image' ? 'favicon' : key === 'footer_logo_image' ? 'footer logo' : (key === 'main_page_nav_logo_image' ? 'main page navigation logo' : key === 'other_pages_nav_logo_image' ? 'other pages navigation logo' : key === 'nav_logo_image' ? 'navigation logo' : key === 'banner_image' ? 'page banner image' : 'this image');
+    if (!requirePermission('settings', 'update')) return;
+    var current = (key === 'favicon_image' || key === 'logo_image' || key === 'footer_logo_image' || key === 'nav_logo_image' || key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') ? (optionalImageSettingPayload(key) || { path: '', url: '', width: key === 'footer_logo_image' ? '100%' : (key === 'favicon_image' ? '32px' : '125px'), height: key === 'favicon_image' ? '32px' : 'auto' }) : imageSettingPayload(key);
+    var deleteLabel = key === 'favicon_image' ? 'favicon' : key === 'logo_image' ? 'application logo' : key === 'footer_logo_image' ? 'footer logo' : (key === 'main_page_nav_logo_image' ? 'main page navigation logo' : key === 'other_pages_nav_logo_image' ? 'other pages navigation logo' : key === 'nav_logo_image' ? 'navigation logo' : key === 'banner_image' ? 'page banner image' : 'this image');
     if (!await crmConfirm('Delete ' + deleteLabel, 'Delete the ' + deleteLabel + '? This cannot be undone.')) return;
     if (current.path && current.path.indexOf('branding/') === 0) {
       var remove = await window.salonSupabase.storage.from('site-assets').remove([current.path]);
       if (remove.error) throw remove.error;
     }
+    if (key === 'logo_image') {
+      await persistBrandingSetting(key, { path: '', url: '', width: '125px', height: 'auto' });
+      message('Application logo deleted.', 'success');
+      return;
+    }
     if (key === 'favicon_image') {
-      await persistBrandingSetting(key, {path:'',url:'',width:'32px',height:'32px'});
-      message('Favicon deleted.','success');
+      await persistBrandingSetting(key, { path: '', url: '', width: '32px', height: '32px' });
+      message('Favicon deleted.', 'success');
       return;
     }
     if (key === 'footer_logo_image') {
-      await persistBrandingSetting(key, {path:'',url:'',width:'100%',height:'auto'});
-      message('Footer logo deleted.','success');
+      await persistBrandingSetting(key, { path: '', url: '', width: '100%', height: 'auto' });
+      message('Footer logo deleted.', 'success');
       return;
     }
     if (key === 'main_page_nav_logo_image' || key === 'other_pages_nav_logo_image') {
-      await persistBrandingSetting(key, {path:'',url:'',width:'125px',height:'auto'});
-      if (key === 'other_pages_nav_logo_image') await persistBrandingSetting('footer_logo_image', {path:'',url:'',width:'100%',height:'auto'});
-      message(key === 'main_page_nav_logo_image' ? 'Main page Nav logo deleted.' : 'Other pages Nav & Footer logo deleted.','success');
+      await persistBrandingSetting(key, { path: '', url: '', width: '125px', height: 'auto' });
+      if (key === 'other_pages_nav_logo_image') await persistBrandingSetting('footer_logo_image', { path: '', url: '', width: '100%', height: 'auto' });
+      message(key === 'main_page_nav_logo_image' ? 'Main page Nav logo deleted.' : 'Other pages Nav & Footer logo deleted.', 'success');
       return;
     }
     if (key === 'nav_logo_image') {
-      await persistBrandingSetting(key, {path:'',url:'',width:'125px',height:'auto'});
-      message('Legacy Nav logo deleted.','success');
+      await persistBrandingSetting(key, { path: '', url: '', width: '125px', height: 'auto' });
+      message('Legacy Nav logo deleted.', 'success');
       return;
     }
     await persistBrandingSetting(key, brandingDefaultPayload(key));
-    message((key === 'header_image' ? 'Top navigation logo' : 'Page banner image') + ' restored to the default image.','success');
+    message((key === 'header_image' ? 'Top navigation logo' : 'Page banner image') + ' restored to the default image.', 'success');
   }
 
 
@@ -866,46 +929,69 @@
     var container = $('currency-options-list');
     if (!container) return;
 
-    var codes = Object.keys(options);
-    if (!codes.length) {
+    var currencies = (state.currencies || []).slice().sort(function (a, b) {
+      return Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.code || '').localeCompare(String(b.code || ''));
+    });
+    if (!currencies.length) {
       container.innerHTML = '<div class="crm-settings-empty">No currencies configured yet. Add one below.</div>';
       return;
     }
 
-    container.innerHTML = codes.map(function(code) {
-      var item = options[code] || {};
-      var safeCode = escapeHtml(String(code).toUpperCase());
-      return '<div class="crm-currency-row" data-currency-row data-code="'+safeCode+'">'+
-        '<div class="crm-currency-code">'+
-          '<span class="crm-currency-symbol">'+escapeHtml((item.en || item.ar || String(code).charAt(0)).toString().slice(0,2))+'</span>'+
-          '<div><strong>'+safeCode+'</strong><small>Currency code</small></div>'+
-        '</div>'+
-        '<div class="crm-field">'+
-          '<label>English label</label>'+
-          '<input type="text" data-currency-en value="'+escapeHtml(item.en || '')+'" placeholder="$ or USD">'+
-        '</div>'+
-        '<div class="crm-field">'+
-          '<label>Arabic label</label>'+
-          '<input type="text" data-currency-ar value="'+escapeHtml(item.ar || '')+'" placeholder="ريال or $">'+
-        '</div>'+
-        '<button type="button" class="crm-icon-btn crm-remove-currency" title="Remove '+safeCode+'" aria-label="Remove '+safeCode+'">×</button>'+
-      '</div>';
+    var displayCode = String(settingValue('display_currency', currencies[0].code || '') || '').toUpperCase();
+    container.innerHTML = currencies.map(function (currency) {
+      var code = String(currency.code || '').toUpperCase();
+      var item = options[code] || { en: currency.en_label || '', ar: currency.ar_label || '' };
+      var safeCode = escapeHtml(code);
+      return '<div class="crm-currency-row" data-currency-row data-code="' + safeCode + '" data-currency-id="' + escapeHtml(currency.id == null ? '' : String(currency.id)) + '">' +
+        '<div class="crm-currency-code">' +
+        '<span class="crm-currency-symbol">' + escapeHtml((item.en || item.ar || code.charAt(0)).toString().slice(0, 2)) + '</span>' +
+        '<div><strong>' + safeCode + '</strong><small>Currency code</small></div>' +
+        '</div>' +
+        '<div class="crm-field">' +
+        '<label>English label</label>' +
+        '<input type="text" data-currency-en value="' + escapeHtml(item.en || '') + '" placeholder="$ or USD">' +
+        '</div>' +
+        '<div class="crm-field">' +
+        '<label>Arabic label</label>' +
+        '<input type="text" data-currency-ar value="' + escapeHtml(item.ar || '') + '" placeholder="ريال or $">' +
+        '</div>' +
+        '<div class="crm-field crm-currency-display">' +
+        '<label>Display currency</label>' +
+        '<label class="crm-toggle" title="Use ' + safeCode + ' as the website display currency"><input type="checkbox" data-currency-display ' + ((currency.display_currency === true || (!currencies.some(function (c) { return c.display_currency === true; }) && code === displayCode)) ? 'checked' : '') + '><span></span></label>' +
+        '<small>Default shown on website</small>' +
+        '</div>' +
+        '<button type="button" class="crm-icon-btn crm-icon-btn-danger crm-remove-currency" title="Delete ' + safeCode + '" aria-label="Delete ' + safeCode + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>' +
+        '</div>';
     }).join('');
 
     bindCurrencyRowEvents();
   }
-
   function bindCurrencyRowEvents() {
-    currencyOptionRows().forEach(function(row) {
+    currencyOptionRows().forEach(function (row) {
       var remove = row.querySelector('.crm-remove-currency');
       if (remove) {
-        remove.addEventListener('click', function() {
+        remove.addEventListener('click', async function () {
           var rows = currencyOptionRows();
           if (rows.length <= 1) {
-            message('Keep at least one currency configured.','error');
+            message('Keep at least one currency configured.', 'error');
             return;
           }
-          row.remove();
+          var code = String(row.getAttribute('data-code') || '').toUpperCase();
+          var ok = await crmConfirm('Delete currency', 'Are you sure you want to delete the ' + code + ' currency?');
+          if (ok) row.remove();
+        });
+      }
+      var display = row.querySelector('[data-currency-display]');
+      if (display) {
+        display.addEventListener('change', function () {
+          if (!display.checked) {
+            var checked = currencyOptionRows().some(function (r) { var cb = r.querySelector('[data-currency-display]'); return cb && cb.checked; });
+            if (!checked) display.checked = true;
+            return;
+          }
+          currencyOptionRows().forEach(function (other) {
+            if (other !== row) { var cb = other.querySelector('[data-currency-display]'); if (cb) cb.checked = false; }
+          });
         });
       }
     });
@@ -916,7 +1002,7 @@
     if (!container) return;
     if (container.querySelector('.crm-settings-empty')) container.innerHTML = '';
 
-    var existingCodes = currencyOptionRows().map(function(row) {
+    var existingCodes = currencyOptionRows().map(function (row) {
       return row.getAttribute('data-code') || '';
     });
     var code = 'NEW';
@@ -930,19 +1016,24 @@
     row.setAttribute('data-currency-row', '');
     row.setAttribute('data-code', code);
     row.innerHTML =
-      '<div class="crm-currency-code crm-currency-code-edit">'+
-        '<input type="text" data-currency-code value="'+code+'" maxlength="5" aria-label="Currency code" placeholder="USD">'+
-        '<small>3-letter code</small>'+
-      '</div>'+
-      '<div class="crm-field">'+
-        '<label>English label</label>'+
-        '<input type="text" data-currency-en placeholder="$ or USD">'+
-      '</div>'+
-      '<div class="crm-field">'+
-        '<label>Arabic label</label>'+
-        '<input type="text" data-currency-ar placeholder="ريال or $">'+
-      '</div>'+
-      '<button type="button" class="crm-icon-btn crm-remove-currency" title="Remove currency" aria-label="Remove currency">×</button>';
+      '<div class="crm-currency-code crm-currency-code-edit">' +
+      '<input type="text" data-currency-code value="' + code + '" maxlength="5" aria-label="Currency code" placeholder="USD">' +
+      '<small>3-letter code</small>' +
+      '</div>' +
+      '<div class="crm-field">' +
+      '<label>English label</label>' +
+      '<input type="text" data-currency-en placeholder="$ or USD">' +
+      '</div>' +
+      '<div class="crm-field">' +
+      '<label>Arabic label</label>' +
+      '<input type="text" data-currency-ar placeholder="ريال or $">' +
+      '</div>' +
+      '<div class="crm-field crm-currency-display">' +
+      '<label>Display currency</label>' +
+      '<label class="crm-toggle" title="Use this currency as the website display currency"><input type="checkbox" data-currency-display><span></span></label>' +
+      '<small>Default shown on website</small>' +
+      '</div>' +
+      '<button type="button" class="crm-icon-btn crm-icon-btn-danger crm-remove-currency" title="Delete currency" aria-label="Delete currency"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>';
 
     container.appendChild(row);
     bindCurrencyRowEvents();
@@ -950,7 +1041,7 @@
     if (codeInput) {
       codeInput.focus();
       codeInput.select();
-      codeInput.addEventListener('input', function() {
+      codeInput.addEventListener('input', function () {
         row.setAttribute('data-code', codeInput.value.trim().toUpperCase());
       });
     }
@@ -960,7 +1051,7 @@
     var options = {};
     var rows = currencyOptionRows();
 
-    rows.forEach(function(row) {
+    rows.forEach(function (row) {
       var codeInput = row.querySelector('[data-currency-code]');
       var code = codeInput
         ? codeInput.value.trim().toUpperCase()
@@ -969,14 +1060,57 @@
       var ar = row.querySelector('[data-currency-ar]').value.trim();
 
       if (!code) throw new Error('Every currency needs a currency code.');
-      if (!/^[A-Z]{3,5}$/.test(code)) throw new Error('Currency code "'+code+'" must use 3–5 letters.');
-      if (!en || !ar) throw new Error('Please enter both English and Arabic labels for '+code+'.');
-      if (options[code]) throw new Error('Currency '+code+' is listed more than once.');
+      if (!/^[A-Z]{3,5}$/.test(code)) throw new Error('Currency code "' + code + '" must use 3–5 letters.');
+      if (!en || !ar) throw new Error('Please enter both English and Arabic labels for ' + code + '.');
+      if (options[code]) throw new Error('Currency ' + code + ' is listed more than once.');
 
-      options[code] = {en: en, ar: ar};
+      options[code] = { en: en, ar: ar };
     });
 
     return options;
+  }
+
+  function collectCurrencyRows() {
+    var rows = currencyOptionRows().map(function (row, index) {
+      var codeInput = row.querySelector('[data-currency-code]');
+      var code = (codeInput ? codeInput.value : row.getAttribute('data-code') || '').trim().toUpperCase();
+      var enInput = row.querySelector('[data-currency-en]');
+      var arInput = row.querySelector('[data-currency-ar]');
+      var en = enInput ? enInput.value.trim() : '';
+      var ar = arInput ? arInput.value.trim() : '';
+      var original = (state.currencies || []).find(function (c) { return String(c.code).toUpperCase() === code; });
+      var display = row.querySelector('[data-currency-display]');
+      if (!code || !/^[A-Z]{3,5}$/.test(code)) throw new Error('Currency code must use 3–5 letters.');
+      if (!en || !ar) throw new Error('Please enter both English and Arabic labels for ' + code + '.');
+      return { id: original ? original.id : null, code: code, en_label: en, ar_label: ar, active: original ? original.active !== false : true, display_currency: !!(display && display.checked), sort_order: original ? Number(original.sort_order) || 0 : index + 1 };
+    });
+    if (!rows.length) throw new Error('Keep at least one currency configured.');
+    var displayRows = rows.filter(function (r) { return r.display_currency; });
+    if (displayRows.length !== 1) throw new Error('Select exactly one display currency.');
+    if (displayRows[0].active === false) throw new Error('The display currency must be active.');
+    var seen = {};
+    rows.forEach(function (r) { if (seen[r.code]) throw new Error('Currency ' + r.code + ' is listed more than once.'); seen[r.code] = true; });
+    return rows;
+  }
+
+  async function saveCurrencies(rows) {
+    if (!requirePermission('settings', 'update')) throw new Error('You do not have permission to update settings.');
+    var existing = state.currencies || [];
+    var incoming = rows.filter(function (r) { return r.id; }).map(function (r) { return String(r.id); });
+    var deleted = existing.filter(function (r) { return r.id && incoming.indexOf(String(r.id)) === -1; }).map(function (r) { return r.id; });
+    if (deleted.length) { var del = await window.salonSupabase.from('currencies').delete().in('id', deleted); if (del.error) throw del.error; }
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i], payload = { code: r.code, en_label: r.en_label, ar_label: r.ar_label, active: r.active, display_currency: r.display_currency, sort_order: r.sort_order, updated_at: new Date().toISOString() };
+      var result = r.id ? await window.salonSupabase.from('currencies').update(payload).eq('id', r.id).select().single() : await window.salonSupabase.from('currencies').insert(payload).select().single();
+      if (result.error) throw result.error;
+    }
+    var reload = await window.salonSupabase.from('currencies').select('id,code,en_label,ar_label,active,display_currency,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('code', { ascending: true });
+    if (reload.error) throw reload.error; state.currencies = reload.data || []; renderCurrencyOptionsFromTable();
+  }
+
+  function renderCurrencyOptionsFromTable() {
+    var options = {}; (state.currencies || []).forEach(function (c) { options[String(c.code).toUpperCase()] = { en: c.en_label, ar: c.ar_label }; });
+    renderCurrencyOptions(options);
   }
 
   function applyCrmFavicon() {
@@ -1001,13 +1135,27 @@
   }
 
   async function loadApplicationSettings(ensureSocial) {
-    var result = await window.salonSupabase
-      .from('application_settings')
-      .select('id,setting_key,setting_value,description,active,created_at,updated_at')
-      .order('setting_key', {ascending:false});
+    var results = await Promise.all([
+      window.salonSupabase.from('application_settings').select('id,setting_key,setting_value,description,active,created_at,updated_at').order('setting_key', { ascending: false }),
+      window.salonSupabase.from('loyalty_tiers').select('id,name,min_lifetime_points,sort_order,active,created_at,updated_at').order('min_lifetime_points', { ascending: true }).order('sort_order', { ascending: true }),
+      window.salonSupabase.from('currencies').select('id,code,en_label,ar_label,active,display_currency,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('code', { ascending: true }),
+      window.salonSupabase.from('languages').select('id,code,en_label,native_label,active,is_default,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('code', { ascending: true }),
+      window.salonSupabase.from('social_media').select('id,platform,slug,url,active,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('platform', { ascending: true }),
+      window.salonSupabase.from('booking_loyalty_points').select('id,currency_code,points_per_unit,active,created_at,updated_at').order('currency_code', { ascending: true })
+    ]);
+    var result = results[0], tierResult = results[1], currencyResult = results[2], languageResult = results[3], socialResult = results[4], loyaltyPointsResult = results[5];
     if (result.error) throw result.error;
+    if (tierResult.error) throw tierResult.error;
+    if (currencyResult.error) throw currencyResult.error;
+    if (languageResult.error) throw languageResult.error;
+    if (socialResult.error) throw socialResult.error;
+    if (loyaltyPointsResult.error) throw loyaltyPointsResult.error;
     state.appSettings = result.data || [];
-    deactivateLegacySocialSettings();
+    state.loyaltyTiers = tierResult.data || [];
+    state.currencies = currencyResult.data || [];
+    state.languages = languageResult.data || [];
+    state.socialMedia = socialResult.data || [];
+    state.loyaltyBookingPoints = loyaltyPointsResult.data || [];
     applyCrmFavicon();
     renderApplicationSettings();
   }
@@ -1021,54 +1169,173 @@
   }
 
   var SOCIAL_DEFAULTS = [
-    {key:'social_whatsapp', slug:'whatsapp', label:'WhatsApp'},
-    {key:'social_facebook', slug:'facebook', label:'Facebook'},
-    {key:'social_instagram', slug:'instagram', label:'Instagram'}
+    { platform: 'WhatsApp', slug: 'whatsapp' },
+    { platform: 'Facebook', slug: 'facebook' },
+    { platform: 'Instagram', slug: 'instagram' }
   ];
 
-  function parseSettingPayload(value) {
-    if (typeof value === 'string') { try { return JSON.parse(value); } catch (e) { return {}; } }
-    return value && typeof value === 'object' ? value : {};
-  }
-
-  function socialRow(key) {
-    return state.appSettings.find(function(x){ return x.setting_key === key; }) || null;
-  }
-
+  function socialRows() { return state.socialMedia || []; }
   function socialPayloadFor(meta) {
-    var row = socialRow(meta.key);
-    var payload = parseSettingPayload(row && row.setting_value);
-    return {url: String(payload.url || '')};
+    var row = socialRows().find(function (x) { return String(x.slug || '').toLowerCase() === String(meta.slug).toLowerCase(); });
+    return row || null;
   }
 
   function renderSocialSettings() {
     var container = $('social-settings-list');
     if (!container) return;
-    container.innerHTML = SOCIAL_DEFAULTS.map(function(meta){
-      var row = socialRow(meta.key);
-      var payload = socialPayloadFor(meta);
-      var active = row ? row.active !== false : false;
-      var iconClass = 'fa-' + meta.slug;
-      return '<div class="crm-social-row" data-social-row="'+escapeHtml(meta.key)+'">'+
-        '<div class="crm-social-icon-preview '+escapeHtml(iconClass)+'" aria-hidden="true"></div>'+
-        '<div class="crm-social-name"><strong>'+escapeHtml(meta.label)+'</strong><small>'+escapeHtml(meta.slug)+'</small></div>'+
-        '<div class="crm-social-field crm-social-field-url"><label for="social-url-'+escapeHtml(meta.slug)+'">Public URL</label><input id="social-url-'+escapeHtml(meta.slug)+'" type="url" data-social-url="'+escapeHtml(meta.key)+'" value="'+escapeHtml(payload.url)+'" placeholder="https://..."></div>'+
-        '<div class="crm-social-status"><label><input type="checkbox" data-social-active="'+escapeHtml(meta.key)+'" '+(active?'checked':'')+'> Active — show on website</label></div>'+
-      '</div>';
+    var rows = socialRows();
+    if (!rows.length) {
+      container.innerHTML = '<div class="crm-settings-empty">No social media channels configured yet. Add one below.</div>';
+      return;
+    }
+    container.innerHTML = rows.map(function (row) {
+      var slug = String(row.slug || '').toLowerCase();
+      var iconClass = 'fa-' + escapeHtml(slug);
+      return '<div class="crm-social-row" data-social-row-id="' + escapeHtml(row.id || '') + '">' +
+        '<div class="crm-social-channel"><div class="crm-social-icon-preview ' + iconClass + '" aria-hidden="true"></div><div class="crm-social-name"><strong>' + escapeHtml(row.platform || slug) + '</strong><small>' + escapeHtml(slug) + '</small></div></div>' +
+        '<div class="crm-field crm-social-field-url"><input type="url" data-social-url-id="' + escapeHtml(row.id || '') + '" value="' + escapeHtml(row.url || '') + '" placeholder="https://..."></div>' +
+        '<div class="crm-field"><input type="number" min="0" step="1" data-social-sort-id="' + escapeHtml(row.id || '') + '" value="' + escapeHtml(String(Number.isInteger(Number(row.sort_order)) ? Number(row.sort_order) : 0)) + '" placeholder="1"></div>' +
+        '<div class="crm-social-status"><label class="crm-toggle"><input type="checkbox" data-social-active-id="' + escapeHtml(row.id || '') + '" ' + (row.active !== false ? 'checked' : '') + '><span></span></label></div>' +
+        '<button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-social-id="' + escapeHtml(row.id || '') + '" aria-label="Delete ' + escapeHtml(row.platform || slug) + '" title="Delete social media"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>' +
+        '</div>';
     }).join('');
+    bindSocialRowEvents();
   }
 
-  function deactivateLegacySocialSettings() {
-    ['social_tiktok','social_youtube','social_snapchat','social_x'].forEach(function(key){
-      var row=socialRow(key);
-      if (row && row.active !== false) row.active=false;
+  function bindSocialRowEvents() {
+    document.querySelectorAll('[data-remove-social-id]').forEach(function (remove) {
+      if (remove.getAttribute('data-bound') === 'true') return;
+      remove.setAttribute('data-bound', 'true');
+      remove.addEventListener('click', async function () {
+        var row = remove.closest('[data-social-row-id]');
+        if (!row) return;
+        var nameEl = row.querySelector('.crm-social-name strong');
+        var name = nameEl ? nameEl.textContent.trim() : 'this social media channel';
+        var ok = await crmConfirm('Delete social media', 'Are you sure you want to delete ' + name + '?');
+        if (ok) row.remove();
+      });
     });
   }
 
+  function collectSocialMedia() {
+    var domRows = Array.prototype.slice.call(document.querySelectorAll('[data-social-row-id]'));
+    return domRows.map(function (domRow) {
+      var id = domRow.getAttribute('data-social-row-id') || '';
+      var source = socialRows().find(function (x) { return String(x.id || '') === String(id); }) || {};
+      var urlInput = domRow.querySelector('[data-social-url-id]');
+      var activeInput = domRow.querySelector('[data-social-active-id]');
+      var sortInput = domRow.querySelector('[data-social-sort-id]');
+      var newPlatform = domRow.querySelector('[data-social-platform-new]');
+      var newSlug = domRow.querySelector('[data-social-slug-new]');
+      var url = urlInput ? urlInput.value.trim() : String(source.url || '').trim();
+      var active = !!(activeInput && activeInput.checked);
+      var sortOrder = sortInput ? Number(sortInput.value) : Number(source.sort_order || 0);
+      var platform = String(newPlatform ? newPlatform.value : source.platform || '').trim();
+      var slug = String(newSlug ? newSlug.value : source.slug || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) throw new Error((platform || 'Social channel') + ' must have a whole-number sort order of 0 or more.');
+      if (active && !url) throw new Error((platform || 'Social channel') + ' is active but has no public URL.');
+      if (active && !/^https?:\/\//i.test(url)) throw new Error((platform || 'Social channel') + ' must use a public URL beginning with https:// or http://.');
+      if (!platform) throw new Error('Each social media channel must have a platform name.');
+      if (!slug) throw new Error('Each social media channel must have a slug.');
+      return { id: id || null, platform: platform, slug: slug, url: url, active: active, sort_order: sortOrder };
+    });
+  }
+
+  async function saveSocialMedia(rows) {
+    if (!requirePermission('settings', 'update')) throw new Error('You do not have permission to update settings.');
+    var incoming = rows.filter(function (r) { return r.id; }).map(function (r) { return String(r.id); });
+    var existing = state.socialMedia || [];
+    var deleted = existing.filter(function (r) { return r.id && incoming.indexOf(String(r.id)) === -1; }).map(function (r) { return r.id; });
+    if (deleted.length) {
+      var del = await window.salonSupabase.from('social_media').delete().in('id', deleted);
+      if (del.error) throw del.error;
+    }
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var payload = { platform: r.platform, slug: r.slug, url: r.url, active: r.active, sort_order: r.sort_order, updated_at: new Date().toISOString() };
+      var result = r.id ? await window.salonSupabase.from('social_media').update(payload).eq('id', r.id).select().single() : await window.salonSupabase.from('social_media').insert(payload).select().single();
+      if (result.error) throw result.error;
+    }
+    var reload = await window.salonSupabase.from('social_media').select('id,platform,slug,url,active,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('platform', { ascending: true });
+    if (reload.error) throw reload.error;
+    state.socialMedia = reload.data || [];
+    renderSocialSettings();
+  }
+
+  function normalizeLoyaltyBookingPointRows(rows) {
+    return (Array.isArray(rows) ? rows : []).map(function (row) {
+      return {
+        id: row && row.id ? row.id : null,
+        currency_code: String(row && row.currency_code || '').trim().toUpperCase(),
+        points_per_unit: Number(row && row.points_per_unit),
+        active: row ? row.active !== false : true
+      };
+    }).filter(function (row) {
+      return row.currency_code && Number.isFinite(row.points_per_unit) && row.points_per_unit >= 0;
+    });
+  }
+
+  function loyaltyBookingCurrencies() {
+    var codes = [];
+    (state.currencies || []).forEach(function (c) {
+      if (c && c.code && c.active !== false) {
+        var code = String(c.code).trim().toUpperCase();
+        if (code && codes.indexOf(code) === -1) codes.push(code);
+      }
+    });
+    (state.loyaltyBookingPoints || []).forEach(function (r) {
+      var code = String(r && r.currency_code || '').trim().toUpperCase();
+      if (code && codes.indexOf(code) === -1) codes.push(code);
+    });
+    ['QAR', 'USD'].forEach(function (code) { if (codes.indexOf(code) === -1) codes.push(code); });
+    return codes;
+  }
+
+  function renderLoyaltyBookingPointsSettings() {
+    var container = $('loyalty-booking-points-rates-list');
+    if (!container) return;
+    var rows = normalizeLoyaltyBookingPointRows(state.loyaltyBookingPoints);
+    container.innerHTML = loyaltyBookingCurrencies().map(function (code) {
+      var stored = rows.find(function (r) { return r.currency_code === code; });
+      var rate = stored ? stored.points_per_unit : 1;
+      return '<div class="crm-loyalty-booking-rate-row" data-loyalty-booking-rate-row data-currency="' + escapeHtml(code) + '">' +
+        '<div><strong>' + escapeHtml(code) + '</strong></div>' +
+        '<div class="crm-field"><input type="number" min="0" step="0.01" data-loyalty-booking-rate value="' + escapeHtml(String(rate)) + '" placeholder="0"></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function collectLoyaltyBookingPoints() {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('[data-loyalty-booking-rate-row]'));
+    return rows.map(function (row) {
+      var code = String(row.getAttribute('data-currency') || '').trim().toUpperCase();
+      var input = row.querySelector('[data-loyalty-booking-rate]');
+      var rate = Number(input && input.value);
+      if (!code) return null;
+      if (!Number.isFinite(rate) || rate < 0) throw new Error('The loyalty points rate for ' + code + ' must be 0 or greater.');
+      return { currency_code: code, points_per_unit: rate, active: true };
+    }).filter(Boolean);
+  }
+
+  async function saveLoyaltyBookingPoints(rows) {
+    if (!requirePermission('settings', 'update')) throw new Error('You do not have permission to update loyalty booking points.');
+    var payloadRows = rows.map(function (r) {
+      return { currency_code: String(r.currency_code).trim().toUpperCase(), points_per_unit: Number(r.points_per_unit), active: r.active !== false, updated_at: new Date().toISOString() };
+    });
+    for (var i = 0; i < payloadRows.length; i++) {
+      var result = await window.salonSupabase.from('booking_loyalty_points').upsert(payloadRows[i], { onConflict: 'currency_code' }).select().single();
+      if (result.error) throw result.error;
+    }
+    var reload = await window.salonSupabase.from('booking_loyalty_points').select('id,currency_code,points_per_unit,active,created_at,updated_at').order('currency_code', { ascending: true });
+    if (reload.error) throw reload.error;
+    state.loyaltyBookingPoints = reload.data || [];
+    renderLoyaltyBookingPointsSettings();
+  }
+
   var DEFAULT_LOYALTY_REWARDS = [
-    {points:100, reward:'$10 reward'},
-    {points:250, reward:'$30 reward'},
-    {points:500, reward:'$70 reward'}
+    { points: 100, reward: '$10 reward' },
+    { points: 250, reward: '$30 reward' },
+    { points: 500, reward: '$70 reward' }
   ];
 
   function normalizeLoyaltyRewards(value) {
@@ -1077,16 +1344,24 @@
       try { parsed = JSON.parse(parsed); } catch (e) { parsed = []; }
     }
     if (!Array.isArray(parsed)) parsed = [];
-    var cleaned = parsed.map(function(item){
-      return {points:Number(item && item.points), reward:String(item && item.reward || '').trim()};
-    }).filter(function(item){
+    var cleaned = parsed.map(function (item) {
+      return { points: Number(item && item.points), reward: String(item && item.reward || '').trim() };
+    }).filter(function (item) {
       return Number.isInteger(item.points) && item.points > 0 && item.reward;
     });
     return cleaned;
   }
 
+  function parseSettingPayload(value) {
+    // Supabase may return jsonb settings as an object/array, while older
+    // records or clients may return them as a JSON string. Normalize both.
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch (e) { return value; }
+  }
+
   function loyaltyRewardsSetting() {
-    var row = state.appSettings.find(function(x){ return x.setting_key === 'loyalty_rewards'; });
+    var row = state.appSettings.find(function (x) { return x.setting_key === 'loyalty_rewards'; });
     return row ? parseSettingPayload(row.setting_value) : DEFAULT_LOYALTY_REWARDS;
   }
 
@@ -1094,12 +1369,12 @@
     var container = $('loyalty-reward-settings-list');
     if (!container) return;
     var rewards = normalizeLoyaltyRewards(loyaltyRewardsSetting());
-    container.innerHTML = rewards.map(function(item,index){
-      return '<div class="crm-loyalty-reward-setting-row" data-loyalty-reward-row>'+
-        '<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points value="'+escapeHtml(String(item.points))+'" placeholder="100"></div>'+
-        '<div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label value="'+escapeHtml(item.reward)+'" placeholder="$10 reward or Free haircut"></div>'+
-        '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward aria-label="Remove reward '+(index+1)+'">Remove</button>'+
-      '</div>';
+    container.innerHTML = rewards.map(function (item, index) {
+      return '<div class="crm-loyalty-reward-setting-row" data-loyalty-reward-row>' +
+        '<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points value="' + escapeHtml(String(item.points)) + '" placeholder="100"></div>' +
+        '<div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label value="' + escapeHtml(item.reward) + '" placeholder="$10 reward or Free haircut"></div>' +
+        '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward aria-label="Remove reward ' + (index + 1) + '">Remove</button>' +
+        '</div>';
     }).join('');
   }
 
@@ -1107,16 +1382,16 @@
     var rows = Array.prototype.slice.call(document.querySelectorAll('[data-loyalty-reward-row]'));
     var seen = {};
     var rewards = [];
-    rows.forEach(function(row){
+    rows.forEach(function (row) {
       var points = Number(row.querySelector('[data-loyalty-reward-points]') && row.querySelector('[data-loyalty-reward-points]').value);
       var reward = String((row.querySelector('[data-loyalty-reward-label]') && row.querySelector('[data-loyalty-reward-label]').value) || '').trim();
       if (!Number.isInteger(points) || points <= 0) throw new Error('Each loyalty reward must have a whole number of points greater than 0.');
       if (!reward) throw new Error('Each loyalty reward must have a reward description.');
       if (seen[points]) throw new Error('Each loyalty reward must use a different points value.');
       seen[points] = true;
-      rewards.push({points:points,reward:reward});
+      rewards.push({ points: points, reward: reward });
     });
-    rewards.sort(function(a,b){ return b.points-a.points; });
+    rewards.sort(function (a, b) { return b.points - a.points; });
     return rewards;
   }
 
@@ -1124,35 +1399,277 @@
     var container = $('customer-loyalty-rewards');
     if (!container) return;
     var rewards = normalizeLoyaltyRewards(loyaltyRewardsSetting());
-    container.innerHTML = rewards.map(function(item){
+    container.innerHTML = rewards.map(function (item) {
       var disabled = points < item.points ? ' disabled' : '';
       var title = points < item.points ? 'Not enough points' : 'Redeem this reward';
-      return '<button type="button" class="crm-btn crm-btn-secondary crm-reward-btn" data-reward-points="'+item.points+'" data-reward-label="'+escapeHtml(item.reward)+'" title="'+escapeHtml(title)+'"'+disabled+'>Redeem '+item.points+' pts → '+escapeHtml(item.reward)+'</button>';
+      return '<button type="button" class="crm-btn crm-btn-secondary crm-reward-btn" data-reward-points="' + item.points + '" data-reward-label="' + escapeHtml(item.reward) + '" title="' + escapeHtml(title) + '"' + disabled + '>Redeem ' + item.points + ' pts → ' + escapeHtml(item.reward) + '</button>';
     }).join('');
+  }
+
+  var DEFAULT_LOYALTY_TIERS = [
+    { name: 'Member', min_lifetime_points: 0, sort_order: 1, active: true },
+    { name: 'Silver', min_lifetime_points: 100, sort_order: 2, active: true },
+    { name: 'Gold', min_lifetime_points: 300, sort_order: 3, active: true },
+    { name: 'Platinum', min_lifetime_points: 600, sort_order: 4, active: true }
+  ];
+
+  function normalizeLoyaltyTiers(value) {
+    var parsed = value;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch (e) { parsed = []; }
+    }
+    if (!Array.isArray(parsed)) parsed = [];
+    return parsed.map(function (item) {
+      return {
+        id: item && item.id != null ? item.id : null,
+        name: String(item && (item.name != null ? item.name : item.tier) || '').trim(),
+        min_lifetime_points: Number(item && (item.min_lifetime_points != null ? item.min_lifetime_points : (item.min_points != null ? item.min_points : item.minPoints))),
+        sort_order: Number(item && item.sort_order != null ? item.sort_order : 0),
+        active: item && item.active !== false
+      };
+    }).filter(function (item) {
+      return item.name && Number.isInteger(item.min_lifetime_points) && item.min_lifetime_points >= 0;
+    }).sort(function (a, b) {
+      return a.min_lifetime_points - b.min_lifetime_points || a.sort_order - b.sort_order || a.name.localeCompare(b.name);
+    });
+  }
+
+  function loyaltyTiersSetting() {
+    var tiers = normalizeLoyaltyTiers(state.loyaltyTiers || []);
+    return tiers.length ? tiers : DEFAULT_LOYALTY_TIERS;
+  }
+
+  function customerLoyaltyTierForPoints(lifetimePoints) {
+    var points = Number(lifetimePoints || 0);
+    if (!Number.isFinite(points)) points = 0;
+    var tiers = loyaltyTiersSetting().filter(function (t) { return t.active !== false; }).slice().sort(function (a, b) { return b.min_lifetime_points - a.min_lifetime_points; });
+    for (var i = 0; i < tiers.length; i++) {
+      if (points >= tiers[i].min_lifetime_points) return tiers[i].name;
+    }
+    return tiers.length ? tiers[tiers.length - 1].name : 'Member';
+  }
+
+  function renderLoyaltyTierFilter() {
+    var select = $('customer-loyalty-filter');
+    if (!select) return;
+    var current = String(select.value || state.customerLoyaltyFilter || 'all');
+    var tiers = loyaltyTiersSetting().filter(function (t) { return t.active !== false; });
+    select.innerHTML = '<option value="all">All loyalty tiers</option>' + tiers.map(function (tier) {
+      return '<option value="' + escapeHtml(tier.name) + '">' + escapeHtml(tier.name) + '</option>';
+    }).join('');
+    select.value = tiers.some(function (tier) { return tier.name === current; }) ? current : 'all';
+    state.customerLoyaltyFilter = select.value;
+  }
+
+  function renderLoyaltyTierSettings() {
+    var container = $('loyalty-tier-settings-list');
+    if (!container) return;
+    var tiers = loyaltyTiersSetting().slice().sort(function (a, b) { return a.min_lifetime_points - b.min_lifetime_points; });
+    container.innerHTML = tiers.map(function (item, index) {
+      return '<div class="crm-loyalty-tier-setting-row" data-loyalty-tier-row data-tier-id="' + escapeHtml(item.id == null ? '' : String(item.id)) + '">' +
+        '<div class="crm-field"><label>Tier name</label><input type="text" maxlength="80" data-loyalty-tier-name value="' + escapeHtml(item.name) + '" placeholder="Member"></div>' +
+        '<div class="crm-field"><label>Minimum lifetime points</label><input type="number" min="0" step="1" data-loyalty-tier-min value="' + escapeHtml(String(item.min_lifetime_points)) + '" placeholder="0"></div>' +
+        '<div class="crm-field"><label>Sort order</label><input type="number" min="0" step="1" data-loyalty-tier-sort value="' + escapeHtml(String(item.sort_order || index + 1)) + '" placeholder="1"></div>' +
+        '<div class="crm-field crm-loyalty-tier-active"><label>Active</label><label class="crm-toggle"><input type="checkbox" data-loyalty-tier-active ' + (item.active !== false ? 'checked' : '') + '><span></span></label></div>' +
+        '<button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-loyalty-tier aria-label="Delete ' + escapeHtml(item.name) + ' tier" title="Delete tier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function collectLoyaltyTiers() {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('[data-loyalty-tier-row]'));
+    var seenNames = {};
+    var seenPoints = {};
+    var tiers = [];
+    rows.forEach(function (row, index) {
+      var id = row.getAttribute('data-tier-id') || null;
+      var name = String((row.querySelector('[data-loyalty-tier-name]') && row.querySelector('[data-loyalty-tier-name]').value) || '').trim();
+      var minPoints = Number(row.querySelector('[data-loyalty-tier-min]') && row.querySelector('[data-loyalty-tier-min]').value);
+      var sortOrder = Number(row.querySelector('[data-loyalty-tier-sort]') && row.querySelector('[data-loyalty-tier-sort]').value);
+      var active = !!(row.querySelector('[data-loyalty-tier-active]') && row.querySelector('[data-loyalty-tier-active]').checked);
+      if (!name) throw new Error('Each loyalty tier must have a name.');
+      if (name.length > 80) throw new Error('Loyalty tier names must be 80 characters or fewer.');
+      if (!Number.isInteger(minPoints) || minPoints < 0) throw new Error('Each loyalty tier must have a whole-number minimum lifetime point value of 0 or more.');
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) throw new Error('Each loyalty tier must have a whole-number sort order of 0 or more.');
+      var nameKey = name.toLowerCase();
+      if (seenNames[nameKey]) throw new Error('Each loyalty tier must have a different name.');
+      if (seenPoints[minPoints]) throw new Error('Each loyalty tier must have a different minimum lifetime point value.');
+      seenNames[nameKey] = true;
+      seenPoints[minPoints] = true;
+      tiers.push({ id: id, name: name, min_lifetime_points: minPoints, sort_order: sortOrder, active: active });
+    });
+    if (!tiers.length) throw new Error('Add at least one loyalty tier.');
+    if (!tiers.some(function (tier) { return tier.min_lifetime_points === 0 && tier.active; })) throw new Error('One active loyalty tier must start at 0 lifetime points.');
+    return tiers.sort(function (a, b) { return a.min_lifetime_points - b.min_lifetime_points || a.sort_order - b.sort_order; });
+  }
+
+  async function saveLoyaltyTiers(tiers) {
+    if (!requirePermission('settings', 'update')) throw new Error('You do not have permission to update settings.');
+    var existing = state.loyaltyTiers || [];
+    var incomingIds = tiers.filter(function (t) { return t.id; }).map(function (t) { return String(t.id); });
+    var deleted = existing.filter(function (t) { return t.id && incomingIds.indexOf(String(t.id)) < 0; }).map(function (t) { return t.id; });
+    if (deleted.length) {
+      var del = await window.salonSupabase.from('loyalty_tiers').delete().in('id', deleted);
+      if (del.error) throw del.error;
+    }
+    for (var i = 0; i < tiers.length; i++) {
+      var tier = tiers[i];
+      var payload = { name: tier.name, min_lifetime_points: tier.min_lifetime_points, sort_order: tier.sort_order, active: tier.active, updated_at: new Date().toISOString() };
+      var result = tier.id
+        ? await window.salonSupabase.from('loyalty_tiers').update(payload).eq('id', tier.id).select().single()
+        : await window.salonSupabase.from('loyalty_tiers').insert(payload).select().single();
+      if (result.error) throw result.error;
+    }
+    var reload = await window.salonSupabase.from('loyalty_tiers').select('id,name,min_lifetime_points,sort_order,active,created_at,updated_at').order('min_lifetime_points', { ascending: true }).order('sort_order', { ascending: true });
+    if (reload.error) throw reload.error;
+    state.loyaltyTiers = reload.data || [];
+    renderLoyaltyTierSettings();
+    renderLoyaltyTierFilter();
+  }
+
+  function languageOptionRows() {
+    return Array.prototype.slice.call(document.querySelectorAll('[data-language-row]'));
+  }
+
+  function languageIcon(code) {
+    var c = String(code || '').toUpperCase();
+    return escapeHtml(c.slice(0, 2) || 'LN');
+  }
+
+  function renderLanguageSettings() {
+    var container = $('language-options-list');
+    if (!container) return;
+    var languages = (state.languages || []).slice().sort(function (a, b) {
+      return Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.code || '').localeCompare(String(b.code || ''));
+    });
+    if (!languages.length) {
+      container.innerHTML = '<div class="crm-settings-empty">No languages configured yet. Add at least one language.</div>';
+      return;
+    }
+    container.innerHTML = languages.map(function (lang) {
+      var id = escapeHtml(lang.id == null ? '' : String(lang.id));
+      var code = String(lang.code || '').toLowerCase();
+      var disabled = lang.id ? ' disabled' : '';
+      return '<div class="crm-language-row" data-language-row data-language-id="' + id + '" data-code="' + escapeHtml(code) + '">' +
+        '<div class="crm-language-code"><span class="crm-language-symbol">' + languageIcon(code) + '</span><div><strong>' + escapeHtml(code.toUpperCase()) + '</strong></div></div>' +
+        '<div class="crm-field"><input type="text" data-language-en value="' + escapeHtml(lang.en_label || '') + '" placeholder="English"' + disabled + '></div>' +
+        '<div class="crm-field"><input type="text" data-language-native value="' + escapeHtml(lang.native_label || '') + '" placeholder="English" dir="auto"' + disabled + '></div>' +
+        '<div class="crm-language-status"><label class="crm-toggle"><input type="checkbox" data-language-active ' + (lang.active !== false ? 'checked' : '') + '><span></span></label></div>' +
+        '<div class="crm-language-default"><label class="crm-toggle"><input type="checkbox" data-language-default ' + (lang.is_default === true ? 'checked' : '') + '><span></span></label></div>' +
+        '<div class="crm-language-actions"><button type="button" class="crm-icon-btn" data-edit-language title="Edit language" aria-label="Edit language"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-language title="Delete language" aria-label="Delete language"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button></div>' +
+        '</div>';
+    }).join('');
+    bindLanguageRowEvents();
+  }
+
+  function bindLanguageRowEvents() {
+    languageOptionRows().forEach(function (row) {
+      var edit = row.querySelector('[data-edit-language]');
+      if (edit) edit.addEventListener('click', function () {
+        var inputs = row.querySelectorAll('[data-language-en],[data-language-native]');
+        var editing = row.getAttribute('data-editing') === 'true';
+        Array.prototype.forEach.call(inputs, function (input) { input.disabled = !editing; });
+        row.setAttribute('data-editing', editing ? 'false' : 'true');
+        edit.classList.toggle('is-active', !editing);
+        if (!editing && inputs[0]) { inputs[0].focus(); inputs[0].select(); }
+      });
+      var def = row.querySelector('[data-language-default]');
+      if (def) def.addEventListener('change', function () {
+        if (!def.checked) {
+          var any = languageOptionRows().some(function (r) { var cb = r.querySelector('[data-language-default]'); return cb && cb.checked; });
+          if (!any) def.checked = true;
+          return;
+        }
+        languageOptionRows().forEach(function (other) {
+          if (other !== row) { var cb = other.querySelector('[data-language-default]'); if (cb) cb.checked = false; }
+        });
+        var active = row.querySelector('[data-language-active]');
+        if (active) active.checked = true;
+      });
+      var active = row.querySelector('[data-language-active]');
+      if (active) active.addEventListener('change', function () {
+        var def = row.querySelector('[data-language-default]');
+        if (!active.checked && def && def.checked) {
+          active.checked = true;
+          message('The default language must remain active.', 'error');
+        }
+      });
+      var remove = row.querySelector('[data-remove-language]');
+      if (remove) remove.addEventListener('click', async function () {
+        var rows = languageOptionRows();
+        if (rows.length <= 1) { message('Keep at least one language configured.', 'error'); return; }
+        var code = String(row.getAttribute('data-code') || '').toUpperCase();
+        var ok = await crmConfirm('Delete language', 'Are you sure you want to delete the ' + code + ' language?');
+        if (ok) row.remove();
+      });
+    });
+  }
+
+  function addLanguageOption() {
+    var container = $('language-options-list');
+    if (!container) return;
+    if (container.querySelector('.crm-settings-empty')) container.innerHTML = '';
+    var existing = languageOptionRows().map(function (r) { return String(r.getAttribute('data-code') || '').toLowerCase(); });
+    var code = 'new', n = 1;
+    while (existing.indexOf(code) !== -1) code = 'new' + n++;
+    var row = document.createElement('div');
+    row.className = 'crm-language-row is-new'; row.setAttribute('data-language-row', ''); row.setAttribute('data-language-id', ''); row.setAttribute('data-code', code); row.setAttribute('data-editing', 'true');
+    row.innerHTML = '<div class="crm-language-code crm-language-code-edit"><input type="text" data-language-code value="' + escapeHtml(code) + '" maxlength="5" placeholder="en" aria-label="Language code"><small>2–5 letters</small></div>' +
+      '<div class="crm-field"><input type="text" data-language-en placeholder="English"></div>' +
+      '<div class="crm-field"><input type="text" data-language-native placeholder="Native name" dir="auto"></div>' +
+      '<div class="crm-language-status"><label class="crm-toggle"><input type="checkbox" data-language-active checked><span></span></label></div>' +
+      '<div class="crm-language-default"><label class="crm-toggle"><input type="checkbox" data-language-default><span></span></label></div>' +
+      '<div class="crm-language-actions"><button type="button" class="crm-icon-btn is-active" data-edit-language title="Edit language" aria-label="Edit language"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-language title="Delete language" aria-label="Delete language"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button></div>';
+    container.appendChild(row); bindLanguageRowEvents();
+    var input = row.querySelector('[data-language-code]'); if (input) { input.focus(); input.select(); input.addEventListener('input', function () { row.setAttribute('data-code', input.value.trim().toLowerCase()); }); }
+  }
+
+  function collectLanguageRows() {
+    var rows = languageOptionRows().map(function (row, index) {
+      var codeInput = row.querySelector('[data-language-code]');
+      var code = (codeInput ? codeInput.value : row.getAttribute('data-code') || '').trim().toLowerCase();
+      var en = (row.querySelector('[data-language-en]') || {}).value;
+      var nativeLabel = (row.querySelector('[data-language-native]') || {}).value;
+      var active = row.querySelector('[data-language-active]');
+      var def = row.querySelector('[data-language-default]');
+      if (!/^[a-z]{2,5}$/.test(code)) throw new Error('Language code must use 2–5 lowercase letters.');
+      if (!String(en || '').trim() || !String(nativeLabel || '').trim()) throw new Error('Please enter both labels for ' + code.toUpperCase() + '.');
+      return { id: row.getAttribute('data-language-id') || null, code: code, en_label: String(en).trim(), native_label: String(nativeLabel).trim(), active: !!(active && active.checked), is_default: !!(def && def.checked), sort_order: index + 1 };
+    });
+    if (!rows.length) throw new Error('Keep at least one language configured.');
+    var defaults = rows.filter(function (r) { return r.is_default; });
+    if (defaults.length !== 1) throw new Error('Select exactly one default language.');
+    if (!defaults[0].active) throw new Error('The default language must be active.');
+    var seen = {}; rows.forEach(function (r) { if (seen[r.code]) throw new Error('Language ' + r.code.toUpperCase() + ' is listed more than once.'); seen[r.code] = true; });
+    return rows;
+  }
+
+  async function saveLanguages(rows) {
+    if (!requirePermission('settings', 'update')) throw new Error('You do not have permission to update settings.');
+    var existing = state.languages || [];
+    var incoming = rows.filter(function (r) { return r.id; }).map(function (r) { return String(r.id); });
+    var deleted = existing.filter(function (r) { return r.id && incoming.indexOf(String(r.id)) === -1; }).map(function (r) { return r.id; });
+    if (deleted.length) { var del = await window.salonSupabase.from('languages').delete().in('id', deleted); if (del.error) throw del.error; }
+    // Clear the default first so the unique constraint never sees two defaults.
+    var clear = await window.salonSupabase.from('languages').update({ is_default: false, updated_at: new Date().toISOString() }).eq('is_default', true); if (clear.error) throw clear.error;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i], payload = { code: r.code, en_label: r.en_label, native_label: r.native_label, active: r.active, is_default: r.is_default, sort_order: r.sort_order, updated_at: new Date().toISOString() };
+      var result = r.id ? await window.salonSupabase.from('languages').update(payload).eq('id', r.id).select().single() : await window.salonSupabase.from('languages').insert(payload).select().single();
+      if (result.error) throw result.error;
+    }
+    var reload = await window.salonSupabase.from('languages').select('id,code,en_label,native_label,active,is_default,sort_order,created_at,updated_at').order('sort_order', { ascending: true }).order('code', { ascending: true });
+    if (reload.error) throw reload.error; state.languages = reload.data || []; renderLanguageSettings();
   }
 
   function renderApplicationSettings() {
     var currency = settingValue('display_currency', 'USD');
-    var options = normalizeCurrencyOptions(settingValue('currency_options', {
-      USD: {en:'$', ar:'$'},
-      QAR: {en:'QAR', ar:'ريال'}
-    }));
+    var options = {};
+    (state.currencies || []).forEach(function (c) { options[String(c.code).toUpperCase()] = { en: c.en_label, ar: c.ar_label }; });
     var language = settingValue('default_language', 'en');
     var websiteName = settingValue('website_name', '');
     var contactPhone = settingValue('contact_phone', '+1 234 567 890');
 
-    var currencySelect = $('app-setting-currency');
-    var languageSelect = $('app-setting-language');
-    if (currencySelect) {
-      var codes = Object.keys(options);
-      currencySelect.innerHTML = codes.map(function(code) {
-        var item = options[code] || {};
-        return '<option value="'+escapeHtml(code)+'">'+escapeHtml(code)+' — '+escapeHtml(item.en || item.ar || '')+'</option>';
-      }).join('');
-      currencySelect.value = String(currency || 'USD').toUpperCase();
-      if (!currencySelect.value && codes.length) currencySelect.value = codes[0];
-    }
-    if (languageSelect) languageSelect.value = String(language || 'en').toLowerCase();
+    renderLanguageSettings();
     var websiteNameInput = $('app-setting-website-name');
     if (websiteNameInput) websiteNameInput.value = String(websiteName || '').trim();
     applyCrmWebsiteName(websiteName);
@@ -1161,52 +1678,58 @@
     renderCurrencyOptions(options);
     renderBrandingSettings();
     renderSocialSettings();
+    renderLoyaltyBookingPointsSettings();
     renderLoyaltyRewardSettings();
+    renderLoyaltyTierSettings();
+    renderLoyaltyTierFilter();
+    renderCustomers();
 
     var status = $('app-settings-status');
     if (status) status.textContent = 'Settings synced';
   }
 
   async function saveImageDimensionsSetting(key, widthId, heightId, label, fallbackWidth) {
-    if (!requirePermission('settings','update')) return;
+    if (!requirePermission('settings', 'update')) return;
     var image = optionalImageSettingPayload(key);
-    if (!image || !image.url) { message('Upload the ' + label + ' first.','error'); return; }
+    if (!image || !image.url) { message('Upload the ' + label + ' first.', 'error'); return; }
     try {
       image.width = validateCssSize($(widthId).value, label + ' width', image.width || fallbackWidth);
       image.height = validateCssSize($(heightId).value, label + ' height', image.height || 'auto');
       await persistBrandingSetting(key, image);
-      message(label + ' dimensions saved.','success');
+      message(label + ' dimensions saved.', 'success');
     } catch (err) {
-      message(err.message,'error');
+      message(err.message, 'error');
     }
   }
 
   async function saveFooterLogoDimensions() {
-    return saveImageDimensionsSetting('footer_logo_image','footer-logo-image-width','footer-logo-image-height','Footer logo','100%');
+    return saveImageDimensionsSetting('footer_logo_image', 'footer-logo-image-width', 'footer-logo-image-height', 'Footer logo', '100%');
+  }
+
+  async function saveApplicationLogoDimensions() {
+    return saveImageDimensionsSetting('logo_image', 'application-logo-image-width', 'application-logo-image-height', 'Application logo', '125px');
   }
 
   async function saveMainPageNavLogoDimensions() {
-    return saveImageDimensionsSetting('main_page_nav_logo_image','main-page-nav-logo-image-width','main-page-nav-logo-image-height','Main page Nav logo','125px');
+    return saveImageDimensionsSetting('main_page_nav_logo_image', 'main-page-nav-logo-image-width', 'main-page-nav-logo-image-height', 'Main page Nav logo', '125px');
   }
 
   async function saveOtherPagesNavLogoDimensions() {
-    return saveImageDimensionsSetting('other_pages_nav_logo_image','other-pages-nav-logo-image-width','other-pages-nav-logo-image-height','Other pages Nav logo','125px');
+    return saveImageDimensionsSetting('other_pages_nav_logo_image', 'other-pages-nav-logo-image-width', 'other-pages-nav-logo-image-height', 'Other pages Nav logo', '125px');
   }
 
   async function saveApplicationSettings(e) {
-    if(!requirePermission('settings','update')) return;
+    if (!requirePermission('settings', 'update')) return;
     e.preventDefault();
     clearMessage();
-    if (!can('users','read')) {
-      message('Only administrators can manage application settings.','error');
+    if (!can('users', 'read')) {
+      message('Only administrators can manage application settings.', 'error');
       return;
     }
 
-    var currency = $('app-setting-currency').value.trim().toUpperCase();
-    var language = $('app-setting-language').value.trim().toLowerCase();
     var websiteName = $('app-setting-website-name').value.trim();
     var contactPhone = $('app-setting-contact-phone').value.trim();
-    var options;
+    var applicationLogoImage;
     var headerImage;
     var mainPageNavLogoImage;
     var otherPagesNavLogoImage;
@@ -1215,11 +1738,12 @@
     var footerLogoImage;
 
     try {
+      applicationLogoImage = optionalImageSettingPayload('logo_image');
       headerImage = imageSettingPayload('header_image');
       mainPageNavLogoImage = optionalImageSettingPayload('main_page_nav_logo_image');
       otherPagesNavLogoImage = optionalImageSettingPayload('other_pages_nav_logo_image') || optionalImageSettingPayload('nav_logo_image');
       bannerImage = imageSettingPayload('banner_image');
-      faviconImage = optionalImageSettingPayload('favicon_image') || {path:'',url:'',width:'32px',height:'32px'};
+      faviconImage = optionalImageSettingPayload('favicon_image') || { path: '', url: '', width: '32px', height: '32px' };
       var storedFooterLogo = optionalImageSettingPayload('footer_logo_image');
       footerLogoImage = otherPagesNavLogoImage && otherPagesNavLogoImage.url
         ? Object.assign({}, otherPagesNavLogoImage)
@@ -1227,6 +1751,10 @@
       if (footerLogoImage && footerLogoImage.url) {
         footerLogoImage.width = validateCssSize($('footer-logo-image-width').value, 'Footer logo width', (storedFooterLogo && storedFooterLogo.width) || '100%');
         footerLogoImage.height = validateCssSize($('footer-logo-image-height').value, 'Footer logo height', (storedFooterLogo && storedFooterLogo.height) || 'auto');
+      }
+      if (applicationLogoImage && applicationLogoImage.url) {
+        applicationLogoImage.width = validateCssSize($('application-logo-image-width').value, 'Application logo width', applicationLogoImage.width || '125px');
+        applicationLogoImage.height = validateCssSize($('application-logo-image-height').value, 'Application logo height', applicationLogoImage.height || 'auto');
       }
       if (mainPageNavLogoImage && mainPageNavLogoImage.url) {
         mainPageNavLogoImage.width = validateCssSize($('main-page-nav-logo-image-width').value, 'Main page Nav logo width', mainPageNavLogoImage.width || '125px');
@@ -1239,86 +1767,51 @@
       bannerImage.width = validateCssSize($('banner-image-width').value, 'Banner width', bannerImage.width);
       bannerImage.height = validateCssSize($('banner-image-height').value, 'Banner height', bannerImage.height);
     } catch (err) {
-      message(err.message,'error');
+      message(err.message, 'error');
       return;
     }
 
-    if (!currency || !language || !websiteName || !contactPhone) {
-      message('Please complete the website name, currency, language and contact phone settings.','error');
-      return;
-    }
-    if (language !== 'en' && language !== 'ar') {
-      message('Default language must be English or Arabic.','error');
+    if (!websiteName || !contactPhone) {
+      message('Please complete the website name and contact phone settings.', 'error');
       return;
     }
 
-    try {
-      options = collectCurrencyOptions();
-    } catch (err) {
-      message(err.message,'error');
-      return;
-    }
+    var languages;
+    try { languages = collectLanguageRows(); } catch (err) { message(err.message, 'error'); return; }
 
-    if (!options[currency]) {
-      message('The display currency must be one of the configured currencies.','error');
-      return;
-    }
+    var socialMedia;
+    try { socialMedia = collectSocialMedia(); } catch (err) { message(err.message, 'error'); return; }
 
-    var socialSettings;
-    try {
-      socialSettings = SOCIAL_DEFAULTS.map(function(meta){
-        var payload = socialPayloadFor(meta);
-        var urlInput = document.querySelector('[data-social-url="'+meta.key+'"]');
-        var activeInput = document.querySelector('[data-social-active="'+meta.key+'"]');
-        payload.url = urlInput ? urlInput.value.trim() : payload.url;
-        var active = !!(activeInput && activeInput.checked);
-
-        // An active social channel must have a real public URL. Without this,
-        // the public website intentionally hides the channel, which previously
-        // made the CRM checkbox look like it was working when nothing appeared.
-        if (active && !payload.url) {
-          throw new Error(meta.label + ' is marked active, but its Public URL is empty. Enter the public URL or turn off “Active — show on website”.');
-        }
-        if (active && !/^https?:\/\//i.test(payload.url)) {
-          throw new Error(meta.label + ' must use a public URL beginning with https:// or http://.');
-        }
-
-        return {key:meta.key,value:{url:payload.url},description:meta.label+' social link.',active:active};
-      });
-    } catch (err) {
-      message(err.message,'error');
-      return;
-    }
-
+    var loyaltyBookingPoints;
     var loyaltyRewards;
+    var loyaltyTiers;
     try {
+      loyaltyBookingPoints = collectLoyaltyBookingPoints();
       loyaltyRewards = collectLoyaltyRewards();
+      loyaltyTiers = collectLoyaltyTiers();
     } catch (err) {
-      message(err.message,'error');
+      message(err.message, 'error');
       return;
     }
 
     var settings = [
-      {key:'website_name', value:websiteName, description:'Public website name used across the website and browser title.'},
-      {key:'display_currency', value:currency, description:'Default website display currency.'},
-      {key:'currency_options', value:options, description:'Currency labels by currency and language.'},
-      {key:'default_language', value:language, description:'Default website language for new visitors.'},
-      {key:'contact_phone', value:contactPhone, description:'Public contact phone number used across the website.'},
-      {key:'header_image', value:headerImage, description:'CRM/header reference image and display dimensions.'},
-      {key:'main_page_nav_logo_image', value:mainPageNavLogoImage || {path:'',url:'',width:'125px',height:'auto'}, description:'Main Home page navigation logo and display dimensions.'},
-      {key:'other_pages_nav_logo_image', value:otherPagesNavLogoImage || {path:'',url:'',width:'125px',height:'auto'}, description:'Other website pages navigation logo and display dimensions.'},
-      {key:'banner_image', value:bannerImage, description:'Website page banner image and display dimensions.'},
-      {key:'favicon_image', value:faviconImage, description:'Website favicon shown in the browser tab.'},
-      {key:'loyalty_rewards', value:loyaltyRewards, description:'Customer loyalty reward redemption rules: points required and reward description.'}
+      { key: 'website_name', value: websiteName, description: 'Public website name used across the website and browser title.' },
+      { key: 'contact_phone', value: contactPhone, description: 'Public contact phone number used across the website.' },
+      { key: 'logo_image', value: applicationLogoImage || { path: '', url: '', width: '125px', height: 'auto' }, description: 'Main application/CRM logo and display dimensions.' },
+      { key: 'header_image', value: headerImage, description: 'CRM/header reference image and display dimensions.' },
+      { key: 'main_page_nav_logo_image', value: mainPageNavLogoImage || { path: '', url: '', width: '125px', height: 'auto' }, description: 'Main Home page navigation logo and display dimensions.' },
+      { key: 'other_pages_nav_logo_image', value: otherPagesNavLogoImage || { path: '', url: '', width: '125px', height: 'auto' }, description: 'Other website pages navigation logo and display dimensions.' },
+      { key: 'banner_image', value: bannerImage, description: 'Website page banner image and display dimensions.' },
+      { key: 'favicon_image', value: faviconImage, description: 'Website favicon shown in the browser tab.' },
+      { key: 'loyalty_rewards', value: loyaltyRewards, description: 'Customer loyalty reward redemption rules: points required and reward description.' }
     ];
-    if (footerLogoImage && footerLogoImage.url) settings.push({key:'footer_logo_image', value:footerLogoImage, description:'Website footer logo using the shared Other pages Nav & Footer image.'});
-    settings = settings.concat(socialSettings);
+    if (footerLogoImage && footerLogoImage.url) settings.push({ key: 'footer_logo_image', value: footerLogoImage, description: 'Website footer logo using the shared Other pages Nav & Footer image.' });
 
     var button = $('save-application-settings');
     if (button) { button.disabled = true; button.textContent = 'Saving…'; }
 
     try {
-      for (var i=0; i<settings.length; i++) {
+      for (var i = 0; i < settings.length; i++) {
         var s = settings[i];
         var result = await window.salonSupabase
           .from('application_settings')
@@ -1328,14 +1821,35 @@
             description: s.description,
             active: s.active !== undefined ? s.active : true,
             updated_at: new Date().toISOString()
-          }, {onConflict:'setting_key'});
+          }, { onConflict: 'setting_key' });
         if (result.error) {
-          message(result.error.message,'error');
+          message(result.error.message, 'error');
           return;
         }
       }
 
-      message('Application settings saved.','success');
+      // Languages, currencies and social media are dedicated database tables.
+      await saveLanguages(languages);
+      var legacyLanguageDelete = await window.salonSupabase.from('application_settings').delete().eq('setting_key', 'default_language');
+      if (legacyLanguageDelete.error) throw legacyLanguageDelete.error;
+      await saveCurrencies(collectCurrencyRows());
+      await saveSocialMedia(socialMedia);
+
+      // Booking loyalty points live in their own dedicated database table, not application_settings.
+      await saveLoyaltyBookingPoints(loyaltyBookingPoints);
+
+      // Loyalty tiers are real database rows, separate from application_settings.
+      await saveLoyaltyTiers(loyaltyTiers);
+
+      // Keep the stored customer tier column synchronized with the CRM rules.
+      var tierSync = await window.salonSupabase.rpc('crm_sync_loyalty_tiers');
+      if (tierSync.error) {
+        message('Settings were saved, but customer tiers could not be synchronized: ' + (tierSync.error.message || 'Unknown error'), 'error');
+        await loadApplicationSettings();
+        return;
+      }
+
+      message('Application settings saved.', 'success');
       await loadApplicationSettings();
     } finally {
       if (button) { button.disabled = false; button.textContent = 'Save Settings'; }
@@ -1344,15 +1858,15 @@
 
 
   async function loadFaqs() {
-    if (!can('faqs','read')) {
+    if (!can('faqs', 'read')) {
       state.faqs = [];
       return;
     }
     var faqResult = await window.salonSupabase
       .from('faqs')
       .select('*')
-      .order('sort_order', {ascending:false})
-      .order('id', {ascending:false});
+      .order('sort_order', { ascending: false })
+      .order('id', { ascending: false });
     if (faqResult.error) throw faqResult.error;
 
     state.faqs = faqResult.data || [];
@@ -1363,16 +1877,16 @@
     var tbody = $('faq-table-body');
     if (!tbody) return;
     var rows = state.faqs.slice().sort(crmLatestDesc);
-    tbody.innerHTML = rows.map(function(f) {
+    tbody.innerHTML = rows.map(function (f) {
       var answer = String(f.answer_en || '');
-      if (answer.length > 150) answer = answer.slice(0,147) + '…';
+      if (answer.length > 150) answer = answer.slice(0, 147) + '…';
       return '<tr>' +
-        '<td><strong>'+escapeHtml(f.question_en || '—')+'</strong><br><span class="crm-small" dir="rtl">'+escapeHtml(f.question_ar || '')+'</span></td>' +
-        '<td>'+escapeHtml(answer || '—')+'</td>' +
-        '<td>'+Number(f.sort_order || 0)+'</td>' +
-        '<td>'+(f.active ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>')+'</td>' +
-        '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" data-edit-faq="'+f.id+'">Edit</button> ' +
-        '<button type="button" class="crm-btn crm-btn-danger crm-btn-sm" data-delete-faq="'+f.id+'">Delete</button></td>' +
+        '<td><strong>' + escapeHtml(f.question_en || '—') + '</strong><br><span class="crm-small" dir="rtl">' + escapeHtml(f.question_ar || '') + '</span></td>' +
+        '<td>' + escapeHtml(answer || '—') + '</td>' +
+        '<td>' + Number(f.sort_order || 0) + '</td>' +
+        '<td>' + (f.active ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '</td>' +
+        '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-sm" data-edit-faq="' + f.id + '">Edit</button> ' +
+        '<button type="button" class="crm-btn crm-btn-danger crm-btn-sm" data-delete-faq="' + f.id + '">Delete</button></td>' +
         '</tr>';
     }).join('') || '<tr><td colspan="5" class="crm-empty">No FAQs found.</td></tr>';
   }
@@ -1382,7 +1896,7 @@
     if (!$('faq-form')) return;
     $('faq-form').reset();
     $('faq-form-title').textContent = 'Add FAQ';
-    $('faq-sort-order').value = state.faqs.length ? String(Math.max.apply(null, state.faqs.map(function(f){ return Number(f.sort_order)||0; })) + 1) : '1';
+    $('faq-sort-order').value = state.faqs.length ? String(Math.max.apply(null, state.faqs.map(function (f) { return Number(f.sort_order) || 0; })) + 1) : '1';
     $('faq-active').checked = true;
     closeCrmFormCardModal('faq-form-card');
   }
@@ -1390,12 +1904,12 @@
   function startFaqCreate() {
     resetFaqForm();
     openCrmFormCardModal('faq-form-card');
-    $('faq-form-card').scrollIntoView({behavior:'smooth', block:'center'});
-    window.setTimeout(function(){ $('faq-question-en').focus(); }, 350);
+    $('faq-form-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(function () { $('faq-question-en').focus(); }, 350);
   }
 
   function editFaq(id) {
-    var f = state.faqs.find(function(x){ return String(x.id) === String(id); });
+    var f = state.faqs.find(function (x) { return String(x.id) === String(id); });
     if (!f) return;
     state.editingFaqId = f.id;
     $('faq-question-en').value = f.question_en || '';
@@ -1406,12 +1920,12 @@
     $('faq-active').checked = f.active !== false;
     $('faq-form-title').textContent = 'Edit FAQ';
     openCrmFormCardModal('faq-form-card');
-    $('faq-form-card').scrollIntoView({behavior:'smooth', block:'center'});
-    window.setTimeout(function(){ $('faq-question-en').focus(); }, 350);
+    $('faq-form-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(function () { $('faq-question-en').focus(); }, 350);
   }
 
   async function saveFaq(e) {
-    if(!requirePermission('faqs', state.editingFaqId?'update':'create')) return;
+    if (!requirePermission('faqs', state.editingFaqId ? 'update' : 'create')) return;
     e.preventDefault();
     clearMessage();
     var payload = {
@@ -1419,11 +1933,11 @@
       question_ar: $('faq-question-ar').value.trim() || null,
       answer_en: $('faq-answer-en').value.trim(),
       answer_ar: $('faq-answer-ar').value.trim() || null,
-      sort_order: Math.max(0, parseInt($('faq-sort-order').value,10) || 0),
+      sort_order: Math.max(0, parseInt($('faq-sort-order').value, 10) || 0),
       active: $('faq-active').checked
     };
     if (!payload.question_en || !payload.answer_en) {
-      message('English question and answer are required.','error');
+      message('English question and answer are required.', 'error');
       return;
     }
     var result;
@@ -1440,135 +1954,135 @@
         .maybeSingle();
     }
     if (result.error) {
-      message(result.error.message,'error');
+      message(result.error.message, 'error');
       return;
     }
     if (!result.data) {
-      message('FAQ could not be saved. Check that your CRM account is an admin and that FAQ RLS policies are installed.','error');
+      message('FAQ could not be saved. Check that your CRM account is an admin and that FAQ RLS policies are installed.', 'error');
       return;
     }
-    message(state.editingFaqId ? 'FAQ updated.' : 'FAQ added.','success');
+    message(state.editingFaqId ? 'FAQ updated.' : 'FAQ added.', 'success');
     resetFaqForm();
     await loadFaqs();
   }
 
   async function deleteFaq(id) {
-    if(!requirePermission('faqs','delete')) return;
-    var f = state.faqs.find(function(x){ return String(x.id) === String(id); });
+    if (!requirePermission('faqs', 'delete')) return;
+    var f = state.faqs.find(function (x) { return String(x.id) === String(id); });
     if (!f || !(await crmConfirm('Delete FAQ', 'Delete this FAQ? This cannot be undone.'))) return;
     var result = await window.salonSupabase.from('faqs').delete().eq('id', id);
     if (result.error) {
-      message(result.error.message,'error');
+      message(result.error.message, 'error');
       return;
     }
-    message('FAQ deleted.','success');
+    message('FAQ deleted.', 'success');
     await loadFaqs();
   }
 
   async function loadData() {
-    if (can('services','read')) {
-      var cats = await window.salonSupabase.from('service_categories').select('*').order('sort_order',{ascending:false}).order('id',{ascending:false});
+    if (can('services', 'read')) {
+      var cats = await window.salonSupabase.from('service_categories').select('*').order('sort_order', { ascending: false }).order('id', { ascending: false });
       if (cats.error) throw cats.error;
-      var services = await window.salonSupabase.from('services').select('*').order('sort_order',{ascending:false}).order('id',{ascending:false});
+      var services = await window.salonSupabase.from('services').select('*').order('sort_order', { ascending: false }).order('id', { ascending: false });
       if (services.error) throw services.error;
-      state.categories=cats.data||[]; state.services=services.data||[];
-    } else { state.categories=[]; state.services=[]; }
-    if (can('vouchers','read')) {
+      state.categories = cats.data || []; state.services = services.data || [];
+    } else { state.categories = []; state.services = []; }
+    if (can('vouchers', 'read')) {
       var vouchers = await window.salonSupabase.from('vouchers').select('*');
       if (vouchers.error) throw vouchers.error;
-      state.vouchers=(vouchers.data||[]).slice().sort(function(a,b){
-        var am=String(a.sku||'').match(/-(\d+)$/), bm=String(b.sku||'').match(/-(\d+)$/);
-        var an=am?Number(am[1]):-1, bn=bm?Number(bm[1]):-1;
-        if(an!==bn) return bn-an;
-        return String(b.sku||'').localeCompare(String(a.sku||''));
+      state.vouchers = (vouchers.data || []).slice().sort(function (a, b) {
+        var am = String(a.sku || '').match(/-(\d+)$/), bm = String(b.sku || '').match(/-(\d+)$/);
+        var an = am ? Number(am[1]) : -1, bn = bm ? Number(bm[1]) : -1;
+        if (an !== bn) return bn - an;
+        return String(b.sku || '').localeCompare(String(a.sku || ''));
       });
-    } else state.vouchers=[];
-    state.bookingVouchers=state.vouchers.slice();
-    renderCategories(); renderServices(); populateWalkinServices(); renderVouchers(); populateCategorySelect(); syncServiceCategoryFilter(); if(!state.editingServiceId) generateServiceSku(); updateDashboard();
+    } else state.vouchers = [];
+    state.bookingVouchers = state.vouchers.slice();
+    renderCategories(); renderServices(); populateWalkinServices(); renderVouchers(); populateCategorySelect(); syncServiceCategoryFilter(); if (!state.editingServiceId) generateServiceSku(); updateDashboard();
   }
   async function loadUsers() {
-    if (!can('users','read')) {
+    if (!can('users', 'read')) {
       state.users = [];
-      $('stat-users') && ($('stat-users').textContent='—');
+      $('stat-users') && ($('stat-users').textContent = '—');
       return;
     }
-    var result = await window.salonSupabase.from('admin_users').select('*').order('created_at',{ascending:false});
+    var result = await window.salonSupabase.from('admin_users').select('*').order('created_at', { ascending: false });
     if (result.error) throw result.error;
-    state.users=result.data||[];
+    state.users = result.data || [];
     syncUserRoleFilter();
-    state.authStatuses={};
+    state.authStatuses = {};
     try {
-      var authResult=await window.salonSupabase.functions.invoke('get-crm-user-statuses',{body:{}});
-      if(authResult.error) throw new Error((authResult.data&&authResult.data.error)||authResult.error.message||'Could not load authentication status.');
-      (authResult.data&&authResult.data.users||[]).forEach(function(item){state.authStatuses[String(item.user_id)]=item;});
-    } catch(statusError) { console.warn('Could not load authentication statuses:',statusError); }
+      var authResult = await window.salonSupabase.functions.invoke('get-crm-user-statuses', { body: {} });
+      if (authResult.error) throw new Error((authResult.data && authResult.data.error) || authResult.error.message || 'Could not load authentication status.');
+      (authResult.data && authResult.data.users || []).forEach(function (item) { state.authStatuses[String(item.user_id)] = item; });
+    } catch (statusError) { console.warn('Could not load authentication statuses:', statusError); }
     renderUsers();
-    $('stat-users') && ($('stat-users').textContent=state.users.length);
-    $('stat-bookings') && ($('stat-bookings').textContent=state.bookings.length);
+    $('stat-users') && ($('stat-users').textContent = state.users.length);
+    $('stat-bookings') && ($('stat-bookings').textContent = state.bookings.length);
   }
-  function categoryName(id) { var c=state.categories.find(function(x){return String(x.id)===String(id);}); return c?c.name_en:'—'; }
+  function categoryName(id) { var c = state.categories.find(function (x) { return String(x.id) === String(id); }); return c ? c.name_en : '—'; }
 
   function syncServiceCategoryFilter() {
     var select = $('service-category-filter');
     if (!select) return;
     var current = select.value || 'all';
-    select.innerHTML = '<option value="all">All categories</option>' + state.categories.slice().sort(function(a,b){ return crmDesc(a.name_en,b.name_en); }).map(function(c){
-      return '<option value="'+escapeHtml(c.id)+'">'+escapeHtml(c.name_en)+'</option>';
+    select.innerHTML = '<option value="all">All categories</option>' + state.categories.slice().sort(function (a, b) { return crmDesc(a.name_en, b.name_en); }).map(function (c) {
+      return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name_en) + '</option>';
     }).join('');
-    if (current !== 'all' && state.categories.some(function(c){return String(c.id)===String(current);})){
+    if (current !== 'all' && state.categories.some(function (c) { return String(c.id) === String(current); })) {
       select.value = current;
     } else {
       select.value = 'all';
     }
   }
 
-  function crmLatestDesc(a,b){
-    var ad=String(a&&a.created_at||''); var bd=String(b&&b.created_at||'');
-    if(ad||bd){var at=ad?Date.parse(ad):0,bt=bd?Date.parse(bd):0;if(bt!==at)return bt-at;}
-    return crmIdDesc(a&&a.id,b&&b.id);
+  function crmLatestDesc(a, b) {
+    var ad = String(a && a.created_at || ''); var bd = String(b && b.created_at || '');
+    if (ad || bd) { var at = ad ? Date.parse(ad) : 0, bt = bd ? Date.parse(bd) : 0; if (bt !== at) return bt - at; }
+    return crmIdDesc(a && a.id, b && b.id);
   }
   function renderCategories() {
-    var body=$('category-table-body'); if(!body)return;
-    var query=String(($('category-search')&&$('category-search').value)||'').trim().toLowerCase();
-    var status=String(($('category-status-filter')&&$('category-status-filter').value)||'all');
-    var rows=state.categories.filter(function(c){
-      var matchesQuery=!query || [c.name_en,c.name_ar,c.description_en,c.description_ar].join(' ').toLowerCase().indexOf(query)!==-1;
-      var matchesStatus=status==='all' || (status==='active' ? c.active!==false : c.active===false);
+    var body = $('category-table-body'); if (!body) return;
+    var query = String(($('category-search') && $('category-search').value) || '').trim().toLowerCase();
+    var status = String(($('category-status-filter') && $('category-status-filter').value) || 'all');
+    var rows = state.categories.filter(function (c) {
+      var matchesQuery = !query || [c.name_en, c.name_ar, c.description_en, c.description_ar].join(' ').toLowerCase().indexOf(query) !== -1;
+      var matchesStatus = status === 'all' || (status === 'active' ? c.active !== false : c.active === false);
       return matchesQuery && matchesStatus;
     }).sort(crmLatestDesc);
-    body.innerHTML=rows.map(function(c){
-      var image=c.image_url||'';
-      var imageHtml=image?'<div class="crm-category-thumb"><img src="'+escapeHtml(image)+'" alt="'+escapeHtml(c.name_en||'Category')+'" onerror="this.parentNode.style.display=&quot;none&quot;"></div>':'<span class="crm-small">No image</span>';
-      return '<tr><td><strong>'+escapeHtml(c.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(c.name_ar)+'</span></td>'+
-      '<td>'+imageHtml+'</td><td>'+escapeHtml(c.image_width||'')+' × '+escapeHtml(c.image_height||'')+'</td>'+
-      '<td>'+escapeHtml(c.sort_order==null?'':c.sort_order)+'</td>'+
-      '<td>'+(c.active?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'</td>'+
-      '<td><div class="crm-row-actions">'+
-      (can('services','update')?'<button class="crm-btn crm-btn-secondary" data-edit-category="'+c.id+'">Edit</button>':'')+
-      (can('services','delete')?'<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-category="'+c.id+'">Delete</button>':'')+
-      '</div></td></tr>';
+    body.innerHTML = rows.map(function (c) {
+      var image = c.image_url || '';
+      var imageHtml = image ? '<div class="crm-category-thumb"><img src="' + escapeHtml(image) + '" alt="' + escapeHtml(c.name_en || 'Category') + '" onerror="this.parentNode.style.display=&quot;none&quot;"></div>' : '<span class="crm-small">No image</span>';
+      return '<tr><td><strong>' + escapeHtml(c.name_en) + '</strong><br><span class="crm-small">' + escapeHtml(c.name_ar) + '</span></td>' +
+        '<td>' + imageHtml + '</td><td>' + escapeHtml(c.image_width || '') + ' × ' + escapeHtml(c.image_height || '') + '</td>' +
+        '<td>' + escapeHtml(c.sort_order == null ? '' : c.sort_order) + '</td>' +
+        '<td>' + (c.active ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '</td>' +
+        '<td><div class="crm-row-actions">' +
+        (can('services', 'update') ? '<button class="crm-btn crm-btn-secondary" data-edit-category="' + c.id + '">Edit</button>' : '') +
+        (can('services', 'delete') ? '<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-category="' + c.id + '">Delete</button>' : '') +
+        '</div></td></tr>';
     }).join('') || '<tr><td colspan="6" class="crm-empty">No categories found.</td></tr>';
   }
 
   function renderServices() {
-    var body=$('service-table-body'); if(!body)return;
-    var query=String(($('service-search')&&$('service-search').value)||'').trim().toLowerCase();
-    var category=String(($('service-category-filter')&&$('service-category-filter').value)||'all');
-    var status=String(($('service-status-filter')&&$('service-status-filter').value)||'all');
-    var rows=state.services.filter(function(s){
-      var matchesQuery=!query || [s.sku,s.name_en,s.name_ar,categoryName(s.category_id)].join(' ').toLowerCase().indexOf(query)!==-1;
-      var matchesCategory=category==='all' || String(s.category_id)===category;
-      var matchesStatus=status==='all' || (status==='active' ? s.active!==false : s.active===false);
+    var body = $('service-table-body'); if (!body) return;
+    var query = String(($('service-search') && $('service-search').value) || '').trim().toLowerCase();
+    var category = String(($('service-category-filter') && $('service-category-filter').value) || 'all');
+    var status = String(($('service-status-filter') && $('service-status-filter').value) || 'all');
+    var rows = state.services.filter(function (s) {
+      var matchesQuery = !query || [s.sku, s.name_en, s.name_ar, categoryName(s.category_id)].join(' ').toLowerCase().indexOf(query) !== -1;
+      var matchesCategory = category === 'all' || String(s.category_id) === category;
+      var matchesStatus = status === 'all' || (status === 'active' ? s.active !== false : s.active === false);
       return matchesQuery && matchesCategory && matchesStatus;
     }).sort(crmLatestDesc);
-    body.innerHTML=rows.map(function(s){
-      return '<tr><td>'+escapeHtml(s.sku||'')+'</td><td><strong>'+escapeHtml(s.name_en)+'</strong><br><span class="crm-small">'+escapeHtml(s.name_ar)+'</span></td>'+
-      '<td>'+escapeHtml(categoryName(s.category_id))+'</td><td class="crm-price">$'+escapeHtml(s.price_usd==null?'':s.price_usd)+'<br><span class="crm-price-muted">'+(s.price_qar==null?'—':escapeHtml(s.price_qar)+' QAR')+'</span></td>'+
-      '<td>'+(s.duration_minutes==null?'—':escapeHtml(s.duration_minutes)+' min')+'</td><td>'+(s.active?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'</td>'+
-      '<td><div class="crm-row-actions">'+
-      (can('services','update')?'<button class="crm-btn crm-btn-secondary" data-edit-service="'+s.id+'">Edit</button>':'')+
-      (can('services','delete')?'<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-service="'+s.id+'">Delete</button>':'')+
-      '</div></td></tr>';
+    body.innerHTML = rows.map(function (s) {
+      return '<tr><td>' + escapeHtml(s.sku || '') + '</td><td><strong>' + escapeHtml(s.name_en) + '</strong><br><span class="crm-small">' + escapeHtml(s.name_ar) + '</span></td>' +
+        '<td>' + escapeHtml(categoryName(s.category_id)) + '</td><td class="crm-price">$' + escapeHtml(s.price_usd == null ? '' : s.price_usd) + '<br><span class="crm-price-muted">' + (s.price_qar == null ? '—' : escapeHtml(s.price_qar) + ' QAR') + '</span></td>' +
+        '<td>' + (s.duration_minutes == null ? '—' : escapeHtml(s.duration_minutes) + ' min') + '</td><td>' + (s.active ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '</td>' +
+        '<td><div class="crm-row-actions">' +
+        (can('services', 'update') ? '<button class="crm-btn crm-btn-secondary" data-edit-service="' + s.id + '">Edit</button>' : '') +
+        (can('services', 'delete') ? '<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-service="' + s.id + '">Delete</button>' : '') +
+        '</div></td></tr>';
     }).join('') || '<tr><td colspan="7" class="crm-empty">No services found.</td></tr>';
   }
   function voucherImageUrl(v) {
@@ -1586,10 +2100,8 @@
 
   function voucherCurrencyLabel(currency) {
     currency = String(currency || voucherMainCurrency()).toUpperCase();
-    var options = normalizeCurrencyOptions(settingValue('currency_options', {
-      USD: {en:'$', ar:'$'},
-      QAR: {en:'QAR', ar:'ريال'}
-    }));
+    var options = {};
+    (state.currencies || []).forEach(function (c) { options[String(c.code).toUpperCase()] = { en: c.en_label, ar: c.ar_label }; });
     var item = options[currency];
     if (item) return String(item.en || item.ar || currency);
     return currency === 'USD' ? '$' : currency;
@@ -1643,19 +2155,19 @@
 
     var query = String(($('voucher-search') && $('voucher-search').value) || '').trim().toLowerCase();
     var status = String(($('voucher-status-filter') && $('voucher-status-filter').value) || 'all');
-    var rows = state.vouchers.filter(function(v) {
+    var rows = state.vouchers.filter(function (v) {
       var title = v.title_en || v.title || '';
       var matchesQuery = !query || [v.sku, title, v.title_ar].join(' ').toLowerCase().indexOf(query) !== -1;
       var matchesStatus = status === 'all' || (status === 'active' ? v.active !== false : v.active === false);
       return matchesQuery && matchesStatus;
-    }).sort(function(a,b){
-      var an = Number((String(a.sku||'').match(/-(\d+)$/)||[])[1] || 0);
-      var bn = Number((String(b.sku||'').match(/-(\d+)$/)||[])[1] || 0);
+    }).sort(function (a, b) {
+      var an = Number((String(a.sku || '').match(/-(\d+)$/) || [])[1] || 0);
+      var bn = Number((String(b.sku || '').match(/-(\d+)$/) || [])[1] || 0);
       if (bn !== an) return bn - an;
-      return String(b.created_at||'').localeCompare(String(a.created_at||''));
+      return String(b.created_at || '').localeCompare(String(a.created_at || ''));
     });
 
-    tbody.innerHTML = rows.map(function(v) {
+    tbody.innerHTML = rows.map(function (v) {
       var image = voucherImageUrl(v);
       var title = v.title_en || v.title || 'Voucher';
       var arabic = v.title_ar || '';
@@ -1666,39 +2178,39 @@
 
       return '<tr>' +
         '<td><div class="crm-voucher-thumb">' +
-          (image ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(title) + '">' : '<span>◇</span>') +
+        (image ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(title) + '">' : '<span>◇</span>') +
         '</div></td>' +
         '<td><strong>' + escapeHtml(v.sku || '') + '</strong></td>' +
         '<td><strong>' + escapeHtml(title) + '</strong>' +
-          (arabic ? '<br><span class="crm-small">' + escapeHtml(arabic) + '</span>' : '') +
+        (arabic ? '<br><span class="crm-small">' + escapeHtml(arabic) + '</span>' : '') +
         '</td>' +
         '<td>' + escapeHtml(prices.join(' · ') || '—') + '</td>' +
         '<td><strong>' + escapeHtml(discount) + '</strong></td>' +
         '<td>' + escapeHtml(v.duration_minutes || 30) + ' min</td>' +
         '<td>' + (v.active !== false ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '</td>' +
         '<td><div class="crm-actions-inline">' +
-          (can('vouchers','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-voucher="' + escapeHtml(v.id) + '">Edit</button>' : '') +
-          (can('vouchers','delete') ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-voucher="' + escapeHtml(v.id) + '">Delete</button>' : '') +
+        (can('vouchers', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-voucher="' + escapeHtml(v.id) + '">Edit</button>' : '') +
+        (can('vouchers', 'delete') ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-voucher="' + escapeHtml(v.id) + '">Delete</button>' : '') +
         '</div></td>' +
-      '</tr>';
+        '</tr>';
     }).join('') || '<tr><td colspan="8" class="crm-empty">No vouchers found.</td></tr>';
   }
 
   function nextVoucherSequence() {
-    var max=0;
-    state.vouchers.forEach(function(v){
-      var match=String(v.sku||'').match(/-(\d+)$/);
-      if(match) max=Math.max(max,Number(match[1])||0);
+    var max = 0;
+    state.vouchers.forEach(function (v) {
+      var match = String(v.sku || '').match(/-(\d+)$/);
+      if (match) max = Math.max(max, Number(match[1]) || 0);
     });
-    return max+1;
+    return max + 1;
   }
   function generateVoucherSku() {
-    if(state.editingVoucherId) return;
-    var seq=nextVoucherSequence();
-    var sku='V-'+String(seq).padStart(3,'0');
-    var used=state.vouchers.some(function(v){return String(v.sku||'').toLowerCase()===sku.toLowerCase();});
-    while(used){seq++;sku='V-'+String(seq).padStart(3,'0');used=state.vouchers.some(function(v){return String(v.sku||'').toLowerCase()===sku.toLowerCase();});}
-    $('voucher-sku').value=sku;
+    if (state.editingVoucherId) return;
+    var seq = nextVoucherSequence();
+    var sku = 'V-' + String(seq).padStart(3, '0');
+    var used = state.vouchers.some(function (v) { return String(v.sku || '').toLowerCase() === sku.toLowerCase(); });
+    while (used) { seq++; sku = 'V-' + String(seq).padStart(3, '0'); used = state.vouchers.some(function (v) { return String(v.sku || '').toLowerCase() === sku.toLowerCase(); }); }
+    $('voucher-sku').value = sku;
   }
 
   function resetVoucherForm() {
@@ -1723,7 +2235,7 @@
   }
 
   function editVoucher(id) {
-    var v = state.vouchers.find(function(x){ return String(x.id) === String(id); });
+    var v = state.vouchers.find(function (x) { return String(x.id) === String(id); });
     if (!v) return;
 
     state.editingVoucherId = v.id;
@@ -1750,14 +2262,14 @@
 
     openCrmFormCardModal('voucher-form-card');
     $('voucher-title-en').focus();
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function getVoucherFileExtension(file) {
     var name = file && file.name ? file.name : '';
     var match = name.toLowerCase().match(/\.([a-z0-9]+)$/);
     var ext = match ? match[1] : 'jpg';
-    return ['jpg','jpeg','png','webp','gif','avif'].indexOf(ext) >= 0 ? ext : 'jpg';
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].indexOf(ext) >= 0 ? ext : 'jpg';
   }
 
   async function uploadVoucherImage(voucherId, file) {
@@ -1777,7 +2289,7 @@
 
     var upload = await window.salonSupabase.storage
       .from('vouchers')
-      .upload(path, file, {upsert:false, contentType:file.type || 'image/jpeg', cacheControl:'3600'});
+      .upload(path, file, { upsert: false, contentType: file.type || 'image/jpeg', cacheControl: '3600' });
     if (upload.error) throw upload.error;
 
     return path;
@@ -1804,7 +2316,7 @@
   }
 
   async function saveVoucher(e) {
-    if(!requirePermission('vouchers', state.editingVoucherId?'update':'create')) return;
+    if (!requirePermission('vouchers', state.editingVoucherId ? 'update' : 'create')) return;
     e.preventDefault();
     clearMessage();
 
@@ -1833,7 +2345,7 @@
 
     var file = $('voucher-image-file').files[0] || null;
     var existing = state.editingVoucherId
-      ? state.vouchers.find(function(v){ return String(v.id) === String(state.editingVoucherId); })
+      ? state.vouchers.find(function (v) { return String(v.id) === String(state.editingVoucherId); })
       : null;
 
     var button = $('voucher-save');
@@ -1918,12 +2430,12 @@
         });
 
         if (imageUpdate.error) {
-          try { await deleteVoucherStorageImage(newPath); } catch (_) {}
+          try { await deleteVoucherStorageImage(newPath); } catch (_) { }
           throw imageUpdate.error;
         }
 
         if (!Array.isArray(imageUpdate.data) || !imageUpdate.data.length || imageUpdate.data[0].image_path !== newPath) {
-          try { await deleteVoucherStorageImage(newPath); } catch (_) {}
+          try { await deleteVoucherStorageImage(newPath); } catch (_) { }
           throw new Error(
             'The image was uploaded, but the voucher record could not be updated. Check the voucher permissions.'
           );
@@ -1970,7 +2482,7 @@
 
   async function deleteVoucherImage() {
     if (!state.editingVoucherId) return;
-    var voucher = state.vouchers.find(function(v){ return String(v.id) === String(state.editingVoucherId); });
+    var voucher = state.vouchers.find(function (v) { return String(v.id) === String(state.editingVoucherId); });
     if (!voucher || !voucher.image_path) return;
 
     if (!await crmConfirm('Delete voucher image', 'Remove this voucher image? This cannot be undone.')) return;
@@ -2010,8 +2522,8 @@
   }
 
   async function deleteVoucher(id) {
-    if(!requirePermission('vouchers','delete')) return;
-    var voucher = state.vouchers.find(function(v){ return String(v.id) === String(id); });
+    if (!requirePermission('vouchers', 'delete')) return;
+    var voucher = state.vouchers.find(function (v) { return String(v.id) === String(id); });
     if (!voucher) return;
 
     var title = voucher.title_en || voucher.title || voucher.sku || 'this voucher';
@@ -2040,344 +2552,349 @@
     }
   }
 
-  function syncUserRoleFilter(){
-    var select=$('user-role-filter'); if(!select)return;
-    var current=select.value||state.userRoleFilter||'all';
-    select.innerHTML='<option value="all">All roles</option>'+state.roles.slice().sort(function(a,b){ return crmDesc(a.name,b.name); }).map(function(r){return '<option value="'+escapeHtml(r.id)+'">'+escapeHtml(r.name)+'</option>';}).join('');
-    select.value=(current==='all'||state.roles.some(function(r){return String(r.id)===String(current);}))?current:'all';
+  function syncUserRoleFilter() {
+    var select = $('user-role-filter'); if (!select) return;
+    var current = select.value || state.userRoleFilter || 'all';
+    select.innerHTML = '<option value="all">All roles</option>' + state.roles.slice().sort(function (a, b) { return crmDesc(a.name, b.name); }).map(function (r) { return '<option value="' + escapeHtml(r.id) + '">' + escapeHtml(r.name) + '</option>'; }).join('');
+    select.value = (current === 'all' || state.roles.some(function (r) { return String(r.id) === String(current); })) ? current : 'all';
   }
   function renderUsers() {
-    var body=$('users-table-body'); if(!body)return;
-    var q=String(($('user-search')&&$('user-search').value)||state.userSearch||'').trim().toLowerCase();
-    var role=String(($('user-role-filter')&&$('user-role-filter').value)||state.userRoleFilter||'all');
-    var statusFilter=String(($('user-status-filter')&&$('user-status-filter').value)||state.userStatusFilter||'all');
-    var rows=state.users.filter(function(u){
-      var roleName=roleNameById(u.role_id,u.role);
-      var matchesQuery=!q || [u.full_name,u.email,roleName].join(' ').toLowerCase().indexOf(q)!==-1;
-      var matchesRole=role==='all' || String(u.role_id)===role;
-      var active=u.active!==false;
-      var matchesStatus=statusFilter==='all' || (statusFilter==='active'?active:!active);
+    var body = $('users-table-body'); if (!body) return;
+    var q = String(($('user-search') && $('user-search').value) || state.userSearch || '').trim().toLowerCase();
+    var role = String(($('user-role-filter') && $('user-role-filter').value) || state.userRoleFilter || 'all');
+    var statusFilter = String(($('user-status-filter') && $('user-status-filter').value) || state.userStatusFilter || 'all');
+    var rows = state.users.filter(function (u) {
+      var roleName = roleNameById(u.role_id, u.role);
+      var matchesQuery = !q || [u.full_name, u.email, roleName].join(' ').toLowerCase().indexOf(q) !== -1;
+      var matchesRole = role === 'all' || String(u.role_id) === role;
+      var active = u.active !== false;
+      var matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? active : !active);
       return matchesQuery && matchesRole && matchesStatus;
-    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmDesc(a.full_name,b.full_name); });
-    body.innerHTML=rows.map(function(u){
-      var roleName=roleNameById(u.role_id, u.role);
-      var status=u.active!==false;
-      var isSelf=state.currentUserId && String(u.user_id)===String(state.currentUserId);
-      var auth=state.authStatuses[String(u.user_id)]||{};
-      var verified=!!auth.email_confirmed_at;
-      var loggedIn=!!auth.last_sign_in_at;
-      var verificationHtml=verified ? '<span class="crm-badge active">Verified</span>' : '<span class="crm-badge inactive">Not verified</span>';
-      var loginHtml=loggedIn ? '<span class="crm-small">Last login: '+escapeHtml(new Date(auth.last_sign_in_at).toLocaleString())+'</span>' : '<span class="crm-small">Never logged in</span>';
-      return '<tr><td><strong>'+escapeHtml(u.full_name||'CRM user')+'</strong><br><span class="crm-small">'+(isSelf?'You':'CRM team member')+'</span></td><td>'+escapeHtml(u.email||'—')+'</td>'+
-      '<td><span class="crm-role-badge">'+escapeHtml(roleName)+'</span></td>'+
-      '<td>'+(status?'<span class="crm-badge active">Active</span>':'<span class="crm-badge inactive">Inactive</span>')+'<br>'+verificationHtml+'<br>'+loginHtml+'</td>'+
-      '<td>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleDateString():'—')+'</td><td><div class="crm-actions-inline"><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-user="'+escapeHtml(u.user_id)+'">Edit</button>'+
-      (isSelf?'':'<button type="button" class="crm-btn '+(status?'crm-btn-danger':'crm-btn-secondary')+' crm-btn-small" data-toggle-user="'+escapeHtml(u.user_id)+'">'+(status?'Deactivate':'Activate')+'</button>')+
-      (!isSelf && can('users','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-reset-password="'+escapeHtml(u.user_id)+'">Reset password</button>' : '')+
-      (can('users','delete') && !isSelf ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-user="'+escapeHtml(u.user_id)+'">Delete</button>' : '')+
-      '</div></td></tr>';
+    }).sort(function (a, b) { return crmDateDesc(a.created_at, b.created_at) || crmDesc(a.full_name, b.full_name); });
+    body.innerHTML = rows.map(function (u) {
+      var roleName = roleNameById(u.role_id, u.role);
+      var status = u.active !== false;
+      var isSelf = state.currentUserId && String(u.user_id) === String(state.currentUserId);
+      var auth = state.authStatuses[String(u.user_id)] || {};
+      var verified = !!auth.email_confirmed_at;
+      var loggedIn = !!auth.last_sign_in_at;
+      var verificationHtml = verified ? '<span class="crm-badge active">Verified</span>' : '<span class="crm-badge inactive">Not verified</span>';
+      var loginHtml = loggedIn ? '<span class="crm-small">Last login: ' + escapeHtml(new Date(auth.last_sign_in_at).toLocaleString()) + '</span>' : '<span class="crm-small">Never logged in</span>';
+      return '<tr><td><strong>' + escapeHtml(u.full_name || 'CRM user') + '</strong><br><span class="crm-small">' + (isSelf ? 'You' : 'CRM team member') + '</span></td><td>' + escapeHtml(u.email || '—') + '</td>' +
+        '<td><span class="crm-role-badge">' + escapeHtml(roleName) + '</span></td>' +
+        '<td>' + (status ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '<br>' + verificationHtml + '<br>' + loginHtml + '</td>' +
+        '<td>' + escapeHtml(u.created_at ? new Date(u.created_at).toLocaleDateString() : '—') + '</td><td><div class="crm-actions-inline"><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-user="' + escapeHtml(u.user_id) + '">Edit</button>' +
+        (isSelf ? '' : '<button type="button" class="crm-btn ' + (status ? 'crm-btn-danger' : 'crm-btn-secondary') + ' crm-btn-small" data-toggle-user="' + escapeHtml(u.user_id) + '">' + (status ? 'Deactivate' : 'Activate') + '</button>') +
+        (!isSelf && can('users', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-reset-password="' + escapeHtml(u.user_id) + '">Reset password</button>' : '') +
+        (can('users', 'delete') && !isSelf ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-user="' + escapeHtml(u.user_id) + '">Delete</button>' : '') +
+        '</div></td></tr>';
     }).join('') || '<tr><td colspan="6" class="crm-empty">No CRM users found.</td></tr>';
   }
   async function updateDashboard() {
-    var active=state.services.filter(function(s){return s.active!==false;}).length;
-    $('stat-services').textContent=active;
-    $('stat-categories').textContent=state.categories.filter(function(c){return c.active!==false;}).length+' categories';
-    $('stat-vouchers') && ($('stat-vouchers').textContent=state.vouchers.filter(function(v){return v.active!==false;}).length);
-    $('stat-users') && ($('stat-users').textContent=state.users.length);
-    $('stat-bookings') && ($('stat-bookings').textContent=state.bookings.length);
-    var dashStatusCounts={pending:0,confirmed:0,completed:0,cancelled:0};
-    (state.bookings||[]).forEach(function(b){var st=String(bookingStatus(b)||'').toLowerCase();if(Object.prototype.hasOwnProperty.call(dashStatusCounts,st))dashStatusCounts[st]++;});
-    Object.keys(dashStatusCounts).forEach(function(st){var el=$('dash-bookings-'+st);if(el)el.textContent=String(dashStatusCounts[st]);});
+    var active = state.services.filter(function (s) { return s.active !== false; }).length;
+    $('stat-services').textContent = active;
+    $('stat-categories').textContent = state.categories.filter(function (c) { return c.active !== false; }).length + ' categories';
+    $('stat-vouchers') && ($('stat-vouchers').textContent = state.vouchers.filter(function (v) { return v.active !== false; }).length);
+    $('stat-users') && ($('stat-users').textContent = state.users.length);
+    $('stat-bookings') && ($('stat-bookings').textContent = state.bookings.length);
+    var dashStatusCounts = { pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+    (state.bookings || []).forEach(function (b) { var st = String(bookingStatus(b) || '').toLowerCase(); if (Object.prototype.hasOwnProperty.call(dashStatusCounts, st)) dashStatusCounts[st]++; });
+    Object.keys(dashStatusCounts).forEach(function (st) { var el = $('dash-bookings-' + st); if (el) el.textContent = String(dashStatusCounts[st]); });
 
     // Keep the dashboard count independent from whether the customer page
     // has been opened first.
-    var customerStat=$('stat-customers');
-    if(customerStat && can('customers','read')){
-      try{
-        var customerResult=await window.salonSupabase
+    var customerStat = $('stat-customers');
+    if (customerStat && can('customers', 'read')) {
+      try {
+        var customerResult = await window.salonSupabase
           .from('customers')
-          .select('id',{count:'exact',head:true})
+          .select('id', { count: 'exact', head: true })
           .eq('is_deleted', false);
-        if(customerResult.error) throw customerResult.error;
-        customerStat.textContent=String(customerResult.count||0);
-      }catch(e){
+        if (customerResult.error) throw customerResult.error;
+        customerStat.textContent = String(customerResult.count || 0);
+      } catch (e) {
         // If the count request fails, use already-loaded customer records
         // when available rather than replacing the card with an error.
-        customerStat.textContent=String(state.customers.length||0);
-        console.warn('Could not load customer count for dashboard:',e);
+        customerStat.textContent = String(state.customers.length || 0);
+        console.warn('Could not load customer count for dashboard:', e);
       }
     }
   }
   function populateCategorySelect() {
-    $('service-category').innerHTML=state.categories.map(function(c){return '<option value="'+c.id+'">'+escapeHtml(c.name_en)+'</option>';}).join('');
+    $('service-category').innerHTML = state.categories.map(function (c) { return '<option value="' + c.id + '">' + escapeHtml(c.name_en) + '</option>'; }).join('');
   }
   function serviceSkuPrefix(categoryName) {
-    var words=String(categoryName||'').trim().match(/[A-Za-z0-9]+/g)||[];
-    if(!words.length) return '';
-    if(words.length===1) return words[0].charAt(0).toUpperCase();
-    return words.map(function(word){return word.charAt(0).toUpperCase();}).join('');
+    var words = String(categoryName || '').trim().match(/[A-Za-z0-9]+/g) || [];
+    if (!words.length) return '';
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
+    return words.map(function (word) { return word.charAt(0).toUpperCase(); }).join('');
   }
   function nextServiceSequence(categoryId) {
-    var category=state.categories.find(function(c){return String(c.id)===String(categoryId);});
-    var prefix=serviceSkuPrefix(category && category.name_en);
-    var max=0;
+    var category = state.categories.find(function (c) { return String(c.id) === String(categoryId); });
+    var prefix = serviceSkuPrefix(category && category.name_en);
+    var max = 0;
     /* SKU numbering is GLOBAL per prefix, not per category.
        Example: Hair Cut = HC-001, Hair Color = HC-002.
        This prevents duplicate SKUs when two category names share initials. */
-    state.services.forEach(function(s){
-      var match=String(s.sku||'').match(/^([A-Z0-9]+)-(\d+)$/i);
-      if(!match || String(match[1]).toUpperCase()!==String(prefix).toUpperCase()) return;
-      max=Math.max(max,Number(match[2])||0);
+    state.services.forEach(function (s) {
+      var match = String(s.sku || '').match(/^([A-Z0-9]+)-(\d+)$/i);
+      if (!match || String(match[1]).toUpperCase() !== String(prefix).toUpperCase()) return;
+      max = Math.max(max, Number(match[2]) || 0);
     });
-    return max+1;
+    return max + 1;
   }
   function generateServiceSku() {
-    if(state.editingServiceId) return;
-    var categoryId=$('service-category').value;
-    var category=state.categories.find(function(c){return String(c.id)===String(categoryId);});
-    var prefix=serviceSkuPrefix(category && category.name_en);
-    if(!categoryId || !prefix){
-      $('service-sku').value='';
+    if (state.editingServiceId) return;
+    var categoryId = $('service-category').value;
+    var category = state.categories.find(function (c) { return String(c.id) === String(categoryId); });
+    var prefix = serviceSkuPrefix(category && category.name_en);
+    if (!categoryId || !prefix) {
+      $('service-sku').value = '';
       return;
     }
-    var sequence=nextServiceSequence(categoryId);
-    var sku=prefix+'-'+String(sequence).padStart(3,'0');
-    var existing=state.services.some(function(s){return String(s.sku||'').toLowerCase()===sku.toLowerCase();});
-    while(existing){sequence++;sku=prefix+'-'+String(sequence).padStart(3,'0');existing=state.services.some(function(s){return String(s.sku||'').toLowerCase()===sku.toLowerCase();});}
-    $('service-sku').value=sku;
+    var sequence = nextServiceSequence(categoryId);
+    var sku = prefix + '-' + String(sequence).padStart(3, '0');
+    var existing = state.services.some(function (s) { return String(s.sku || '').toLowerCase() === sku.toLowerCase(); });
+    while (existing) { sequence++; sku = prefix + '-' + String(sequence).padStart(3, '0'); existing = state.services.some(function (s) { return String(s.sku || '').toLowerCase() === sku.toLowerCase(); }); }
+    $('service-sku').value = sku;
   }
-  function resetServiceForm(){
-    applyRoleVisibility();state.editingServiceId=null;$('service-form').reset();$('service-form-title').textContent='Add Service';$('service-save').textContent='Add Service';populateCategorySelect();$('service-sku').readOnly=true;generateServiceSku();}
-  function editService(id){
-    var s=state.services.find(function(x){return String(x.id)===String(id);}); if(!s)return;
-    state.editingServiceId=s.id; applyRoleVisibility(); $('service-form-title').textContent='Edit Service';$('service-save').textContent='Save Changes';$('service-sku').readOnly=true;
-    $('service-category').value=s.category_id||'';$('service-sku').value=s.sku||'';$('service-name-en').value=s.name_en||'';$('service-name-ar').value=s.name_ar||'';
-    $('service-description-en').value=s.description_en||'';$('service-description-ar').value=s.description_ar||'';
-    $('service-price-usd').value=s.price_usd==null?'':s.price_usd;$('service-price-qar').value=s.price_qar==null?'':s.price_qar;
-    $('service-duration').value=s.duration_minutes==null?30:s.duration_minutes;$('service-sort').value=s.sort_order||0;$('service-active').checked=s.active!==false;
+  function resetServiceForm() {
+    applyRoleVisibility(); state.editingServiceId = null; $('service-form').reset(); $('service-form-title').textContent = 'Add Service'; $('service-save').textContent = 'Add Service'; populateCategorySelect(); $('service-sku').readOnly = true; generateServiceSku();
+  }
+  function editService(id) {
+    var s = state.services.find(function (x) { return String(x.id) === String(id); }); if (!s) return;
+    state.editingServiceId = s.id; applyRoleVisibility(); $('service-form-title').textContent = 'Edit Service'; $('service-save').textContent = 'Save Changes'; $('service-sku').readOnly = true;
+    $('service-category').value = s.category_id || ''; $('service-sku').value = s.sku || ''; $('service-name-en').value = s.name_en || ''; $('service-name-ar').value = s.name_ar || '';
+    $('service-description-en').value = s.description_en || ''; $('service-description-ar').value = s.description_ar || '';
+    $('service-price-usd').value = s.price_usd == null ? '' : s.price_usd; $('service-price-qar').value = s.price_qar == null ? '' : s.price_qar;
+    $('service-duration').value = s.duration_minutes == null ? 30 : s.duration_minutes; $('service-sort').value = s.sort_order || 0; $('service-active').checked = s.active !== false;
     setServicesTab('services'); showView('services');
-    var modal=$('service-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
+    var modal = $('service-form-modal'); if (modal) { mountCrmFormModal(modal); modal.classList.remove('crm-hidden'); modal.setAttribute('aria-hidden', 'false'); }
   }
-  async function saveService(e){
-    if(!requirePermission('services', state.editingServiceId?'update':'create')) return;
+  async function saveService(e) {
+    if (!requirePermission('services', state.editingServiceId ? 'update' : 'create')) return;
     e.preventDefault(); clearMessage();
-    var usd=$('service-price-usd').value;
-    if(!state.editingServiceId) generateServiceSku();
-    var sku=$('service-sku').value.trim();
-    var qar=$('service-price-qar').value;
-    var payload={category_id:Number($('service-category').value),sku:sku,name_en:$('service-name-en').value.trim(),name_ar:$('service-name-ar').value.trim(),
-      description_en:$('service-description-en').value.trim()||null,description_ar:$('service-description-ar').value.trim()||null,price:usd===''?(qar===''?0:Number(qar)):Number(usd),
-      price_usd:usd===''?null:Number(usd),price_qar:qar===''?null:Number(qar),
-      duration_minutes:$('service-duration').value===''?30:Number($('service-duration').value),sort_order:Number($('service-sort').value||0),active:$('service-active').checked};
-    if(!sku||!payload.name_en||!payload.name_ar||!payload.category_id){message('Please enter the SKU, English name, Arabic name and category.','error');return;}
-    if(usd==='' && qar===''){message('Enter at least one price: USD or QAR.','error');return;}
-    var duplicate=state.services.some(function(existing){return String(existing.id)!==String(state.editingServiceId||'') && String(existing.category_id)===String(payload.category_id) && String(existing.sku||'').trim().toLowerCase()===sku.toLowerCase();});
-    if(duplicate){message('This service SKU already exists in this category.','error');return;}
-    var result=state.editingServiceId?await window.salonSupabase.from('services').update(payload).eq('id',state.editingServiceId):await window.salonSupabase.from('services').insert(payload);
-    if(result.error){
-      var msg=result.error.message||'Could not save service.';
-      if(result.error.code==='23505') msg='This service SKU already exists in this category.';
-      if(result.error.code==='23514') msg='Enter at least one price: USD or QAR.';
-      message(msg,'error');return;
-    } message(state.editingServiceId?'Service updated.':'Service added.','success');closeServiceForm();await loadData();
+    var usd = $('service-price-usd').value;
+    if (!state.editingServiceId) generateServiceSku();
+    var sku = $('service-sku').value.trim();
+    var qar = $('service-price-qar').value;
+    var payload = {
+      category_id: Number($('service-category').value), sku: sku, name_en: $('service-name-en').value.trim(), name_ar: $('service-name-ar').value.trim(),
+      description_en: $('service-description-en').value.trim() || null, description_ar: $('service-description-ar').value.trim() || null, price: usd === '' ? (qar === '' ? 0 : Number(qar)) : Number(usd),
+      price_usd: usd === '' ? null : Number(usd), price_qar: qar === '' ? null : Number(qar),
+      duration_minutes: $('service-duration').value === '' ? 30 : Number($('service-duration').value), sort_order: Number($('service-sort').value || 0), active: $('service-active').checked
+    };
+    if (!sku || !payload.name_en || !payload.name_ar || !payload.category_id) { message('Please enter the SKU, English name, Arabic name and category.', 'error'); return; }
+    if (usd === '' && qar === '') { message('Enter at least one price: USD or QAR.', 'error'); return; }
+    var duplicate = state.services.some(function (existing) { return String(existing.id) !== String(state.editingServiceId || '') && String(existing.category_id) === String(payload.category_id) && String(existing.sku || '').trim().toLowerCase() === sku.toLowerCase(); });
+    if (duplicate) { message('This service SKU already exists in this category.', 'error'); return; }
+    var result = state.editingServiceId ? await window.salonSupabase.from('services').update(payload).eq('id', state.editingServiceId) : await window.salonSupabase.from('services').insert(payload);
+    if (result.error) {
+      var msg = result.error.message || 'Could not save service.';
+      if (result.error.code === '23505') msg = 'This service SKU already exists in this category.';
+      if (result.error.code === '23514') msg = 'Enter at least one price: USD or QAR.';
+      message(msg, 'error'); return;
+    } message(state.editingServiceId ? 'Service updated.' : 'Service added.', 'success'); closeServiceForm(); await loadData();
   }
   function renderCategoryImagePreview(url) {
-    var wrap=$('category-image-preview-wrap');
-    var img=$('category-image-preview');
-    if(!wrap||!img)return;
-    if(url){
-      img.src=url; img.hidden=false;
-      img.onerror=function(){img.removeAttribute('src');img.hidden=true;};
-    }else{
-      img.removeAttribute('src'); img.hidden=true;
+    var wrap = $('category-image-preview-wrap');
+    var img = $('category-image-preview');
+    if (!wrap || !img) return;
+    if (url) {
+      img.src = url; img.hidden = false;
+      img.onerror = function () { img.removeAttribute('src'); img.hidden = true; };
+    } else {
+      img.removeAttribute('src'); img.hidden = true;
     }
   }
 
   function categoryStoragePathFromUrl(url) {
-    if(!url || !/^https?:\/\//i.test(String(url))) return '';
+    if (!url || !/^https?:\/\//i.test(String(url))) return '';
     try {
-      var parsed=new URL(String(url));
-      var marker='/storage/v1/object/public/site-assets/';
-      var index=parsed.pathname.indexOf(marker);
-      return index===0 ? decodeURIComponent(parsed.pathname.slice(marker.length)) : '';
-    } catch(e) { return ''; }
+      var parsed = new URL(String(url));
+      var marker = '/storage/v1/object/public/site-assets/';
+      var index = parsed.pathname.indexOf(marker);
+      return index === 0 ? decodeURIComponent(parsed.pathname.slice(marker.length)) : '';
+    } catch (e) { return ''; }
   }
 
   async function uploadCategoryImage(file) {
-    if(!file) return null;
-    if(!/^image\//i.test(file.type)) throw new Error('Please choose an image file.');
-    if(file.size>5*1024*1024) throw new Error('Category image must be 5 MB or smaller.');
-    var ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
-    if(!/^(jpg|jpeg|png|webp|gif|avif)$/.test(ext)) ext='jpg';
-    var path='categories/category-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
-    var upload=await window.salonSupabase.storage.from('site-assets').upload(path,file,{upsert:false,contentType:file.type||undefined});
-    if(upload.error) throw upload.error;
-    var publicUrlResult=window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
-    var publicUrl=publicUrlResult&&publicUrlResult.data?publicUrlResult.data.publicUrl:'';
-    if(!publicUrl){
+    if (!file) return null;
+    if (!/^image\//i.test(file.type)) throw new Error('Please choose an image file.');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Category image must be 5 MB or smaller.');
+    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!/^(jpg|jpeg|png|webp|gif|avif)$/.test(ext)) ext = 'jpg';
+    var path = 'categories/category-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    var upload = await window.salonSupabase.storage.from('site-assets').upload(path, file, { upsert: false, contentType: file.type || undefined });
+    if (upload.error) throw upload.error;
+    var publicUrlResult = window.salonSupabase.storage.from('site-assets').getPublicUrl(path);
+    var publicUrl = publicUrlResult && publicUrlResult.data ? publicUrlResult.data.publicUrl : '';
+    if (!publicUrl) {
       await window.salonSupabase.storage.from('site-assets').remove([path]);
       throw new Error('Could not create a public URL for the category image.');
     }
-    return {path:path,url:publicUrl};
+    return { path: path, url: publicUrl };
   }
 
-  function setServicesTab(tab){
-    var isCategories=tab!=='services';
-    var catPanel=$('services-tab-categories'),svcPanel=$('services-tab-services');
-    if(catPanel)catPanel.classList.toggle('crm-hidden',!isCategories);
-    if(svcPanel)svcPanel.classList.toggle('crm-hidden',isCategories);
-    document.querySelectorAll('[data-services-tab]').forEach(function(btn){
-      var active=btn.getAttribute('data-services-tab')===(isCategories?'categories':'services');
-      btn.classList.toggle('is-active',active);btn.setAttribute('aria-selected',active?'true':'false');
-    });
-  }
-
-  function setBookingConfigTab(tab){
-    tab=tab==='closures'?'closures':'settings';
-    document.querySelectorAll('[data-booking-config-panel]').forEach(function(panel){
-      panel.classList.toggle('crm-hidden',panel.getAttribute('data-booking-config-panel')!==tab);
-    });
-    document.querySelectorAll('[data-booking-config-tab]').forEach(function(btn){
-      var active=btn.getAttribute('data-booking-config-tab')===tab;
-      btn.classList.toggle('is-active',active);
-      btn.setAttribute('aria-selected',active?'true':'false');
+  function setServicesTab(tab) {
+    var isCategories = tab !== 'services';
+    var catPanel = $('services-tab-categories'), svcPanel = $('services-tab-services');
+    if (catPanel) catPanel.classList.toggle('crm-hidden', !isCategories);
+    if (svcPanel) svcPanel.classList.toggle('crm-hidden', isCategories);
+    document.querySelectorAll('[data-services-tab]').forEach(function (btn) {
+      var active = btn.getAttribute('data-services-tab') === (isCategories ? 'categories' : 'services');
+      btn.classList.toggle('is-active', active); btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
   }
 
-  function setSettingsTab(tab){
-    tab=tab||'language-currency';
-    var allowed=['language-currency','rewards','social','media','url-qr'];
-    if(allowed.indexOf(tab)<0)tab='language-currency';
-    document.querySelectorAll('[data-settings-panel]').forEach(function(panel){
-      panel.classList.toggle('crm-hidden',panel.getAttribute('data-settings-panel')!==tab);
+  function setBookingConfigTab(tab) {
+    tab = tab === 'closures' ? 'closures' : 'settings';
+    document.querySelectorAll('[data-booking-config-panel]').forEach(function (panel) {
+      panel.classList.toggle('crm-hidden', panel.getAttribute('data-booking-config-panel') !== tab);
     });
-    document.querySelectorAll('[data-settings-tab]').forEach(function(btn){
-      var active=btn.getAttribute('data-settings-tab')===tab;
-      btn.classList.toggle('is-active',active);
-      btn.setAttribute('aria-selected',active?'true':'false');
+    document.querySelectorAll('[data-booking-config-tab]').forEach(function (btn) {
+      var active = btn.getAttribute('data-booking-config-tab') === tab;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    var save=$('save-application-settings');
-    if(save)save.closest('.crm-settings-actions').classList.toggle('crm-hidden',tab==='url-qr');
-    if(tab==='url-qr') loadUrlQrCodes().catch(function(e){message(e.message||'Could not load URL QR codes.','error');});
   }
 
-  function mountCrmFormModal(modal){
-    if(!modal) return;
+  function setSettingsTab(tab) {
+    tab = tab || 'language-currency';
+    var allowed = ['language-currency', 'rewards', 'social', 'media', 'url-qr'];
+    if (allowed.indexOf(tab) < 0) tab = 'language-currency';
+    document.querySelectorAll('[data-settings-panel]').forEach(function (panel) {
+      panel.classList.toggle('crm-hidden', panel.getAttribute('data-settings-panel') !== tab);
+    });
+    document.querySelectorAll('[data-settings-tab]').forEach(function (btn) {
+      var active = btn.getAttribute('data-settings-tab') === tab;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    var save = $('save-application-settings');
+    if (save) save.closest('.crm-settings-actions').classList.toggle('crm-hidden', tab === 'url-qr');
+    if (tab === 'url-qr') loadUrlQrCodes().catch(function (e) { message(e.message || 'Could not load URL QR codes.', 'error'); });
+  }
+
+  function mountCrmFormModal(modal) {
+    if (!modal) return;
     // Keep form dialogs under <body> so position:fixed is relative to the viewport,
     // not to a CRM section/container that may affect positioning.
-    if(modal.parentElement!==document.body) document.body.appendChild(modal);
-    modal.style.position='fixed';
-    modal.style.inset='0';
-    modal.style.display='flex';
-    modal.style.alignItems='center';
-    modal.style.justifyContent='center';
+    if (modal.parentElement !== document.body) document.body.appendChild(modal);
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
   }
 
-  function openCategoryForm(id){
-    if(id){ editCategory(id); return; }
-    if(!requirePermission('services','create'))return;
+  function openCategoryForm(id) {
+    if (id) { editCategory(id); return; }
+    if (!requirePermission('services', 'create')) return;
     resetCategoryForm();
-    var modal=$('category-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
-    var input=$('category-name-en');if(input)input.focus();
+    var modal = $('category-form-modal'); if (modal) { mountCrmFormModal(modal); modal.classList.remove('crm-hidden'); modal.setAttribute('aria-hidden', 'false'); }
+    var input = $('category-name-en'); if (input) input.focus();
   }
-  function closeCategoryForm(){
+  function closeCategoryForm() {
     resetCategoryForm();
-    var modal=$('category-form-modal');if(modal){modal.classList.add('crm-hidden');modal.setAttribute('aria-hidden','true');}
+    var modal = $('category-form-modal'); if (modal) { modal.classList.add('crm-hidden'); modal.setAttribute('aria-hidden', 'true'); }
   }
-  function openServiceForm(id){
-    if(id){ editService(id); return; }
-    if(!requirePermission('services','create'))return;
+  function openServiceForm(id) {
+    if (id) { editService(id); return; }
+    if (!requirePermission('services', 'create')) return;
     resetServiceForm();
-    var modal=$('service-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
-    var input=$('service-name-en');if(input)input.focus();
+    var modal = $('service-form-modal'); if (modal) { mountCrmFormModal(modal); modal.classList.remove('crm-hidden'); modal.setAttribute('aria-hidden', 'false'); }
+    var input = $('service-name-en'); if (input) input.focus();
   }
-  function closeServiceForm(){
+  function closeServiceForm() {
     resetServiceForm();
-    var modal=$('service-form-modal');if(modal){modal.classList.add('crm-hidden');modal.setAttribute('aria-hidden','true');}
+    var modal = $('service-form-modal'); if (modal) { modal.classList.add('crm-hidden'); modal.setAttribute('aria-hidden', 'true'); }
   }
 
-  function editCategory(id){
-    var c=state.categories.find(function(x){return String(x.id)===String(id);});if(!c)return;
-    state.editingCategoryId=c.id; applyRoleVisibility();$('category-form-title').textContent='Edit Category';$('category-save').textContent='Save Changes';
-    $('category-name-en').value=c.name_en||'';$('category-name-ar').value=c.name_ar||'';$('category-description-en').value=c.description_en||'';$('category-description-ar').value=c.description_ar||'';
-    $('category-image-file').value='';renderCategoryImagePreview(c.image_url||'');$('category-width').value=c.image_width==null?'':c.image_width;$('category-height').value=c.image_height==null?'':c.image_height;$('category-sort').value=c.sort_order||0;$('category-active').checked=c.active!==false;
+  function editCategory(id) {
+    var c = state.categories.find(function (x) { return String(x.id) === String(id); }); if (!c) return;
+    state.editingCategoryId = c.id; applyRoleVisibility(); $('category-form-title').textContent = 'Edit Category'; $('category-save').textContent = 'Save Changes';
+    $('category-name-en').value = c.name_en || ''; $('category-name-ar').value = c.name_ar || ''; $('category-description-en').value = c.description_en || ''; $('category-description-ar').value = c.description_ar || '';
+    $('category-image-file').value = ''; renderCategoryImagePreview(c.image_url || ''); $('category-width').value = c.image_width == null ? '' : c.image_width; $('category-height').value = c.image_height == null ? '' : c.image_height; $('category-sort').value = c.sort_order || 0; $('category-active').checked = c.active !== false;
     setServicesTab('categories'); showView('services');
-    var modal=$('category-form-modal');if(modal){mountCrmFormModal(modal);modal.classList.remove('crm-hidden');modal.setAttribute('aria-hidden','false');}
+    var modal = $('category-form-modal'); if (modal) { mountCrmFormModal(modal); modal.classList.remove('crm-hidden'); modal.setAttribute('aria-hidden', 'false'); }
   }
-  async function deleteService(id){
-    if(!requirePermission('services','delete')) return;
-    var s=state.services.find(function(x){return String(x.id)===String(id);});
-    if(!s) return;
-    if(!await crmConfirm('Delete service', 'Delete \"'+(s.name_en||s.sku||'this service')+'\"? This cannot be undone.')) return;
-    try{
-      var refs=await window.salonSupabase.from('booking_services').select('id',{count:'exact',head:true}).eq('service_id',id);
-      if(refs.error) throw refs.error;
-      if((refs.count||0)>0){message('This service is already used in bookings. Delete is blocked; deactivate the service instead.','error');return;}
-      var result=await window.salonSupabase.from('services').delete().eq('id',id);
-      if(result.error) throw result.error;
-      message('Service deleted.','success');
-      await loadData();
-    }catch(err){
-      console.error('Could not delete service:',err);
-      message(err.message||'Could not delete service.','error');
-    }
-  }
-
-  async function deleteCategory(id){
-    if(!requirePermission('services','delete')) return;
-    var c=state.categories.find(function(x){return String(x.id)===String(id);});
-    if(!c) return;
-    if(!await crmConfirm('Delete category', 'Delete category "'+(c.name_en||'this category')+'"? You must delete all services in this category first.')) return;
-    try{
-      var refs=await window.salonSupabase.from('services').select('id',{count:'exact',head:true}).eq('category_id',id);
-      if(refs.error) throw refs.error;
-      if((refs.count||0)>0){message('This category still contains services. Delete those services first, then delete the category.','error');return;}
-      var result=await window.salonSupabase.from('service_categories').delete().eq('id',id);
-      if(result.error) throw result.error;
-      message('Category deleted.','success');
-      await loadData();
-    }catch(err){
-      console.error('Could not delete category:',err);
-      message(err.message||'Could not delete category.','error');
-    }
-  }
-
-  function resetCategoryForm(){
-    applyRoleVisibility();state.editingCategoryId=null;$('category-form').reset();$('category-form-title').textContent='Add Category';$('category-save').textContent='Add Category';$('category-active').checked=true;renderCategoryImagePreview('');
-  }
-  async function saveCategory(e){
-    if(!requirePermission('services', state.editingCategoryId?'update':'create')) return;
-    e.preventDefault();clearMessage();
-    var editing=state.editingCategoryId?state.categories.find(function(x){return String(x.id)===String(state.editingCategoryId);}):null;
-    var fileInput=$('category-image-file');
-    var file=fileInput&&fileInput.files?fileInput.files[0]:null;
-    var payload={name_en:$('category-name-en').value.trim(),name_ar:$('category-name-ar').value.trim(),description_en:$('category-description-en').value.trim()||null,description_ar:$('category-description-ar').value.trim()||null,
-      image_url:editing&&editing.image_url?editing.image_url:null,image_width:$('category-width').value===''?null:Number($('category-width').value),image_height:$('category-height').value===''?null:Number($('category-height').value),sort_order:Number($('category-sort').value||0),active:$('category-active').checked};
-    if(!payload.name_en||!payload.name_ar){message('Please enter the English and Arabic category names.','error');return;}
-
-    var uploaded=null;
+  async function deleteService(id) {
+    if (!requirePermission('services', 'delete')) return;
+    var s = state.services.find(function (x) { return String(x.id) === String(id); });
+    if (!s) return;
+    if (!await crmConfirm('Delete service', 'Delete \"' + (s.name_en || s.sku || 'this service') + '\"? This cannot be undone.')) return;
     try {
-      if(file) uploaded=await uploadCategoryImage(file);
-      if(uploaded) payload.image_url=uploaded.url;
+      var refs = await window.salonSupabase.from('booking_services').select('id', { count: 'exact', head: true }).eq('service_id', id);
+      if (refs.error) throw refs.error;
+      if ((refs.count || 0) > 0) { message('This service is already used in bookings. Delete is blocked; deactivate the service instead.', 'error'); return; }
+      var result = await window.salonSupabase.from('services').delete().eq('id', id);
+      if (result.error) throw result.error;
+      message('Service deleted.', 'success');
+      await loadData();
+    } catch (err) {
+      console.error('Could not delete service:', err);
+      message(err.message || 'Could not delete service.', 'error');
+    }
+  }
 
-      var result=state.editingCategoryId
-        ? await window.salonSupabase.from('service_categories').update(payload).eq('id',state.editingCategoryId)
+  async function deleteCategory(id) {
+    if (!requirePermission('services', 'delete')) return;
+    var c = state.categories.find(function (x) { return String(x.id) === String(id); });
+    if (!c) return;
+    if (!await crmConfirm('Delete category', 'Delete category "' + (c.name_en || 'this category') + '"? You must delete all services in this category first.')) return;
+    try {
+      var refs = await window.salonSupabase.from('services').select('id', { count: 'exact', head: true }).eq('category_id', id);
+      if (refs.error) throw refs.error;
+      if ((refs.count || 0) > 0) { message('This category still contains services. Delete those services first, then delete the category.', 'error'); return; }
+      var result = await window.salonSupabase.from('service_categories').delete().eq('id', id);
+      if (result.error) throw result.error;
+      message('Category deleted.', 'success');
+      await loadData();
+    } catch (err) {
+      console.error('Could not delete category:', err);
+      message(err.message || 'Could not delete category.', 'error');
+    }
+  }
+
+  function resetCategoryForm() {
+    applyRoleVisibility(); state.editingCategoryId = null; $('category-form').reset(); $('category-form-title').textContent = 'Add Category'; $('category-save').textContent = 'Add Category'; $('category-active').checked = true; renderCategoryImagePreview('');
+  }
+  async function saveCategory(e) {
+    if (!requirePermission('services', state.editingCategoryId ? 'update' : 'create')) return;
+    e.preventDefault(); clearMessage();
+    var editing = state.editingCategoryId ? state.categories.find(function (x) { return String(x.id) === String(state.editingCategoryId); }) : null;
+    var fileInput = $('category-image-file');
+    var file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    var payload = {
+      name_en: $('category-name-en').value.trim(), name_ar: $('category-name-ar').value.trim(), description_en: $('category-description-en').value.trim() || null, description_ar: $('category-description-ar').value.trim() || null,
+      image_url: editing && editing.image_url ? editing.image_url : null, image_width: $('category-width').value === '' ? null : Number($('category-width').value), image_height: $('category-height').value === '' ? null : Number($('category-height').value), sort_order: Number($('category-sort').value || 0), active: $('category-active').checked
+    };
+    if (!payload.name_en || !payload.name_ar) { message('Please enter the English and Arabic category names.', 'error'); return; }
+
+    var uploaded = null;
+    try {
+      if (file) uploaded = await uploadCategoryImage(file);
+      if (uploaded) payload.image_url = uploaded.url;
+
+      var result = state.editingCategoryId
+        ? await window.salonSupabase.from('service_categories').update(payload).eq('id', state.editingCategoryId)
         : await window.salonSupabase.from('service_categories').insert(payload);
-      if(result.error) throw result.error;
-    } catch(err) {
-      if(uploaded&&uploaded.path) await window.salonSupabase.storage.from('site-assets').remove([uploaded.path]);
-      message(err.message||'Could not save category.','error');
+      if (result.error) throw result.error;
+    } catch (err) {
+      if (uploaded && uploaded.path) await window.salonSupabase.storage.from('site-assets').remove([uploaded.path]);
+      message(err.message || 'Could not save category.', 'error');
       return;
     }
 
-    if(uploaded&&editing&&editing.image_url){
-      var oldPath=categoryStoragePathFromUrl(editing.image_url);
-      if(oldPath){
-        var cleanup=await window.salonSupabase.storage.from('site-assets').remove([oldPath]);
-        if(cleanup.error) console.warn('Category saved, but the old category image could not be removed:',cleanup.error);
+    if (uploaded && editing && editing.image_url) {
+      var oldPath = categoryStoragePathFromUrl(editing.image_url);
+      if (oldPath) {
+        var cleanup = await window.salonSupabase.storage.from('site-assets').remove([oldPath]);
+        if (cleanup.error) console.warn('Category saved, but the old category image could not be removed:', cleanup.error);
       }
     }
-    message(state.editingCategoryId?'Category updated.':'Category added.','success');
+    message(state.editingCategoryId ? 'Category updated.' : 'Category added.', 'success');
     closeCategoryForm();
     await loadData();
   }
@@ -2407,14 +2924,14 @@
         window.salonSupabase
           .from('bookings')
           .select('id,booking_date,start_time,end_time,status,is_walkin,currency,total_price,subtotal_price,discount_type,discount_value,discount_amount,total_duration_minutes,customer_id,customer_notes,created_at,updated_at,public_reference')
-          .order('created_at',{ascending:false}),
+          .order('created_at', { ascending: false }),
         window.salonSupabase
           .from('customers')
           .select('id,name,phone,email,notes'),
         window.salonSupabase
           .from('booking_services')
           .select('id,booking_id,service_id,staff_id,start_time,end_time,price,currency,duration_minutes,voucher_id')
-          .order('start_time',{ascending:true})
+          .order('start_time', { ascending: true })
       ]);
 
       var bookingsResult = results[0];
@@ -2426,22 +2943,22 @@
       if (bookingServicesResult.error) throw bookingServicesResult.error;
 
       var customersById = {};
-      (customersResult.data || []).forEach(function(customer) {
+      (customersResult.data || []).forEach(function (customer) {
         customersById[String(customer.id)] = customer;
       });
 
       var servicesById = {};
-      state.services.forEach(function(service) {
+      state.services.forEach(function (service) {
         servicesById[String(service.id)] = service;
       });
 
       var vouchersById = {};
-      state.vouchers.forEach(function(voucher) {
+      state.vouchers.forEach(function (voucher) {
         vouchersById[String(voucher.id)] = voucher;
       });
 
       var itemsByBooking = {};
-      (bookingServicesResult.data || []).forEach(function(row) {
+      (bookingServicesResult.data || []).forEach(function (row) {
         var service = row.service_id != null ? servicesById[String(row.service_id)] : null;
         var voucher = row.voucher_id != null ? vouchersById[String(row.voucher_id)] : null;
 
@@ -2451,8 +2968,8 @@
           voucherId: row.voucher_id,
           serviceSku: service ? (service.sku || '') : '',
           voucherSku: voucher ? (voucher.sku || '') : '',
-          start: String(row.start_time || '').slice(0,5),
-          end: String(row.end_time || '').slice(0,5),
+          start: String(row.start_time || '').slice(0, 5),
+          end: String(row.end_time || '').slice(0, 5),
           price: row.price,
           currency: row.currency || null,
           duration_minutes: row.duration_minutes,
@@ -2464,13 +2981,13 @@
         itemsByBooking[String(row.booking_id)].push(item);
       });
 
-      dbBookings = (bookingsResult.data || []).map(function(row) {
+      dbBookings = (bookingsResult.data || []).map(function (row) {
         var customer = row.customer_id != null
           ? (customersById[String(row.customer_id)] || null)
           : null;
 
         var items = itemsByBooking[String(row.id)] || [];
-        items.sort(function(a,b) {
+        items.sort(function (a, b) {
           return a.start.localeCompare(b.start);
         });
 
@@ -2513,7 +3030,7 @@
     var local = bookingStore();
     state.bookingVouchers = state.vouchers.slice();
     var source = dbBookings !== null ? dbBookings : local;
-    state.bookings = source.slice().sort(function(a,b) {
+    state.bookings = source.slice().sort(function (a, b) {
       return String(b.created_at || '').localeCompare(String(a.created_at || ''));
     });
     renderBookings();
@@ -2545,10 +3062,10 @@
 
   function serviceForBookingItem(item) {
     var voucher = item && item.voucherId != null
-      ? state.bookingVouchers.find(function(v){ return String(v.id) === String(item.voucherId); })
+      ? state.bookingVouchers.find(function (v) { return String(v.id) === String(item.voucherId); })
       : null;
     if (!voucher && item && item.voucherSku) {
-      voucher = state.bookingVouchers.find(function(v){ return String(v.sku || '') === String(item.voucherSku); });
+      voucher = state.bookingVouchers.find(function (v) { return String(v.sku || '') === String(item.voucherSku); });
     }
     if (voucher) return {
       name: voucher.title_en || voucher.title || item.voucherSku || 'Voucher',
@@ -2558,15 +3075,15 @@
     };
 
     var found = item && item.serviceId != null
-      ? state.services.find(function(s){ return String(s.id) === String(item.serviceId); })
+      ? state.services.find(function (s) { return String(s.id) === String(item.serviceId); })
       : null;
     if (!found && item && item.serviceSku) {
-      found = state.services.find(function(s){ return String(s.sku || '') === String(item.serviceSku); });
+      found = state.services.find(function (s) { return String(s.sku || '') === String(item.serviceSku); });
     }
     if (found) return {
       name: found.name_en || found.name || item.serviceSku || 'Service',
       duration: found.duration_minutes || item.duration_minutes,
-      price: item && item.price != null ? item.price : (function(){ var c=walkinServiceCurrency(found); if(c==='QAR' && found.price_qar!=null) return found.price_qar; if(c==='USD' && found.price_usd!=null) return found.price_usd; return found.price != null ? found.price : null; })(),
+      price: item && item.price != null ? item.price : (function () { var c = walkinServiceCurrency(found); if (c === 'QAR' && found.price_qar != null) return found.price_qar; if (c === 'USD' && found.price_usd != null) return found.price_usd; return found.price != null ? found.price : null; })(),
       currency: item && item.currency ? String(item.currency).toUpperCase() : walkinServiceCurrency(found)
     };
 
@@ -2574,7 +3091,7 @@
   }
 
   function bookingServiceNames(b) {
-    return (b.items || []).map(function(item){ return serviceForBookingItem(item).name; });
+    return (b.items || []).map(function (item) { return serviceForBookingItem(item).name; });
   }
 
   function bookingMoney(b) {
@@ -2584,7 +3101,7 @@
   }
 
   function statusLabel(status) {
-    var s = bookingStatus({status: status});
+    var s = bookingStatus({ status: status });
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
@@ -2595,12 +3112,12 @@
     var typeFilter = state.bookingTypeFilter || 'all';
     if (typeFilter !== 'all') {
       var bookingItems = Array.isArray(b.items) ? b.items : [];
-      var hasVoucher = bookingItems.some(function(item){ return item && item.voucherId != null; });
-      var hasService = bookingItems.some(function(item){ return item && item.voucherId == null; });
+      var hasVoucher = bookingItems.some(function (item) { return item && item.voucherId != null; });
+      var hasService = bookingItems.some(function (item) { return item && item.voucherId == null; });
       if (typeFilter === 'voucher' && !hasVoucher) return false;
       if (typeFilter === 'service' && !hasService) return false;
     }
-    var now = new Date(); now.setHours(0,0,0,0);
+    var now = new Date(); now.setHours(0, 0, 0, 0);
     var d = b.date ? new Date(b.date + 'T12:00:00') : null;
     if (state.bookingDateFilter === 'today' && (!d || d.toDateString() !== now.toDateString())) return false;
     if (state.bookingDateFilter === 'upcoming' && (!d || d < now)) return false;
@@ -2615,26 +3132,26 @@
   }
 
 
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  function dateKey(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
-  function parseTimeMinutes(t){
-    if(!t) return null;
-    var p=String(t).split(':'); var h=Number(p[0]), m=Number(p[1]||0);
-    return isNaN(h)||isNaN(m)?null:h*60+m;
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function parseTimeMinutes(t) {
+    if (!t) return null;
+    var p = String(t).split(':'); var h = Number(p[0]), m = Number(p[1] || 0);
+    return isNaN(h) || isNaN(m) ? null : h * 60 + m;
   }
-  function formatTime12(t){
-    var mins=parseTimeMinutes(t); if(mins==null)return '—';
-    var h=Math.floor(mins/60), m=mins%60, ap=h>=12?'PM':'AM', hh=h%12||12;
-    return hh+':'+pad2(m)+' '+ap;
+  function formatTime12(t) {
+    var mins = parseTimeMinutes(t); if (mins == null) return '—';
+    var h = Math.floor(mins / 60), m = mins % 60, ap = h >= 12 ? 'PM' : 'AM', hh = h % 12 || 12;
+    return hh + ':' + pad2(m) + ' ' + ap;
   }
-  function startOfWeek(d){
-    var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-    var day=x.getDay(); x.setDate(x.getDate()-day); return x;
+  function startOfWeek(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var day = x.getDay(); x.setDate(x.getDate() - day); return x;
   }
-  function sameDay(a,b){ return dateKey(a)===dateKey(b); }
+  function sameDay(a, b) { return dateKey(a) === dateKey(b); }
 
-  function scheduleVisibleBookings(){
-    return state.bookings.filter(bookingMatches).filter(function(b){ return !!b.date && !!bookingStart(b); });
+  function scheduleVisibleBookings() {
+    return state.bookings.filter(bookingMatches).filter(function (b) { return !!b.date && !!bookingStart(b); });
   }
 
 
@@ -2643,7 +3160,7 @@
     var end = parseTimeMinutes(bookingEnd(b));
     if (start == null) return null;
     if (end == null || end <= start) end = start + 30;
-    return {start:start,end:end};
+    return { start: start, end: end };
   }
 
   function isBlockingStatus(b) {
@@ -2652,20 +3169,20 @@
     return bookingStatus(b) === 'confirmed';
   }
 
-  function overlaps(a,b) {
+  function overlaps(a, b) {
     return a && b && a.start < b.end && b.start < a.end;
   }
 
   function dayBookings(date) {
-    return state.bookings.filter(function(b){
+    return state.bookings.filter(function (b) {
       return b.date === date && !!bookingRange(b) && bookingStatus(b) !== 'cancelled';
-    }).sort(function(a,b){ return bookingRange(a).start - bookingRange(b).start; });
+    }).sort(function (a, b) { return bookingRange(a).start - bookingRange(b).start; });
   }
 
   function hasBlockingOverlap(candidate, ignoreId) {
     var range = bookingRange(candidate);
     if (!range) return null;
-    return state.bookings.find(function(b){
+    return state.bookings.find(function (b) {
       if (ignoreId != null && String(b.id) === String(ignoreId)) return false;
       if (b.date !== candidate.date || !isBlockingStatus(b)) return false;
       return overlaps(range, bookingRange(b));
@@ -2673,119 +3190,119 @@
   }
 
   function freeIntervalsForDay(date, hourStart, hourEnd) {
-    var booked = dayBookings(date).filter(function(b){ return isBlockingStatus(b); })
-      .map(bookingRange).sort(function(a,b){ return a.start-b.start; });
+    var booked = dayBookings(date).filter(function (b) { return isBlockingStatus(b); })
+      .map(bookingRange).sort(function (a, b) { return a.start - b.start; });
     var result = [], cursor = hourStart * 60;
-    booked.forEach(function(r){
-      var start = Math.max(r.start, hourStart*60);
-      var end = Math.min(r.end, hourEnd*60);
-      if (end <= hourStart*60 || start >= hourEnd*60) return;
-      if (start > cursor) result.push({start:cursor,end:start});
-      cursor = Math.max(cursor,end);
+    booked.forEach(function (r) {
+      var start = Math.max(r.start, hourStart * 60);
+      var end = Math.min(r.end, hourEnd * 60);
+      if (end <= hourStart * 60 || start >= hourEnd * 60) return;
+      if (start > cursor) result.push({ start: cursor, end: start });
+      cursor = Math.max(cursor, end);
     });
-    if (cursor < hourEnd*60) result.push({start:cursor,end:hourEnd*60});
+    if (cursor < hourEnd * 60) result.push({ start: cursor, end: hourEnd * 60 });
     return result;
   }
 
   function freeIntervalLabel(r) {
-    return formatTime12(pad2(Math.floor(r.start/60))+':'+pad2(r.start%60)) + ' – ' +
-           formatTime12(pad2(Math.floor(r.end/60))+':'+pad2(r.end%60));
+    return formatTime12(pad2(Math.floor(r.start / 60)) + ':' + pad2(r.start % 60)) + ' – ' +
+      formatTime12(pad2(Math.floor(r.end / 60)) + ':' + pad2(r.end % 60));
   }
 
-  function renderSchedule(){
-    var grid=$('booking-schedule-grid'); if(!grid)return;
-    var weekStart=startOfWeek(state.scheduleDate), days=[];
-    for(var i=0;i<7;i++){var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);days.push(d);}
-    var visible=scheduleVisibleBookings(), hourStart=8, hourEnd=20, rowH=64, labelW=74;
-    var cols='74px repeat(7,minmax(150px,1fr))';
-    grid.style.setProperty('--schedule-cols',cols);
+  function renderSchedule() {
+    var grid = $('booking-schedule-grid'); if (!grid) return;
+    var weekStart = startOfWeek(state.scheduleDate), days = [];
+    for (var i = 0; i < 7; i++) { var d = new Date(weekStart); d.setDate(weekStart.getDate() + i); days.push(d); }
+    var visible = scheduleVisibleBookings(), hourStart = 8, hourEnd = 20, rowH = 64, labelW = 74;
+    var cols = '74px repeat(7,minmax(150px,1fr))';
+    grid.style.setProperty('--schedule-cols', cols);
 
     // Flag overlaps for the current view.
-    visible.forEach(function(b){
-      var r=bookingRange(b);
-      b.__crmOverlap=!!r && state.bookings.some(function(other){
-        if(String(other.id)===String(b.id) || other.date!==b.date || bookingStatus(other)==='cancelled') return false;
-        return overlaps(r,bookingRange(other));
+    visible.forEach(function (b) {
+      var r = bookingRange(b);
+      b.__crmOverlap = !!r && state.bookings.some(function (other) {
+        if (String(other.id) === String(b.id) || other.date !== b.date || bookingStatus(other) === 'cancelled') return false;
+        return overlaps(r, bookingRange(other));
       });
     });
 
-    var head='<div class="crm-schedule-corner"><span>Time</span></div>';
-    days.forEach(function(d){
-      var key=dateKey(d), count=visible.filter(function(b){return b.date===key;}).length;
-      var free=freeIntervalsForDay(key,hourStart,hourEnd);
-      var today=sameDay(d,new Date());
-      head+='<div class="crm-schedule-day-head '+(today?'is-today':'')+'">'+
-        '<span>'+d.toLocaleDateString(undefined,{weekday:'short'})+'</span>'+
-        '<strong>'+d.getDate()+'</strong>'+
-        '<small>'+count+' '+(count===1?'booking':'bookings')+' · '+(free.length?free.length+' free':'fully booked')+'</small>'+
-      '</div>';
+    var head = '<div class="crm-schedule-corner"><span>Time</span></div>';
+    days.forEach(function (d) {
+      var key = dateKey(d), count = visible.filter(function (b) { return b.date === key; }).length;
+      var free = freeIntervalsForDay(key, hourStart, hourEnd);
+      var today = sameDay(d, new Date());
+      head += '<div class="crm-schedule-day-head ' + (today ? 'is-today' : '') + '">' +
+        '<span>' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</span>' +
+        '<strong>' + d.getDate() + '</strong>' +
+        '<small>' + count + ' ' + (count === 1 ? 'booking' : 'bookings') + ' · ' + (free.length ? free.length + ' free' : 'fully booked') + '</small>' +
+        '</div>';
     });
 
-    var body='';
-    for(var h=hourStart;h<hourEnd;h++){
-      body+='<div class="crm-schedule-time">'+formatTime12(pad2(h)+':00')+'</div>';
-      days.forEach(function(d){body+='<div class="crm-schedule-cell" data-schedule-date="'+dateKey(d)+'" style="height:'+rowH+'px"></div>';});
+    var body = '';
+    for (var h = hourStart; h < hourEnd; h++) {
+      body += '<div class="crm-schedule-time">' + formatTime12(pad2(h) + ':00') + '</div>';
+      days.forEach(function (d) { body += '<div class="crm-schedule-cell" data-schedule-date="' + dateKey(d) + '" style="height:' + rowH + 'px"></div>'; });
     }
-    grid.innerHTML='<div class="crm-schedule-head" style="grid-template-columns:'+cols+'">'+head+'</div>'+
-      '<div class="crm-schedule-body" style="grid-template-columns:'+cols+'">'+body+'</div>';
+    grid.innerHTML = '<div class="crm-schedule-head" style="grid-template-columns:' + cols + '">' + head + '</div>' +
+      '<div class="crm-schedule-body" style="grid-template-columns:' + cols + '">' + body + '</div>';
 
-    var bodyEl=grid.querySelector('.crm-schedule-body');
+    var bodyEl = grid.querySelector('.crm-schedule-body');
 
     // Exact free windows are shown behind bookings.
-    days.forEach(function(d,dayIndex){
-      freeIntervalsForDay(dateKey(d),hourStart,hourEnd).forEach(function(r){
-        var el=document.createElement('div');
-        el.className='crm-schedule-free';
-        el.style.left='calc('+labelW+'px + '+dayIndex+' * ((100% - '+labelW+'px) / 7) + 4px)';
-        el.style.width='calc((100% - '+labelW+'px) / 7 - 8px)';
-        el.style.top=((r.start-hourStart*60)/60*rowH)+'px';
-        el.style.height=Math.max(22,(r.end-r.start)/60*rowH-4)+'px';
-        el.innerHTML='<span>Available</span><small>'+escapeHtml(freeIntervalLabel(r))+'</small>';
+    days.forEach(function (d, dayIndex) {
+      freeIntervalsForDay(dateKey(d), hourStart, hourEnd).forEach(function (r) {
+        var el = document.createElement('div');
+        el.className = 'crm-schedule-free';
+        el.style.left = 'calc(' + labelW + 'px + ' + dayIndex + ' * ((100% - ' + labelW + 'px) / 7) + 4px)';
+        el.style.width = 'calc((100% - ' + labelW + 'px) / 7 - 8px)';
+        el.style.top = ((r.start - hourStart * 60) / 60 * rowH) + 'px';
+        el.style.height = Math.max(22, (r.end - r.start) / 60 * rowH - 4) + 'px';
+        el.innerHTML = '<span>Available</span><small>' + escapeHtml(freeIntervalLabel(r)) + '</small>';
         bodyEl.appendChild(el);
       });
     });
 
-    visible.forEach(function(b){
-      var dayIndex=days.findIndex(function(d){return b.date===dateKey(d);});
-      if(dayIndex<0)return;
-      var range=bookingRange(b); if(!range)return;
-      var clampedStart=Math.max(range.start,hourStart*60);
-      var clampedEnd=Math.min(Math.max(range.end,range.start+15),hourEnd*60);
-      if(clampedEnd<=hourStart*60 || clampedStart>=hourEnd*60)return;
-      var card=document.createElement('button'), c=bookingCustomer(b), names=bookingServiceNames(b), status=bookingStatus(b);
-      card.type='button';
-      card.className='crm-schedule-booking status-'+status+(b.__crmOverlap?' has-overlap':'');
-      card.style.left='calc('+labelW+'px + '+dayIndex+' * ((100% - '+labelW+'px) / 7) + 4px)';
-      card.style.width='calc((100% - '+labelW+'px) / 7 - 8px)';
-      card.style.top=((clampedStart-hourStart*60)/60*rowH)+'px';
-      card.style.height=Math.max(38,(clampedEnd-clampedStart)/60*rowH-4)+'px';
-      card.setAttribute('data-view-booking',b.id||'');
-      card.title=b.__crmOverlap?'Overlap detected — review this booking':'Open booking details';
-      card.innerHTML='<span class="crm-schedule-time">'+escapeHtml(formatTime12(bookingStart(b)))+' – '+escapeHtml(formatTime12(bookingEnd(b)))+'</span>'+
-        '<strong>'+escapeHtml(c.name||'Customer')+'</strong><span>'+escapeHtml(names.join(', ')||'Booking')+'</span>'+
-        (b.__crmOverlap?'<em class="crm-overlap-flag">Overlap</em>':'');
+    visible.forEach(function (b) {
+      var dayIndex = days.findIndex(function (d) { return b.date === dateKey(d); });
+      if (dayIndex < 0) return;
+      var range = bookingRange(b); if (!range) return;
+      var clampedStart = Math.max(range.start, hourStart * 60);
+      var clampedEnd = Math.min(Math.max(range.end, range.start + 15), hourEnd * 60);
+      if (clampedEnd <= hourStart * 60 || clampedStart >= hourEnd * 60) return;
+      var card = document.createElement('button'), c = bookingCustomer(b), names = bookingServiceNames(b), status = bookingStatus(b);
+      card.type = 'button';
+      card.className = 'crm-schedule-booking status-' + status + (b.__crmOverlap ? ' has-overlap' : '');
+      card.style.left = 'calc(' + labelW + 'px + ' + dayIndex + ' * ((100% - ' + labelW + 'px) / 7) + 4px)';
+      card.style.width = 'calc((100% - ' + labelW + 'px) / 7 - 8px)';
+      card.style.top = ((clampedStart - hourStart * 60) / 60 * rowH) + 'px';
+      card.style.height = Math.max(38, (clampedEnd - clampedStart) / 60 * rowH - 4) + 'px';
+      card.setAttribute('data-view-booking', b.id || '');
+      card.title = b.__crmOverlap ? 'Overlap detected — review this booking' : 'Open booking details';
+      card.innerHTML = '<span class="crm-schedule-time">' + escapeHtml(formatTime12(bookingStart(b))) + ' – ' + escapeHtml(formatTime12(bookingEnd(b))) + '</span>' +
+        '<strong>' + escapeHtml(c.name || 'Customer') + '</strong><span>' + escapeHtml(names.join(', ') || 'Booking') + '</span>' +
+        (b.__crmOverlap ? '<em class="crm-overlap-flag">Overlap</em>' : '');
       bodyEl.appendChild(card);
     });
 
-    $('schedule-range-label').textContent=days[0].toLocaleDateString(undefined,{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
-    var conflicts=visible.filter(function(b){return b.__crmOverlap;}).length;
-    $('schedule-summary').textContent=visible.length+' '+(visible.length===1?'booking':'bookings')+' this week'+(conflicts?' · '+conflicts+' overlap'+(conflicts===1?'':'s')+' to review':'');
+    $('schedule-range-label').textContent = days[0].toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) + ' – ' + days[6].toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    var conflicts = visible.filter(function (b) { return b.__crmOverlap; }).length;
+    $('schedule-summary').textContent = visible.length + ' ' + (visible.length === 1 ? 'booking' : 'bookings') + ' this week' + (conflicts ? ' · ' + conflicts + ' overlap' + (conflicts === 1 ? '' : 's') + ' to review' : '');
   }
 
-  function setBookingView(view){
-    state.bookingView=view==='list'?'list':'schedule';
-    document.querySelectorAll('[data-booking-view]').forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-booking-view')===state.bookingView);});
-    var sched=$('booking-schedule'), list=$('booking-list');
-    if(sched)sched.classList.toggle('crm-hidden',state.bookingView!=='schedule');
-    if(list)list.classList.toggle('crm-hidden',state.bookingView!=='list');
-    if(state.bookingView==='schedule')renderSchedule();
+  function setBookingView(view) {
+    state.bookingView = view === 'list' ? 'list' : 'schedule';
+    document.querySelectorAll('[data-booking-view]').forEach(function (b) { b.classList.toggle('is-active', b.getAttribute('data-booking-view') === state.bookingView); });
+    var sched = $('booking-schedule'), list = $('booking-list');
+    if (sched) sched.classList.toggle('crm-hidden', state.bookingView !== 'schedule');
+    if (list) list.classList.toggle('crm-hidden', state.bookingView !== 'list');
+    if (state.bookingView === 'schedule') renderSchedule();
   }
 
   function bookingVoucherValueText(item) {
     if (!item || item.voucherId == null) return '';
-    var voucher = state.bookingVouchers.find(function(v){ return String(v.id) === String(item.voucherId); });
+    var voucher = state.bookingVouchers.find(function (v) { return String(v.id) === String(item.voucherId); });
     if (!voucher && item.voucherSku) {
-      voucher = state.bookingVouchers.find(function(v){ return String(v.sku || '') === String(item.voucherSku); });
+      voucher = state.bookingVouchers.find(function (v) { return String(v.sku || '') === String(item.voucherSku); });
     }
     if (!voucher) return item.price != null ? Number(item.price || 0).toFixed(2) + ' ' + String(item.currency || '').toUpperCase() : '';
     var type = String(voucher.discount_type || voucher.discountType || 'percentage').toLowerCase() === 'fixed' ? 'fixed' : 'percentage';
@@ -2802,21 +3319,21 @@
     var body = $('bookings-table-body');
     if (!body) return;
     var visible = state.bookings.filter(bookingMatches);
-    body.innerHTML = visible.map(function(b) {
+    body.innerHTML = visible.map(function (b) {
       var c = bookingCustomer(b);
       var items = Array.isArray(b.items) ? b.items : [];
-      var serviceNames = items.filter(function(item){ return item && item.voucherId == null; }).map(function(item){ return serviceForBookingItem(item).name; });
-      var voucherItems = items.filter(function(item){ return item && item.voucherId != null; });
-      var voucherNames = voucherItems.map(function(item){ return serviceForBookingItem(item).name; });
-      var voucherSkus = voucherItems.map(function(item){
+      var serviceNames = items.filter(function (item) { return item && item.voucherId == null; }).map(function (item) { return serviceForBookingItem(item).name; });
+      var voucherItems = items.filter(function (item) { return item && item.voucherId != null; });
+      var voucherNames = voucherItems.map(function (item) { return serviceForBookingItem(item).name; });
+      var voucherSkus = voucherItems.map(function (item) {
         var resolved = serviceForBookingItem(item);
         return (item && (item.voucherSku || item.serviceSku)) || resolved.sku || '—';
       });
-      var voucherValues = voucherItems.map(function(item){
+      var voucherValues = voucherItems.map(function (item) {
         return bookingVoucherValueText(item);
       });
       var first = bookingStart(b), last = bookingEnd(b);
-      var dateText = b.date ? new Date(b.date + 'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—';
+      var dateText = b.date ? new Date(b.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
       var timeText = first ? first + (last ? ' – ' + last : '') : '—';
       var status = bookingStatus(b);
       var badgeClass = status === 'confirmed' ? 'active' : (status === 'cancelled' ? 'inactive' : 'crm-booking-status-' + status);
@@ -2831,18 +3348,18 @@
         '<td class="crm-price">' + ((voucherItems.length && !serviceNames.length) ? escapeHtml(voucherValues.join(', ') || bookingMoney(b)) : bookingMoney(b)) + '</td>' +
         '<td><span class="crm-badge ' + badgeClass + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? ' <span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '</td>' +
         '<td><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-booking="' + escapeHtml(b.id || '') + '">View</button></td>' +
-      '</tr>';
+        '</tr>';
     }).join('');
     $('bookings-empty').classList.toggle('crm-hidden', visible.length !== 0);
     updateBookingCounts();
-    if(state.bookingView==='schedule') renderSchedule();
+    if (state.bookingView === 'schedule') renderSchedule();
   }
 
   function updateBookingCounts() {
-    var counts = {all:state.bookings.length,pending:0,confirmed:0,completed:0,cancelled:0,applied:0};
-    state.bookings.forEach(function(b){ var s=bookingStatus(b); if (counts[s] != null) counts[s]++; });
-    Object.keys(counts).forEach(function(k){ var el=$('booking-count-'+k); if(el) el.textContent=counts[k]; });
-    document.querySelectorAll('[data-booking-filter]').forEach(function(b){ b.classList.toggle('is-active', b.getAttribute('data-booking-filter') === state.bookingFilter); });
+    var counts = { all: state.bookings.length, pending: 0, confirmed: 0, completed: 0, cancelled: 0, applied: 0 };
+    state.bookings.forEach(function (b) { var s = bookingStatus(b); if (counts[s] != null) counts[s]++; });
+    Object.keys(counts).forEach(function (k) { var el = $('booking-count-' + k); if (el) el.textContent = counts[k]; });
+    document.querySelectorAll('[data-booking-filter]').forEach(function (b) { b.classList.toggle('is-active', b.getAttribute('data-booking-filter') === state.bookingFilter); });
   }
 
   function updateBookingDashboardStat() {
@@ -2854,11 +3371,11 @@
     localStorage.setItem('salonTestBookings', JSON.stringify(state.bookings));
   }
 
-  async function updateBookingStatusInDatabase(id,status){
-    var result=await window.salonSupabase.from('bookings').update({
-      status:status
-    }).eq('id',id);
-    if(result.error) throw result.error;
+  async function updateBookingStatusInDatabase(id, status) {
+    var result = await window.salonSupabase.from('bookings').update({
+      status: status
+    }).eq('id', id);
+    if (result.error) throw result.error;
   }
 
   function shiftBookingItems(items, newStart) {
@@ -2869,11 +3386,11 @@
     if (firstStart == null || targetStart == null) throw new Error('Invalid appointment time.');
 
     var delta = targetStart - firstStart;
-    function clock(total){
-      if(total < 0 || total >= 24*60) throw new Error('The appointment cannot extend past midnight.');
-      return pad2(Math.floor(total/60))+':'+pad2(total%60);
+    function clock(total) {
+      if (total < 0 || total >= 24 * 60) throw new Error('The appointment cannot extend past midnight.');
+      return pad2(Math.floor(total / 60)) + ':' + pad2(total % 60);
     }
-    return source.map(function(item){
+    return source.map(function (item) {
       var start = parseTimeMinutes(item.start);
       var end = parseTimeMinutes(item.end);
       if (start == null || end == null || end <= start) throw new Error('Invalid appointment time.');
@@ -2884,26 +3401,26 @@
     });
   }
 
-  async function updateBookingAppointmentInDatabase(id, date, items){
-    var result=await window.salonSupabase.from('bookings').update({
-      booking_date:date
-    }).eq('id',id);
-    if(result.error) throw result.error;
+  async function updateBookingAppointmentInDatabase(id, date, items) {
+    var result = await window.salonSupabase.from('bookings').update({
+      booking_date: date
+    }).eq('id', id);
+    if (result.error) throw result.error;
 
     var source = Array.isArray(items) ? items : [];
-    await Promise.all(source.filter(function(item){ return item && item.id != null; }).map(function(item){
+    await Promise.all(source.filter(function (item) { return item && item.id != null; }).map(function (item) {
       return window.salonSupabase.from('booking_services').update({
-        start_time:item.start,
-        end_time:item.end
-      }).eq('id',item.id).eq('booking_id',id).then(function(r){
-        if(r.error) throw r.error;
+        start_time: item.start,
+        end_time: item.end
+      }).eq('id', item.id).eq('booking_id', id).then(function (r) {
+        if (r.error) throw r.error;
         return r;
       });
     }));
   }
 
   function findBooking(id) {
-    return state.bookings.find(function(b){ return String(b.id) === String(id); });
+    return state.bookings.find(function (b) { return String(b.id) === String(id); });
   }
 
   function bookingVoucherLabel(row, sourceBooking, voucher, customer) {
@@ -2918,10 +3435,10 @@
   }
 
   function bookingVoucherSearchText(x) {
-    var v=x && x.voucher || {};
-    var b=x && x.booking || {};
-    var c=x && x.customer || {};
-    return [v.sku,v.title_en,v.title,b.public_reference,b.publicReference,c.name,c.phone].filter(Boolean).join(' ').toLowerCase();
+    var v = x && x.voucher || {};
+    var b = x && x.booking || {};
+    var c = x && x.customer || {};
+    return [v.sku, v.title_en, v.title, b.public_reference, b.publicReference, c.name, c.phone].filter(Boolean).join(' ').toLowerCase();
   }
 
   async function loadBookingVoucherApplicationData(targetBookingId) {
@@ -2929,159 +3446,159 @@
       .from('booking_voucher_applications')
       .select('id,voucher_booking_service_id,booking_id,service_booking_service_id,created_at')
       .eq('booking_id', targetBookingId)
-      .order('created_at', {ascending:false});
+      .order('created_at', { ascending: false });
     if (appsResult.error) throw appsResult.error;
 
     var applications = appsResult.data || [];
-    var sourceIds = applications.map(function(a){ return a.voucher_booking_service_id; }).filter(function(v){return v!=null;});
-    var serviceIds = applications.map(function(a){ return a.service_booking_service_id; }).filter(function(v){return v!=null;});
+    var sourceIds = applications.map(function (a) { return a.voucher_booking_service_id; }).filter(function (v) { return v != null; });
+    var serviceIds = applications.map(function (a) { return a.service_booking_service_id; }).filter(function (v) { return v != null; });
 
     var sourceRowsPromise = sourceIds.length ? window.salonSupabase
       .from('booking_services')
       .select('id,booking_id,voucher_id,service_id,price,currency')
-      .in('id', sourceIds) : Promise.resolve({data:[],error:null});
+      .in('id', sourceIds) : Promise.resolve({ data: [], error: null });
     var targetRowsPromise = serviceIds.length ? window.salonSupabase
       .from('booking_services')
       .select('id,booking_id,service_id,start_time,end_time,price,currency')
-      .in('id', serviceIds) : Promise.resolve({data:[],error:null});
-    var sourceRowsAndTarget = await Promise.all([sourceRowsPromise,targetRowsPromise]);
-    var sourceRows=sourceRowsAndTarget[0], targetRows=sourceRowsAndTarget[1];
+      .in('id', serviceIds) : Promise.resolve({ data: [], error: null });
+    var sourceRowsAndTarget = await Promise.all([sourceRowsPromise, targetRowsPromise]);
+    var sourceRows = sourceRowsAndTarget[0], targetRows = sourceRowsAndTarget[1];
     if (sourceRows.error) throw sourceRows.error;
     if (targetRows.error) throw targetRows.error;
 
-    var sourceBookingIds = (sourceRows.data||[]).map(function(r){return r.booking_id;}).filter(function(v){return v!=null;});
+    var sourceBookingIds = (sourceRows.data || []).map(function (r) { return r.booking_id; }).filter(function (v) { return v != null; });
     var sourceBookings = sourceBookingIds.length ? await window.salonSupabase
       .from('bookings')
       .select('id,public_reference,status,booking_date,customer_id,currency')
-      .in('id', Array.from(new Set(sourceBookingIds))) : {data:[],error:null};
+      .in('id', Array.from(new Set(sourceBookingIds))) : { data: [], error: null };
     if (sourceBookings.error) throw sourceBookings.error;
 
-    var customerIds = (sourceBookings.data||[]).map(function(b){return b.customer_id;}).filter(function(v){return v!=null;});
+    var customerIds = (sourceBookings.data || []).map(function (b) { return b.customer_id; }).filter(function (v) { return v != null; });
     var customers = customerIds.length ? await window.salonSupabase
       .from('customers')
       .select('id,name,phone')
-      .in('id', Array.from(new Set(customerIds))) : {data:[],error:null};
+      .in('id', Array.from(new Set(customerIds))) : { data: [], error: null };
     if (customers.error) throw customers.error;
 
-    var sourceById={}; (sourceRows.data||[]).forEach(function(r){sourceById[String(r.id)]=r;});
-    var targetById={}; (targetRows.data||[]).forEach(function(r){targetById[String(r.id)]=r;});
-    var bookingById={}; (sourceBookings.data||[]).forEach(function(b){bookingById[String(b.id)]=b;});
-    var customerById={}; (customers.data||[]).forEach(function(c){customerById[String(c.id)]=c;});
-    var voucherById={}; state.vouchers.forEach(function(v){voucherById[String(v.id)]=v;});
-    var serviceById={}; state.services.forEach(function(v){serviceById[String(v.id)]=v;});
+    var sourceById = {}; (sourceRows.data || []).forEach(function (r) { sourceById[String(r.id)] = r; });
+    var targetById = {}; (targetRows.data || []).forEach(function (r) { targetById[String(r.id)] = r; });
+    var bookingById = {}; (sourceBookings.data || []).forEach(function (b) { bookingById[String(b.id)] = b; });
+    var customerById = {}; (customers.data || []).forEach(function (c) { customerById[String(c.id)] = c; });
+    var voucherById = {}; state.vouchers.forEach(function (v) { voucherById[String(v.id)] = v; });
+    var serviceById = {}; state.services.forEach(function (v) { serviceById[String(v.id)] = v; });
 
-    applications.forEach(function(a){
-      a.sourceRow=sourceById[String(a.voucher_booking_service_id)]||null;
-      a.targetRow=targetById[String(a.service_booking_service_id)]||null;
-      a.sourceBooking=a.sourceRow ? bookingById[String(a.sourceRow.booking_id)]||null : null;
-      a.customer=a.sourceBooking ? customerById[String(a.sourceBooking.customer_id)]||null : null;
-      a.voucher=a.sourceRow ? voucherById[String(a.sourceRow.voucher_id)]||null : null;
-      a.service=a.targetRow ? serviceById[String(a.targetRow.service_id)]||null : null;
+    applications.forEach(function (a) {
+      a.sourceRow = sourceById[String(a.voucher_booking_service_id)] || null;
+      a.targetRow = targetById[String(a.service_booking_service_id)] || null;
+      a.sourceBooking = a.sourceRow ? bookingById[String(a.sourceRow.booking_id)] || null : null;
+      a.customer = a.sourceBooking ? customerById[String(a.sourceBooking.customer_id)] || null : null;
+      a.voucher = a.sourceRow ? voucherById[String(a.sourceRow.voucher_id)] || null : null;
+      a.service = a.targetRow ? serviceById[String(a.targetRow.service_id)] || null : null;
     });
 
     var sourceResult = await window.salonSupabase
       .from('booking_services')
       .select('id,booking_id,voucher_id,service_id,price,currency')
-      .not('voucher_id','is',null)
-      .is('service_id',null)
-      .order('id',{ascending:false});
+      .not('voucher_id', 'is', null)
+      .is('service_id', null)
+      .order('id', { ascending: false });
     if (sourceResult.error) throw sourceResult.error;
 
-    var allSourceRows=sourceResult.data||[];
-    var allBookingIds=Array.from(new Set(allSourceRows.map(function(r){return r.booking_id;}).filter(function(v){return v!=null;})));
-    var allBookingsPromise=allBookingIds.length ? window.salonSupabase
+    var allSourceRows = sourceResult.data || [];
+    var allBookingIds = Array.from(new Set(allSourceRows.map(function (r) { return r.booking_id; }).filter(function (v) { return v != null; })));
+    var allBookingsPromise = allBookingIds.length ? window.salonSupabase
       .from('bookings')
       .select('id,public_reference,status,booking_date,customer_id,currency')
-      .in('id',allBookingIds) : Promise.resolve({data:[],error:null});
-    var allAppsPromise=window.salonSupabase.from('booking_voucher_applications').select('voucher_booking_service_id');
-    var allMain=await Promise.all([allBookingsPromise,allAppsPromise]);
-    var allBookings=allMain[0], allAppsResult=allMain[1];
+      .in('id', allBookingIds) : Promise.resolve({ data: [], error: null });
+    var allAppsPromise = window.salonSupabase.from('booking_voucher_applications').select('voucher_booking_service_id');
+    var allMain = await Promise.all([allBookingsPromise, allAppsPromise]);
+    var allBookings = allMain[0], allAppsResult = allMain[1];
     if (allBookings.error) throw allBookings.error;
     if (allAppsResult.error) throw allAppsResult.error;
-    var allCustomerIds=Array.from(new Set((allBookings.data||[]).map(function(b){return b.customer_id;}).filter(function(v){return v!=null;})));
-    var allCustomers=allCustomerIds.length ? await window.salonSupabase
-      .from('customers').select('id,name,phone').in('id',allCustomerIds) : {data:[],error:null};
+    var allCustomerIds = Array.from(new Set((allBookings.data || []).map(function (b) { return b.customer_id; }).filter(function (v) { return v != null; })));
+    var allCustomers = allCustomerIds.length ? await window.salonSupabase
+      .from('customers').select('id,name,phone').in('id', allCustomerIds) : { data: [], error: null };
     if (allCustomers.error) throw allCustomers.error;
-    var allBookingById={}; (allBookings.data||[]).forEach(function(b){allBookingById[String(b.id)]=b;});
-    var allCustomerById={}; (allCustomers.data||[]).forEach(function(c){allCustomerById[String(c.id)]=c;});
-    var appliedSourceIds={};
-    (allAppsResult.data||[]).forEach(function(a){
-      if(a && a.voucher_booking_service_id != null) appliedSourceIds[String(a.voucher_booking_service_id)]=true;
+    var allBookingById = {}; (allBookings.data || []).forEach(function (b) { allBookingById[String(b.id)] = b; });
+    var allCustomerById = {}; (allCustomers.data || []).forEach(function (c) { allCustomerById[String(c.id)] = c; });
+    var appliedSourceIds = {};
+    (allAppsResult.data || []).forEach(function (a) {
+      if (a && a.voucher_booking_service_id != null) appliedSourceIds[String(a.voucher_booking_service_id)] = true;
     });
 
-    var available=allSourceRows.filter(function(r){
-      var sb=allBookingById[String(r.booking_id)];
-      if(!sb) return false;
-      var st=String(sb.status||'').toLowerCase();
-      return (st==='pending'||st==='confirmed') && !appliedSourceIds[String(r.id)] && String(r.booking_id)!==String(targetBookingId);
-    }).map(function(r){
-      var sb=allBookingById[String(r.booking_id)];
-      var customer=allCustomerById[String(sb.customer_id)]||null;
-      var voucher=voucherById[String(r.voucher_id)]||null;
-      return {row:r,booking:sb,customer:customer,voucher:voucher};
-    }).filter(function(x){return !!x.voucher;});
+    var available = allSourceRows.filter(function (r) {
+      var sb = allBookingById[String(r.booking_id)];
+      if (!sb) return false;
+      var st = String(sb.status || '').toLowerCase();
+      return (st === 'pending' || st === 'confirmed') && !appliedSourceIds[String(r.id)] && String(r.booking_id) !== String(targetBookingId);
+    }).map(function (r) {
+      var sb = allBookingById[String(r.booking_id)];
+      var customer = allCustomerById[String(sb.customer_id)] || null;
+      var voucher = voucherById[String(r.voucher_id)] || null;
+      return { row: r, booking: sb, customer: customer, voucher: voucher };
+    }).filter(function (x) { return !!x.voucher; });
 
-    return {applications:applications, available:available};
+    return { applications: applications, available: available };
   }
 
   function setBookingDetailLocked(locked) {
-    var content=$('booking-detail-content');
-    if(!content) return;
-    content.querySelectorAll('input, select, textarea').forEach(function(el){
-      el.disabled=!!locked;
-      el.readOnly=!!locked;
-      el.style.pointerEvents=locked?'none':'auto';
+    var content = $('booking-detail-content');
+    if (!content) return;
+    content.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = !!locked;
+      el.readOnly = !!locked;
+      el.style.pointerEvents = locked ? 'none' : 'auto';
     });
-    content.querySelectorAll('[data-save-booking-appointment],[data-save-booking-pricing],[data-booking-status]').forEach(function(el){
-      el.style.display=locked?'none':'';
+    content.querySelectorAll('[data-save-booking-appointment],[data-save-booking-pricing],[data-booking-status]').forEach(function (el) {
+      el.style.display = locked ? 'none' : '';
     });
-    content.querySelectorAll('.crm-booking-edit-section').forEach(function(el){ el.style.display=locked?'none':''; });
-    content.querySelectorAll('.crm-booking-editable-pricing').forEach(function(el){ el.style.display=locked?'none':''; });
-    if(locked) content.classList.add('crm-booking-detail-locked');
+    content.querySelectorAll('.crm-booking-edit-section').forEach(function (el) { el.style.display = locked ? 'none' : ''; });
+    content.querySelectorAll('.crm-booking-editable-pricing').forEach(function (el) { el.style.display = locked ? 'none' : ''; });
+    if (locked) content.classList.add('crm-booking-detail-locked');
     else content.classList.remove('crm-booking-detail-locked');
   }
 
   async function renderBookingVoucherSection(bookingId) {
-    var targetBooking=findBooking(bookingId);
-    var hasServiceBooking=!!targetBooking && Array.isArray(targetBooking.items) && targetBooking.items.some(function(item){ return item && item.voucherId == null; });
-    var area=$('booking-voucher-area');
-    if(!hasServiceBooking || !area) return;
-    area.innerHTML='<div class="crm-small">Loading available vouchers…</div>';
+    var targetBooking = findBooking(bookingId);
+    var hasServiceBooking = !!targetBooking && Array.isArray(targetBooking.items) && targetBooking.items.some(function (item) { return item && item.voucherId == null; });
+    var area = $('booking-voucher-area');
+    if (!hasServiceBooking || !area) return;
+    area.innerHTML = '<div class="crm-small">Loading available vouchers…</div>';
     try {
-      var data=await loadBookingVoucherApplicationData(bookingId);
-      var hasApplied=data.applications.length>0;
-      var selectedLabel='Select a voucher';
-      var options=data.available.map(function(x){
-        var label=(x.booking && (x.booking.public_reference || x.booking.publicReference) ? (x.booking.public_reference || x.booking.publicReference) : 'No ref')+' • '+(x.voucher && (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) ? (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) : 'Voucher');
-        var search=bookingVoucherSearchText(x);
-        var voucherType=String(x.voucher.discount_type || 'percentage').toLowerCase()==='fixed' ? 'fixed' : 'percentage';
-        var voucherCurrency=String(x.row.currency || x.booking.currency || '').toUpperCase();
-        var voucherDiscountText=voucherType==='fixed'
-          ? (Number(voucherCurrency==='QAR' ? (x.voucher.price_qar || 0) : (x.voucher.price_usd || 0)).toFixed(2)+' '+(voucherCurrency || voucherMainCurrency()))
-          : (Number(x.voucher.discount_value || 0).toFixed(2).replace(/\.00$/,'')+'%');
-        return '<button type="button" class="crm-walkin-result crm-booking-voucher-option" data-voucher-option="'+escapeHtml(search)+'" data-voucher-source-id="'+escapeHtml(String(x.row.id))+'" data-voucher-id="'+escapeHtml(String(x.voucher.id))+'" data-voucher-discount-type="'+escapeHtml(voucherType)+'" data-voucher-discount-value="'+escapeHtml(String(x.voucher.discount_value == null ? 0 : x.voucher.discount_value))+'" data-voucher-fixed-usd="'+escapeHtml(String(x.voucher.price_usd == null ? 0 : x.voucher.price_usd))+'" data-voucher-fixed-qar="'+escapeHtml(String(x.voucher.price_qar == null ? 0 : x.voucher.price_qar))+'" data-voucher-currency="'+escapeHtml(voucherCurrency)+'" data-voucher-source-status="'+escapeHtml(String(x.booking.status || 'confirmed').toLowerCase())+'" data-voucher-source-booking-id="'+escapeHtml(String(x.booking.id))+'" data-voucher-display-label="'+escapeHtml(label)+'"><span><strong>'+escapeHtml(label)+'</strong><small class="crm-small">'+escapeHtml(voucherDiscountText)+'</small></span></button>';
+      var data = await loadBookingVoucherApplicationData(bookingId);
+      var hasApplied = data.applications.length > 0;
+      var selectedLabel = 'Select a voucher';
+      var options = data.available.map(function (x) {
+        var label = (x.booking && (x.booking.public_reference || x.booking.publicReference) ? (x.booking.public_reference || x.booking.publicReference) : 'No ref') + ' • ' + (x.voucher && (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) ? (x.voucher.title_en || x.voucher.title || x.voucher.name_en || x.voucher.name) : 'Voucher');
+        var search = bookingVoucherSearchText(x);
+        var voucherType = String(x.voucher.discount_type || 'percentage').toLowerCase() === 'fixed' ? 'fixed' : 'percentage';
+        var voucherCurrency = String(x.row.currency || x.booking.currency || '').toUpperCase();
+        var voucherDiscountText = voucherType === 'fixed'
+          ? (Number(voucherCurrency === 'QAR' ? (x.voucher.price_qar || 0) : (x.voucher.price_usd || 0)).toFixed(2) + ' ' + (voucherCurrency || voucherMainCurrency()))
+          : (Number(x.voucher.discount_value || 0).toFixed(2).replace(/\.00$/, '') + '%');
+        return '<button type="button" class="crm-walkin-result crm-booking-voucher-option" data-voucher-option="' + escapeHtml(search) + '" data-voucher-source-id="' + escapeHtml(String(x.row.id)) + '" data-voucher-id="' + escapeHtml(String(x.voucher.id)) + '" data-voucher-discount-type="' + escapeHtml(voucherType) + '" data-voucher-discount-value="' + escapeHtml(String(x.voucher.discount_value == null ? 0 : x.voucher.discount_value)) + '" data-voucher-fixed-usd="' + escapeHtml(String(x.voucher.price_usd == null ? 0 : x.voucher.price_usd)) + '" data-voucher-fixed-qar="' + escapeHtml(String(x.voucher.price_qar == null ? 0 : x.voucher.price_qar)) + '" data-voucher-currency="' + escapeHtml(voucherCurrency) + '" data-voucher-source-status="' + escapeHtml(String(x.booking.status || 'confirmed').toLowerCase()) + '" data-voucher-source-booking-id="' + escapeHtml(String(x.booking.id)) + '" data-voucher-display-label="' + escapeHtml(label) + '"><span><strong>' + escapeHtml(label) + '</strong><small class="crm-small">' + escapeHtml(voucherDiscountText) + '</small></span></button>';
       }).join('');
-      var appliedHtml=data.applications.map(function(a){
-        var ref=a.sourceBooking && (a.sourceBooking.public_reference || a.sourceBooking.publicReference) ? (a.sourceBooking.public_reference || a.sourceBooking.publicReference) : 'No ref';
-        var voucherName=a.voucher && (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) ? (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) : 'Voucher';
-        return '<div class="crm-booking-voucher-linked crm-booking-voucher-applied"><div><strong>'+escapeHtml(ref+' • '+voucherName)+'</strong><span class="crm-small">Voucher applied to this booking</span></div></div>';
+      var appliedHtml = data.applications.map(function (a) {
+        var ref = a.sourceBooking && (a.sourceBooking.public_reference || a.sourceBooking.publicReference) ? (a.sourceBooking.public_reference || a.sourceBooking.publicReference) : 'No ref';
+        var voucherName = a.voucher && (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) ? (a.voucher.title_en || a.voucher.title || a.voucher.name_en || a.voucher.name) : 'Voucher';
+        return '<div class="crm-booking-voucher-linked crm-booking-voucher-applied"><div><strong>' + escapeHtml(ref + ' • ' + voucherName) + '</strong><span class="crm-small">Voucher applied to this booking</span></div></div>';
       }).join('');
-      area.innerHTML=(hasApplied ? '<div class="crm-booking-voucher-linked-list crm-booking-voucher-applied-list">'+appliedHtml+'</div>' : '<div class="crm-booking-voucher-picker">'+
-        '<details class="crm-walkin-service-dropdown crm-booking-voucher-dropdown">'+
-          '<summary><span id="booking-voucher-selection-label">'+escapeHtml(selectedLabel)+'</span><span class="crm-walkin-service-count">'+data.available.length+' available</span></summary>'+
-          '<div class="crm-walkin-service-menu">'+
-            '<div class="crm-walkin-service-search"><span>⌕</span><input id="booking-voucher-search" type="search" placeholder="Search voucher by SKU, name or booking ref" autocomplete="off"></div>'+ 
-            '<div class="crm-walkin-service-list crm-booking-voucher-list">'+(options || '<div class="crm-small">No pending or confirmed vouchers are available.</div>')+'</div>'+ 
-          '</div>'+ 
-        '</details>'+ 
-        '<input type="hidden" id="booking-voucher-select" value="">'+
-        '<div class="crm-small crm-booking-voucher-help">Only vouchers from pending or confirmed bookings are shown. The booking reference is displayed for each voucher.</div>'+ 
-        '<div class="crm-form-actions crm-booking-voucher-actions"><button type="button" class="crm-btn crm-btn-primary" data-apply-booking-voucher="'+escapeHtml(String(bookingId))+'">Apply voucher</button></div>'+ 
-        '<div class="crm-booking-voucher-linked-list">'+(appliedHtml || '<div class="crm-small">No vouchers applied to this booking.</div>')+'</div>'+ 
-      '</div>');
-    } catch(err) {
-      console.error('Could not load booking vouchers:',err);
-      area.innerHTML='<div class="crm-small">Could not load vouchers.</div>';
+      area.innerHTML = (hasApplied ? '<div class="crm-booking-voucher-linked-list crm-booking-voucher-applied-list">' + appliedHtml + '</div>' : '<div class="crm-booking-voucher-picker">' +
+        '<details class="crm-walkin-service-dropdown crm-booking-voucher-dropdown">' +
+        '<summary><span id="booking-voucher-selection-label">' + escapeHtml(selectedLabel) + '</span><span class="crm-walkin-service-count">' + data.available.length + ' available</span></summary>' +
+        '<div class="crm-walkin-service-menu">' +
+        '<div class="crm-walkin-service-search"><span>⌕</span><input id="booking-voucher-search" type="search" placeholder="Search voucher by SKU, name or booking ref" autocomplete="off"></div>' +
+        '<div class="crm-walkin-service-list crm-booking-voucher-list">' + (options || '<div class="crm-small">No pending or confirmed vouchers are available.</div>') + '</div>' +
+        '</div>' +
+        '</details>' +
+        '<input type="hidden" id="booking-voucher-select" value="">' +
+        '<div class="crm-small crm-booking-voucher-help">Only vouchers from pending or confirmed bookings are shown. The booking reference is displayed for each voucher.</div>' +
+        '<div class="crm-form-actions crm-booking-voucher-actions"><button type="button" class="crm-btn crm-btn-primary" data-apply-booking-voucher="' + escapeHtml(String(bookingId)) + '">Apply voucher</button></div>' +
+        '<div class="crm-booking-voucher-linked-list">' + (appliedHtml || '<div class="crm-small">No vouchers applied to this booking.</div>') + '</div>' +
+        '</div>');
+    } catch (err) {
+      console.error('Could not load booking vouchers:', err);
+      area.innerHTML = '<div class="crm-small">Could not load vouchers.</div>';
     }
   }
 
@@ -3091,14 +3608,14 @@
     var valueEl = $('crm-booking-discount-value');
     if (!typeEl || !valueEl) return;
     var type = option.getAttribute('data-voucher-discount-type') === 'fixed' ? 'amount' : 'percent';
-    var booking=findBooking(window.__openBookingDetailId || '');
-    var currency=String((booking && booking.currency) || '').toUpperCase();
+    var booking = findBooking(window.__openBookingDetailId || '');
+    var currency = String((booking && booking.currency) || '').toUpperCase();
     var value;
-    if(type === 'amount') {
-      var fixedAttr=currency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
-      value=Math.max(Number(option.getAttribute(fixedAttr) || 0),0);
+    if (type === 'amount') {
+      var fixedAttr = currency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
+      value = Math.max(Number(option.getAttribute(fixedAttr) || 0), 0);
     } else {
-      value=Math.min(Math.max(Number(option.getAttribute('data-voucher-discount-value') || 0),0),100);
+      value = Math.min(Math.max(Number(option.getAttribute('data-voucher-discount-value') || 0), 0), 100);
     }
     typeEl.value = type;
     valueEl.value = value.toFixed(2);
@@ -3106,101 +3623,101 @@
   }
 
   async function applyVoucherToBooking(bookingId, voucherBookingServiceId) {
-    if(!requirePermission('bookings','update')) return;
-    if(!voucherBookingServiceId) { message('Select a voucher first.','error'); return; }
+    if (!requirePermission('bookings', 'update')) return;
+    if (!voucherBookingServiceId) { message('Select a voucher first.', 'error'); return; }
     try {
-      var option=document.querySelector('#booking-voucher-area [data-voucher-source-id=\"'+CSS.escape(String(voucherBookingServiceId))+'\"]');
-      var b=findBooking(bookingId);
-      if(!b) throw new Error('Booking not found.');
-      var voucherType=option && option.getAttribute('data-voucher-discount-type') === 'fixed' ? 'amount' : 'percent';
-      var bookingCurrency=String(b.currency || (b.items && b.items[0] && b.items[0].currency) || '').toUpperCase();
+      var option = document.querySelector('#booking-voucher-area [data-voucher-source-id=\"' + CSS.escape(String(voucherBookingServiceId)) + '\"]');
+      var b = findBooking(bookingId);
+      if (!b) throw new Error('Booking not found.');
+      var voucherType = option && option.getAttribute('data-voucher-discount-type') === 'fixed' ? 'amount' : 'percent';
+      var bookingCurrency = String(b.currency || (b.items && b.items[0] && b.items[0].currency) || '').toUpperCase();
       var voucherValue;
-      if(voucherType === 'amount') {
-        var fixedAttr=bookingCurrency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
-        voucherValue=Math.max(Number(option && option.getAttribute(fixedAttr) || 0),0);
+      if (voucherType === 'amount') {
+        var fixedAttr = bookingCurrency === 'QAR' ? 'data-voucher-fixed-qar' : 'data-voucher-fixed-usd';
+        voucherValue = Math.max(Number(option && option.getAttribute(fixedAttr) || 0), 0);
       } else {
-        voucherValue=Math.max(Number(option && option.getAttribute('data-voucher-discount-value') || 0),0);
+        voucherValue = Math.max(Number(option && option.getAttribute('data-voucher-discount-value') || 0), 0);
       }
-      var voucherCurrency=String(option && option.getAttribute('data-voucher-currency') || '').toUpperCase();
-      if(voucherType==='amount' && voucherCurrency && bookingCurrency && voucherCurrency!==bookingCurrency){
-        throw new Error('Fixed voucher currency ('+voucherCurrency+') does not match the booking currency ('+bookingCurrency+').');
+      var voucherCurrency = String(option && option.getAttribute('data-voucher-currency') || '').toUpperCase();
+      if (voucherType === 'amount' && voucherCurrency && bookingCurrency && voucherCurrency !== bookingCurrency) {
+        throw new Error('Fixed voucher currency (' + voucherCurrency + ') does not match the booking currency (' + bookingCurrency + ').');
       }
-      if(voucherType==='percent') voucherValue=Math.min(voucherValue,100);
-      var subtotal=Number(b.subtotal_price != null ? b.subtotal_price : 0);
-      if(!subtotal) subtotal=(b.items||[]).filter(function(item){return item && item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.price)||0);},0);
-      var discountAmount=voucherType==='amount' ? Math.min(voucherValue,subtotal) : subtotal*voucherValue/100;
-      var finalPrice=Math.max(subtotal-discountAmount,0);
+      if (voucherType === 'percent') voucherValue = Math.min(voucherValue, 100);
+      var subtotal = Number(b.subtotal_price != null ? b.subtotal_price : 0);
+      if (!subtotal) subtotal = (b.items || []).filter(function (item) { return item && item.voucherId == null; }).reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      var discountAmount = voucherType === 'amount' ? Math.min(voucherValue, subtotal) : subtotal * voucherValue / 100;
+      var finalPrice = Math.max(subtotal - discountAmount, 0);
 
       // A booking can have one voucher application only.
-      var existingApplication=await window.salonSupabase
+      var existingApplication = await window.salonSupabase
         .from('booking_voucher_applications')
         .select('id')
-        .eq('booking_id',Number(bookingId))
+        .eq('booking_id', Number(bookingId))
         .limit(1);
-      if(existingApplication.error) throw existingApplication.error;
-      if((existingApplication.data||[]).length){
+      if (existingApplication.error) throw existingApplication.error;
+      if ((existingApplication.data || []).length) {
         throw new Error('Only one voucher can be applied to a booking.');
       }
 
-      var result=await window.salonSupabase.from('booking_voucher_applications').insert({
-        voucher_booking_service_id:Number(voucherBookingServiceId),
-        booking_id:Number(bookingId),
-        source_previous_status:String(option && option.getAttribute('data-voucher-source-status') || 'confirmed').toLowerCase()
+      var result = await window.salonSupabase.from('booking_voucher_applications').insert({
+        voucher_booking_service_id: Number(voucherBookingServiceId),
+        booking_id: Number(bookingId),
+        source_previous_status: String(option && option.getAttribute('data-voucher-source-status') || 'confirmed').toLowerCase()
       });
-      if(result.error) throw result.error;
+      if (result.error) throw result.error;
 
       // Once a voucher is redeemed, its original voucher booking becomes Applied.
       var voucherSourceBookingId = option && option.getAttribute('data-voucher-source-booking-id');
-      if(voucherSourceBookingId){
-        var sourceStatusResult=await window.salonSupabase.from('bookings').update({status:'applied'}).eq('id',Number(voucherSourceBookingId));
-        if(sourceStatusResult.error){
-          await window.salonSupabase.from('booking_voucher_applications').delete().eq('voucher_booking_service_id',Number(voucherBookingServiceId)).eq('booking_id',Number(bookingId));
+      if (voucherSourceBookingId) {
+        var sourceStatusResult = await window.salonSupabase.from('bookings').update({ status: 'applied' }).eq('id', Number(voucherSourceBookingId));
+        if (sourceStatusResult.error) {
+          await window.salonSupabase.from('booking_voucher_applications').delete().eq('voucher_booking_service_id', Number(voucherBookingServiceId)).eq('booking_id', Number(bookingId));
           throw sourceStatusResult.error;
         }
       }
 
-      var pricing=await window.salonSupabase.from('bookings').update({
-        subtotal_price:subtotal,
-        discount_type:voucherType,
-        discount_value:voucherValue,
-        discount_amount:discountAmount,
-        total_price:finalPrice
-      }).eq('id',b.databaseId||bookingId);
-      if(pricing.error) throw pricing.error;
+      var pricing = await window.salonSupabase.from('bookings').update({
+        subtotal_price: subtotal,
+        discount_type: voucherType,
+        discount_value: voucherValue,
+        discount_amount: discountAmount,
+        total_price: finalPrice
+      }).eq('id', b.databaseId || bookingId);
+      if (pricing.error) throw pricing.error;
 
-      b.subtotal_price=subtotal; b.discount_type=voucherType; b.discount_value=voucherValue; b.discount_amount=discountAmount; b.total=finalPrice;
+      b.subtotal_price = subtotal; b.discount_type = voucherType; b.discount_value = voucherValue; b.discount_amount = discountAmount; b.total = finalPrice;
       persistBookings();
-      message('Voucher applied and booking discount filled.','success');
+      message('Voucher applied and booking discount filled.', 'success');
       await renderBookingVoucherSection(bookingId);
       renderBookings();
       renderBookingDetail(bookingId);
-    } catch(err) {
-      console.error('Could not apply voucher:',err);
-      message(err.message||'Could not apply the voucher.','error');
+    } catch (err) {
+      console.error('Could not apply voucher:', err);
+      message(err.message || 'Could not apply the voucher.', 'error');
       await renderBookingVoucherSection(bookingId);
     }
   }
 
   async function unapplyVoucherFromBooking(applicationId, bookingId) {
-    if(!requirePermission('bookings','update')) return;
+    if (!requirePermission('bookings', 'update')) return;
     try {
-      var appResult=await window.salonSupabase.from('booking_voucher_applications').select('id,voucher_booking_service_id,source_previous_status').eq('id',applicationId).single();
-      if(appResult.error) throw appResult.error;
-      var app=appResult.data;
-      var sourceRowResult=await window.salonSupabase.from('booking_services').select('booking_id').eq('id',app.voucher_booking_service_id).single();
-      if(sourceRowResult.error) throw sourceRowResult.error;
-      var restoredStatus=String(app.source_previous_status || 'confirmed').toLowerCase();
-      if(restoredStatus!=='pending' && restoredStatus!=='confirmed') restoredStatus='confirmed';
-      var result=await window.salonSupabase.from('booking_voucher_applications').delete().eq('id',applicationId);
-      if(result.error) throw result.error;
-      var restoreResult=await window.salonSupabase.from('bookings').update({status:restoredStatus}).eq('id',sourceRowResult.data.booking_id);
-      if(restoreResult.error) throw restoreResult.error;
-      message('Voucher removed from the booking.','success');
+      var appResult = await window.salonSupabase.from('booking_voucher_applications').select('id,voucher_booking_service_id,source_previous_status').eq('id', applicationId).single();
+      if (appResult.error) throw appResult.error;
+      var app = appResult.data;
+      var sourceRowResult = await window.salonSupabase.from('booking_services').select('booking_id').eq('id', app.voucher_booking_service_id).single();
+      if (sourceRowResult.error) throw sourceRowResult.error;
+      var restoredStatus = String(app.source_previous_status || 'confirmed').toLowerCase();
+      if (restoredStatus !== 'pending' && restoredStatus !== 'confirmed') restoredStatus = 'confirmed';
+      var result = await window.salonSupabase.from('booking_voucher_applications').delete().eq('id', applicationId);
+      if (result.error) throw result.error;
+      var restoreResult = await window.salonSupabase.from('bookings').update({ status: restoredStatus }).eq('id', sourceRowResult.data.booking_id);
+      if (restoreResult.error) throw restoreResult.error;
+      message('Voucher removed from the booking.', 'success');
       await loadBookings();
       await renderBookingVoucherSection(bookingId);
-    } catch(err) {
-      console.error('Could not remove voucher application:',err);
-      message(err.message||'Could not remove the voucher.','error');
+    } catch (err) {
+      console.error('Could not remove voucher application:', err);
+      message(err.message || 'Could not remove the voucher.', 'error');
     }
   }
 
@@ -3210,61 +3727,61 @@
 
   function renderBookingServicePicker() {
     var services = Array.isArray(state.services) ? state.services.slice() : [];
-    services.sort(function(a,b){ return String(a.name_en || a.name || '').localeCompare(String(b.name_en || b.name || '')); });
-    return services.map(function(service){
+    services.sort(function (a, b) { return String(a.name_en || a.name || '').localeCompare(String(b.name_en || b.name || '')); });
+    return services.map(function (service) {
       var currency = bookingServiceCurrency(service);
       var price = Number(walkinServicePrice(service) || 0);
       var duration = Number(walkinServiceDuration(service) || service.duration_minutes || 0);
       var name = service.name_en || service.name || service.sku || 'Service';
-      var search = [service.sku,name,service.name_ar].filter(Boolean).join(' ').toLowerCase();
+      var search = [service.sku, name, service.name_ar].filter(Boolean).join(' ').toLowerCase();
       return '<button type="button" class="crm-walkin-result crm-booking-service-option" data-booking-service-option="' + escapeHtml(search) + '" data-service-id="' + escapeHtml(String(service.id)) + '" data-service-currency="' + escapeHtml(currency) + '" data-service-price="' + escapeHtml(String(price)) + '" data-service-duration="' + escapeHtml(String(duration)) + '"><span><strong>' + escapeHtml(name) + '</strong><small class="crm-small">' + escapeHtml(String(duration)) + ' min • ' + escapeHtml(price.toFixed(2) + ' ' + currency) + '</small></span></button>';
     }).join('');
   }
 
   async function addServiceToBooking(bookingId) {
-    if(!requirePermission('bookings','update')) return;
-    var b=findBooking(bookingId); if(!b) return;
-    var selected=$('booking-add-service-id');
-    var priceInput=$('booking-add-service-price');
-    var msg=$('booking-add-service-message');
-    if(!selected || !selected.value){ if(msg) msg.textContent='Select a service first.'; return; }
-    var service=state.services.find(function(x){ return String(x.id)===String(selected.value); });
-    if(!service){ if(msg) msg.textContent='Selected service could not be found.'; return; }
-    var currency=bookingServiceCurrency(service);
-    var bookingCurrency=String(b.currency || (b.items&&b.items[0]&&b.items[0].currency) || settingValue('display_currency','USD') || 'USD').toUpperCase();
-    if(bookingCurrency && currency!==bookingCurrency){ if(msg) msg.textContent='Service currency ('+currency+') must match the booking currency ('+bookingCurrency+').'; return; }
-    var price=Number(priceInput && priceInput.value); if(!isFinite(price)||price<0){ if(msg) msg.textContent='Enter a valid non-negative service price.'; return; }
-    var duration=Number(walkinServiceDuration(service)||service.duration_minutes||0); if(!duration) duration=30;
-    var start=bookingEnd(b) || bookingStart(b);
-    if(!start){ if(msg) msg.textContent='The booking has no start time.'; return; }
-    var itemStart=start;
-    var totalMinutes=parseTimeMinutes(start)+duration;
-    if(totalMinutes>=24*60){ if(msg) msg.textContent='The added service cannot extend past midnight.'; return; }
-    var itemEnd=pad2(Math.floor(totalMinutes/60))+':'+pad2(totalMinutes%60);
-    try{
-      var result=await window.salonSupabase.from('booking_services').insert({
-        booking_id:Number(b.databaseId||bookingId), service_id:Number(service.id), staff_id:null,
-        start_time:itemStart, end_time:itemEnd, price:price, currency:currency, duration_minutes:duration
+    if (!requirePermission('bookings', 'update')) return;
+    var b = findBooking(bookingId); if (!b) return;
+    var selected = $('booking-add-service-id');
+    var priceInput = $('booking-add-service-price');
+    var msg = $('booking-add-service-message');
+    if (!selected || !selected.value) { if (msg) msg.textContent = 'Select a service first.'; return; }
+    var service = state.services.find(function (x) { return String(x.id) === String(selected.value); });
+    if (!service) { if (msg) msg.textContent = 'Selected service could not be found.'; return; }
+    var currency = bookingServiceCurrency(service);
+    var bookingCurrency = String(b.currency || (b.items && b.items[0] && b.items[0].currency) || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
+    if (bookingCurrency && currency !== bookingCurrency) { if (msg) msg.textContent = 'Service currency (' + currency + ') must match the booking currency (' + bookingCurrency + ').'; return; }
+    var price = Number(priceInput && priceInput.value); if (!isFinite(price) || price < 0) { if (msg) msg.textContent = 'Enter a valid non-negative service price.'; return; }
+    var duration = Number(walkinServiceDuration(service) || service.duration_minutes || 0); if (!duration) duration = 30;
+    var start = bookingEnd(b) || bookingStart(b);
+    if (!start) { if (msg) msg.textContent = 'The booking has no start time.'; return; }
+    var itemStart = start;
+    var totalMinutes = parseTimeMinutes(start) + duration;
+    if (totalMinutes >= 24 * 60) { if (msg) msg.textContent = 'The added service cannot extend past midnight.'; return; }
+    var itemEnd = pad2(Math.floor(totalMinutes / 60)) + ':' + pad2(totalMinutes % 60);
+    try {
+      var result = await window.salonSupabase.from('booking_services').insert({
+        booking_id: Number(b.databaseId || bookingId), service_id: Number(service.id), staff_id: null,
+        start_time: itemStart, end_time: itemEnd, price: price, currency: currency, duration_minutes: duration
       }).select('id,booking_id,service_id,staff_id,start_time,end_time,price,currency,duration_minutes,voucher_id').single();
-      if(result.error) throw result.error;
-      var newRow=result.data;
-      var newItem={id:newRow.id,serviceId:service.id,serviceSku:service.sku||'',serviceName:service.name_en||service.name||'',start:itemStart,end:itemEnd,price:price,currency:currency,duration_minutes:duration,voucherId:null};
-      b.items=Array.isArray(b.items)?b.items:[]; b.items.push(newItem);
-      var subtotal=b.items.filter(function(item){return item && item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.price)||0);},0);
-      var discountType=b.discount_type==='amount'?'amount':(b.discount_type==='percent'?'percent':null);
-      var discountValue=Math.max(Number(b.discount_value||0),0);
-      var discountAmount=discountType==='amount'?Math.min(discountValue,subtotal):discountType==='percent'?subtotal*Math.min(discountValue,100)/100:0;
-      var finalPrice=Math.max(subtotal-discountAmount,0);
-      var bookingUpdate=await window.salonSupabase.from('bookings').update({subtotal_price:subtotal,discount_type:discountAmount>0?discountType:null,discount_value:discountAmount>0?discountValue:0,discount_amount:discountAmount,total_price:finalPrice,total_duration_minutes:b.items.filter(function(item){return item&&item.voucherId==null;}).reduce(function(sum,item){return sum+(Number(item.duration_minutes)||0);},0)}).eq('id',b.databaseId||bookingId);
-      if(bookingUpdate.error) throw bookingUpdate.error;
-      b.subtotal_price=subtotal; b.discount_amount=discountAmount; b.total=finalPrice;
+      if (result.error) throw result.error;
+      var newRow = result.data;
+      var newItem = { id: newRow.id, serviceId: service.id, serviceSku: service.sku || '', serviceName: service.name_en || service.name || '', start: itemStart, end: itemEnd, price: price, currency: currency, duration_minutes: duration, voucherId: null };
+      b.items = Array.isArray(b.items) ? b.items : []; b.items.push(newItem);
+      var subtotal = b.items.filter(function (item) { return item && item.voucherId == null; }).reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      var discountType = b.discount_type === 'amount' ? 'amount' : (b.discount_type === 'percent' ? 'percent' : null);
+      var discountValue = Math.max(Number(b.discount_value || 0), 0);
+      var discountAmount = discountType === 'amount' ? Math.min(discountValue, subtotal) : discountType === 'percent' ? subtotal * Math.min(discountValue, 100) / 100 : 0;
+      var finalPrice = Math.max(subtotal - discountAmount, 0);
+      var bookingUpdate = await window.salonSupabase.from('bookings').update({ subtotal_price: subtotal, discount_type: discountAmount > 0 ? discountType : null, discount_value: discountAmount > 0 ? discountValue : 0, discount_amount: discountAmount, total_price: finalPrice, total_duration_minutes: b.items.filter(function (item) { return item && item.voucherId == null; }).reduce(function (sum, item) { return sum + (Number(item.duration_minutes) || 0); }, 0) }).eq('id', b.databaseId || bookingId);
+      if (bookingUpdate.error) throw bookingUpdate.error;
+      b.subtotal_price = subtotal; b.discount_amount = discountAmount; b.total = finalPrice;
       persistBookings();
-      message('Service added to the booking.','success');
+      message('Service added to the booking.', 'success');
       await loadBookings();
       renderBookingDetail(bookingId);
-    }catch(e){
-      console.error('Could not add service to booking:',e);
-      if(msg) msg.textContent='Could not add the service: '+(e.message||'Unknown error');
+    } catch (e) {
+      console.error('Could not add service to booking:', e);
+      if (msg) msg.textContent = 'Could not add the service: ' + (e.message || 'Unknown error');
     }
   }
 
@@ -3272,11 +3789,11 @@
     var b = findBooking(id); if (!b) return;
     window.__openBookingDetailId = id;
     var bookingItems = Array.isArray(b.items) ? b.items : [];
-    var isVoucherBooking = bookingItems.length > 0 && bookingItems.every(function(item){ return item && item.voucherId != null; });
-    var hasServiceBooking = bookingItems.some(function(item){ return item && item.voucherId == null; });
+    var isVoucherBooking = bookingItems.length > 0 && bookingItems.every(function (item) { return item && item.voucherId != null; });
+    var hasServiceBooking = bookingItems.some(function (item) { return item && item.voucherId == null; });
     var c = bookingCustomer(b), status = bookingStatus(b);
-        var dateText = b.date ? new Date(b.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : '—';
-    var items = (b.items || []).map(function(item, idx) {
+    var dateText = b.date ? new Date(b.date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—';
+    var items = (b.items || []).map(function (item, idx) {
       var s = serviceForBookingItem(item);
       var price = item.price != null ? Number(item.price) : (s.price == null ? 0 : Number(s.price));
       var itemCurrency = String(item.currency || s.currency || b.currency || settingValue('display_currency', 'USD')).toUpperCase();
@@ -3286,42 +3803,42 @@
       }
       return '<div class="crm-detail-item crm-booking-price-item"><div><strong>' + escapeHtml(s.name) + '</strong><span>' + escapeHtml(item.start || '') + (item.end ? ' – ' + escapeHtml(item.end) : '') + '</span></div><label class="crm-price-edit"><span>Price (' + escapeHtml(itemCurrency) + ')</span><input type="number" min="0" step="0.01" value="' + escapeHtml(price.toFixed(2)) + '" data-booking-item-price="' + escapeHtml(String(item.id || idx)) + '"></label></div>';
     }).join('');
-    var lineSubtotal = (b.items || []).reduce(function(sum,item){ var v=Number(item.price); return sum + (isFinite(v)?v:0); },0);
+    var lineSubtotal = (b.items || []).reduce(function (sum, item) { var v = Number(item.price); return sum + (isFinite(v) ? v : 0); }, 0);
     var savedSubtotal = b.subtotal_price != null && b.subtotal_price !== '' ? Number(b.subtotal_price) : lineSubtotal;
     var discountType = b.discount_type === 'amount' ? 'amount' : 'percent';
     var discountValue = Number(b.discount_value || 0);
     var discountAmount = Number(b.discount_amount || 0);
     var bookingCurrency = String(((b.items && b.items[0] && b.items[0].currency) || b.currency || settingValue('display_currency', 'USD')) || 'USD').toUpperCase();
-    var finalPrice = Number(b.total != null ? b.total : Math.max(savedSubtotal-discountAmount,0));
-    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g,' ') === 'staff';
-    var nextStatuses = (isStaffRole && status === 'cancelled') ? '' : ['pending','confirmed','completed','cancelled'].filter(function(s){return s!==status;}).map(function(s){
-      return '<button type="button" class="crm-btn ' + (s==='cancelled'?'crm-btn-danger':'crm-btn-secondary') + '" data-booking-status="' + s + '" data-booking-id="' + escapeHtml(b.id) + '">' + statusLabel(s) + '</button>';
+    var finalPrice = Number(b.total != null ? b.total : Math.max(savedSubtotal - discountAmount, 0));
+    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g, ' ') === 'staff';
+    var nextStatuses = (isStaffRole && status === 'cancelled') ? '' : ['pending', 'confirmed', 'completed', 'cancelled'].filter(function (s) { return s !== status; }).map(function (s) {
+      return '<button type="button" class="crm-btn ' + (s === 'cancelled' ? 'crm-btn-danger' : 'crm-btn-secondary') + '" data-booking-status="' + s + '" data-booking-id="' + escapeHtml(b.id) + '">' + statusLabel(s) + '</button>';
     }).join('');
     $('booking-detail-content').innerHTML =
-      '<div class="crm-detail-status"><span class="crm-detail-reference"><span class="crm-detail-label">Booking ref</span><strong>' + escapeHtml(b.publicReference || b.id || '—') + '</strong></span><span class="crm-badge ' + (status==='confirmed'?'active':status==='cancelled'?'inactive':'crm-booking-status-'+status) + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? '<span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '<span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
+      '<div class="crm-detail-status"><span class="crm-detail-reference"><span class="crm-detail-label">Booking ref</span><strong>' + escapeHtml(b.publicReference || b.id || '—') + '</strong></span><span class="crm-badge ' + (status === 'confirmed' ? 'active' : status === 'cancelled' ? 'inactive' : 'crm-booking-status-' + status) + '">' + escapeHtml(statusLabel(status)) + '</span>' + (b.is_walkin ? '<span class="crm-badge crm-badge-warning">WALK-IN</span>' : '') + '<span class="crm-small">' + escapeHtml(b.id || '') + '</span></div>' +
       '<div class="crm-detail-grid">' +
-        '<div><span class="crm-detail-label">Customer</span><strong>' + escapeHtml(c.name || '—') + '</strong></div>' +
-        '<div><span class="crm-detail-label">Phone / WhatsApp</span><strong>' + escapeHtml(c.phone || '—') + '</strong></div>' +
-        '<div><span class="crm-detail-label">Email</span><strong>' + escapeHtml(c.email || '—') + '</strong></div>' +
-        '<div><span class="crm-detail-label">Appointment</span><strong>' + escapeHtml(dateText) + '</strong><span>' + escapeHtml(bookingStart(b) || '—') + (bookingEnd(b) ? ' – ' + escapeHtml(bookingEnd(b)) : '') + '</span></div>' +
+      '<div><span class="crm-detail-label">Customer</span><strong>' + escapeHtml(c.name || '—') + '</strong></div>' +
+      '<div><span class="crm-detail-label">Phone / WhatsApp</span><strong>' + escapeHtml(c.phone || '—') + '</strong></div>' +
+      '<div><span class="crm-detail-label">Email</span><strong>' + escapeHtml(c.email || '—') + '</strong></div>' +
+      '<div><span class="crm-detail-label">Appointment</span><strong>' + escapeHtml(dateText) + '</strong><span>' + escapeHtml(bookingStart(b) || '—') + (bookingEnd(b) ? ' – ' + escapeHtml(bookingEnd(b)) : '') + '</span></div>' +
       '</div>' +
       '<div class="crm-detail-section crm-booking-edit-section">' +
-        '<div class="crm-section-label">Adjust appointment</div>' +
-        '<div class="crm-form-grid">' +
-          '<div class="crm-field"><label for="crm-edit-booking-date">Date</label><input id="crm-edit-booking-date" type="date" value="' + escapeHtml(b.date || '') + '"></div>' +
-          '<div class="crm-field"><label for="crm-edit-booking-start">Start time</label><input id="crm-edit-booking-start" type="time" value="' + escapeHtml(bookingStart(b) || '') + '"></div>' +
-        '</div>' +
-        '<div class="crm-small crm-booking-edit-help">Changing the start time moves the entire appointment by the same amount and keeps each service duration. Pending requests do not block other customers.</div>' +
-        '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-appointment="' + escapeHtml(b.id) + '">Save date & time</button>' +
-        '<span id="crm-edit-booking-message" class="crm-small"></span>' +
+      '<div class="crm-section-label">Adjust appointment</div>' +
+      '<div class="crm-form-grid">' +
+      '<div class="crm-field"><label for="crm-edit-booking-date">Date</label><input id="crm-edit-booking-date" type="date" value="' + escapeHtml(b.date || '') + '"></div>' +
+      '<div class="crm-field"><label for="crm-edit-booking-start">Start time</label><input id="crm-edit-booking-start" type="time" value="' + escapeHtml(bookingStart(b) || '') + '"></div>' +
+      '</div>' +
+      '<div class="crm-small crm-booking-edit-help">Changing the start time moves the entire appointment by the same amount and keeps each service duration. Pending requests do not block other customers.</div>' +
+      '<button type="button" class="crm-btn crm-btn-secondary" data-save-booking-appointment="' + escapeHtml(b.id) + '">Save date & time</button>' +
+      '<span id="crm-edit-booking-message" class="crm-small"></span>' +
       '</div>' +
       (hasServiceBooking ? '<div class="crm-detail-section crm-booking-voucher-section"><div class="crm-section-label">Voucher</div><h3>Apply a voucher</h3><p class="crm-small">Select a pending or confirmed voucher to apply to this booking.</p><div id="booking-voucher-area"><div class="crm-small">Loading available vouchers…</div></div></div>' : '') +
-      (hasServiceBooking ? '<div class="crm-detail-section crm-booking-add-service-section"><div class="crm-section-label">Services & pricing</div><h3>Add service</h3><p class="crm-small">Search for a service, select it, then enter the price for this booking.</p><details class="crm-walkin-service-dropdown crm-booking-service-dropdown"><summary><span id="booking-add-service-label">Select a service</span><span class="crm-walkin-service-count">'+state.services.length+' services</span></summary><div class="crm-walkin-service-menu"><div class="crm-walkin-service-search"><span>⌕</span><input id="booking-add-service-search" type="search" placeholder="Search service by name or SKU" autocomplete="off"></div><div class="crm-walkin-service-list crm-booking-add-service-list">'+(renderBookingServicePicker() || '<div class="crm-small">No services available.</div>')+'</div></div></details><input type="hidden" id="booking-add-service-id" value=""><div class="crm-field crm-booking-add-service-price-row"><label for="booking-add-service-price">Price</label><input id="booking-add-service-price" type="number" min="0" step="0.01" placeholder="0.00" disabled></div><div class="crm-form-actions crm-booking-add-service-actions"><button type="button" class="crm-btn crm-btn-primary" data-add-booking-service="'+escapeHtml(b.id)+'">Add service</button><span id="booking-add-service-message" class="crm-small"></span></div></div>' : '') +
-      '<div class="crm-detail-section"><div class="crm-section-label">'+(isVoucherBooking ? 'Voucher details' : 'Current services')+'</div>' + items +
-        (isVoucherBooking ? '<div class="crm-small">Voucher amount/discount is fixed and cannot be edited.</div>' : '<div class="crm-booking-price-summary">' +
-          '<div><span>Original price</span><strong id="crm-booking-subtotal">' + savedSubtotal.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
-          '<div class="crm-booking-discount-row"><label>Discount</label><select id="crm-booking-discount-type"><option value="percent"' + (discountType==='percent'?' selected':'') + '>%</option><option value="amount"' + (discountType==='amount'?' selected':'') + '>Fixed amount</option></select><input id="crm-booking-discount-value" type="number" min="0" step="0.01" value="' + escapeHtml(discountValue.toFixed(2)) + '"><span id="crm-booking-discount-amount">−' + discountAmount.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</span></div>' +
-          '<div class="crm-booking-final-row"><span>Final price</span><strong id="crm-booking-final-price">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
+      (hasServiceBooking ? '<div class="crm-detail-section crm-booking-add-service-section"><div class="crm-section-label">Services & pricing</div><h3>Add service</h3><p class="crm-small">Search for a service, select it, then enter the price for this booking.</p><details class="crm-walkin-service-dropdown crm-booking-service-dropdown"><summary><span id="booking-add-service-label">Select a service</span><span class="crm-walkin-service-count">' + state.services.length + ' services</span></summary><div class="crm-walkin-service-menu"><div class="crm-walkin-service-search"><span>⌕</span><input id="booking-add-service-search" type="search" placeholder="Search service by name or SKU" autocomplete="off"></div><div class="crm-walkin-service-list crm-booking-add-service-list">' + (renderBookingServicePicker() || '<div class="crm-small">No services available.</div>') + '</div></div></details><input type="hidden" id="booking-add-service-id" value=""><div class="crm-field crm-booking-add-service-price-row"><label for="booking-add-service-price">Price</label><input id="booking-add-service-price" type="number" min="0" step="0.01" placeholder="0.00" disabled></div><div class="crm-form-actions crm-booking-add-service-actions"><button type="button" class="crm-btn crm-btn-primary" data-add-booking-service="' + escapeHtml(b.id) + '">Add service</button><span id="booking-add-service-message" class="crm-small"></span></div></div>' : '') +
+      '<div class="crm-detail-section"><div class="crm-section-label">' + (isVoucherBooking ? 'Voucher details' : 'Current services') + '</div>' + items +
+      (isVoucherBooking ? '<div class="crm-small">Voucher amount/discount is fixed and cannot be edited.</div>' : '<div class="crm-booking-price-summary">' +
+        '<div><span>Original price</span><strong id="crm-booking-subtotal">' + savedSubtotal.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
+        '<div class="crm-booking-discount-row"><label>Discount</label><select id="crm-booking-discount-type"><option value="percent"' + (discountType === 'percent' ? ' selected' : '') + '>%</option><option value="amount"' + (discountType === 'amount' ? ' selected' : '') + '>Fixed amount</option></select><input id="crm-booking-discount-value" type="number" min="0" step="0.01" value="' + escapeHtml(discountValue.toFixed(2)) + '"><span id="crm-booking-discount-amount">−' + discountAmount.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</span></div>' +
+        '<div class="crm-booking-final-row"><span>Final price</span><strong id="crm-booking-final-price">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>' +
         '</div><button type="button" class="crm-btn crm-btn-secondary" data-save-booking-pricing="' + escapeHtml(b.id) + '">Save pricing</button><span id="crm-edit-booking-pricing-message" class="crm-small"></span>') +
       '</div>' +
       (isVoucherBooking ? '' : '<div class="crm-detail-total"><span>Total</span><strong id="crm-booking-total-display">' + finalPrice.toFixed(2) + ' ' + escapeHtml(bookingCurrency) + '</strong></div>') +
@@ -3329,7 +3846,7 @@
       (c.notes ? '<div class="crm-detail-section"><div class="crm-section-label">Internal CRM notes</div><p class="crm-detail-notes">' + escapeHtml(c.notes) + '</p></div>' : '') +
       '<div class="crm-detail-actions">' + nextStatuses + '</div>';
     $('booking-detail-modal').classList.remove('crm-hidden');
-    $('booking-detail-modal').setAttribute('aria-hidden','false');
+    $('booking-detail-modal').setAttribute('aria-hidden', 'false');
     // Only the voucher purchase booking is locked after its voucher is applied.
     // A normal service booking remains fully editable even after receiving a voucher.
     var pricingSave = document.querySelector('[data-save-booking-pricing=\"' + CSS.escape(String(id)) + '\"]');
@@ -3339,7 +3856,7 @@
   }
 
   async function saveBookingAppointment(id) {
-    if(!requirePermission('bookings','update')) return;
+    if (!requirePermission('bookings', 'update')) return;
     var b = findBooking(id);
     if (!b) return;
     var dateInput = $('crm-edit-booking-date');
@@ -3366,7 +3883,7 @@
     // may be moved freely; when the admin confirms it, the overlap check
     // below is performed against other confirmed appointments.
     if (bookingStatus(b) === 'confirmed') {
-      var candidate = Object.assign({}, b, {date:date, items:items});
+      var candidate = Object.assign({}, b, { date: date, items: items });
       var conflict = hasBlockingOverlap(candidate, id);
       if (conflict) {
         var cc = bookingCustomer(conflict);
@@ -3403,78 +3920,78 @@
   }
 
   function updateBookingPricingPreview() {
-    var subtotalEl=$('crm-booking-subtotal'), typeEl=$('crm-booking-discount-type'), valueEl=$('crm-booking-discount-value');
-    if(!subtotalEl || !typeEl || !valueEl) return;
+    var subtotalEl = $('crm-booking-subtotal'), typeEl = $('crm-booking-discount-type'), valueEl = $('crm-booking-discount-value');
+    if (!subtotalEl || !typeEl || !valueEl) return;
     var b = findBooking(window.__openBookingDetailId);
     var currency = String((b && b.items && b.items[0] && b.items[0].currency) || (b && b.currency) || settingValue('display_currency', 'USD') || 'USD').toUpperCase();
     var currencies = {};
-    var subtotal=0;
-    document.querySelectorAll('[data-booking-item-price]').forEach(function(input){
-      var v=Number(input.value); if(isFinite(v)&&v>=0) subtotal+=v;
+    var subtotal = 0;
+    document.querySelectorAll('[data-booking-item-price]').forEach(function (input) {
+      var v = Number(input.value); if (isFinite(v) && v >= 0) subtotal += v;
     });
     if (b && Array.isArray(b.items)) {
-      b.items.forEach(function(item){
-        var cur=String(item.currency || '').toUpperCase();
-        if(cur) currencies[cur]=true;
+      b.items.forEach(function (item) {
+        var cur = String(item.currency || '').toUpperCase();
+        if (cur) currencies[cur] = true;
       });
     }
-    var type=typeEl.value || 'percent';
-    var value=Math.max(Number(valueEl.value)||0,0);
-    var amount=type==='amount' ? Math.min(value,subtotal) : subtotal*Math.min(value,100)/100;
-    var finalPrice=Math.max(subtotal-amount,0);
-    subtotalEl.textContent=subtotal.toFixed(2)+' '+currency;
-    var amountEl=$('crm-booking-discount-amount'); if(amountEl) amountEl.textContent='−'+amount.toFixed(2)+' '+currency;
-    var finalEl=$('crm-booking-final-price'); if(finalEl) finalEl.textContent=finalPrice.toFixed(2)+' '+currency;
-    var totalEl=$('crm-booking-total-display'); if(totalEl) totalEl.textContent=finalPrice.toFixed(2)+' '+currency;
+    var type = typeEl.value || 'percent';
+    var value = Math.max(Number(valueEl.value) || 0, 0);
+    var amount = type === 'amount' ? Math.min(value, subtotal) : subtotal * Math.min(value, 100) / 100;
+    var finalPrice = Math.max(subtotal - amount, 0);
+    subtotalEl.textContent = subtotal.toFixed(2) + ' ' + currency;
+    var amountEl = $('crm-booking-discount-amount'); if (amountEl) amountEl.textContent = '−' + amount.toFixed(2) + ' ' + currency;
+    var finalEl = $('crm-booking-final-price'); if (finalEl) finalEl.textContent = finalPrice.toFixed(2) + ' ' + currency;
+    var totalEl = $('crm-booking-total-display'); if (totalEl) totalEl.textContent = finalPrice.toFixed(2) + ' ' + currency;
   }
 
   async function saveBookingPricing(id) {
-    if(!requirePermission('bookings','update')) return;
-    var b=findBooking(id); if(!b) return;
-    var button=document.querySelector('[data-save-booking-pricing="'+CSS.escape(String(id))+'"]');
-    var msg=$('crm-edit-booking-pricing-message');
-    var typeEl=$('crm-booking-discount-type'), valueEl=$('crm-booking-discount-value');
-    var inputs=Array.prototype.slice.call(document.querySelectorAll('[data-booking-item-price]'));
-    var itemById={}; (b.items||[]).forEach(function(item){itemById[String(item.id)] = item;});
-    var updates=[]; var subtotal=0;
-    for(var i=0;i<inputs.length;i++){
-      var input=inputs[i], price=Number(input.value);
-      if(!isFinite(price)||price<0){ if(msg) msg.textContent='Enter valid non-negative prices.'; return; }
-      subtotal+=price;
-      var item=itemById[String(input.getAttribute('data-booking-item-price'))];
-      if(item && item.id!=null) updates.push({id:item.id,price:price});
+    if (!requirePermission('bookings', 'update')) return;
+    var b = findBooking(id); if (!b) return;
+    var button = document.querySelector('[data-save-booking-pricing="' + CSS.escape(String(id)) + '"]');
+    var msg = $('crm-edit-booking-pricing-message');
+    var typeEl = $('crm-booking-discount-type'), valueEl = $('crm-booking-discount-value');
+    var inputs = Array.prototype.slice.call(document.querySelectorAll('[data-booking-item-price]'));
+    var itemById = {}; (b.items || []).forEach(function (item) { itemById[String(item.id)] = item; });
+    var updates = []; var subtotal = 0;
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs[i], price = Number(input.value);
+      if (!isFinite(price) || price < 0) { if (msg) msg.textContent = 'Enter valid non-negative prices.'; return; }
+      subtotal += price;
+      var item = itemById[String(input.getAttribute('data-booking-item-price'))];
+      if (item && item.id != null) updates.push({ id: item.id, price: price });
     }
-    var discountType=typeEl && typeEl.value==='amount' ? 'amount' : 'percent';
-    var discountValue=Math.max(Number(valueEl && valueEl.value)||0,0);
-    var discountAmount=discountType==='amount' ? Math.min(discountValue,subtotal) : subtotal*Math.min(discountValue,100)/100;
-    var finalPrice=Math.max(subtotal-discountAmount,0);
-    if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Saving…';}
-    try{
-      for(var j=0;j<updates.length;j++){
-        var r=await window.salonSupabase.from('booking_services').update({price:updates[j].price}).eq('id',updates[j].id).eq('booking_id',b.databaseId||id);
-        if(r.error) throw r.error;
+    var discountType = typeEl && typeEl.value === 'amount' ? 'amount' : 'percent';
+    var discountValue = Math.max(Number(valueEl && valueEl.value) || 0, 0);
+    var discountAmount = discountType === 'amount' ? Math.min(discountValue, subtotal) : subtotal * Math.min(discountValue, 100) / 100;
+    var finalPrice = Math.max(subtotal - discountAmount, 0);
+    if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = 'Saving…'; }
+    try {
+      for (var j = 0; j < updates.length; j++) {
+        var r = await window.salonSupabase.from('booking_services').update({ price: updates[j].price }).eq('id', updates[j].id).eq('booking_id', b.databaseId || id);
+        if (r.error) throw r.error;
       }
-      var br=await window.salonSupabase.from('bookings').update({subtotal_price:subtotal,discount_type:discountAmount>0?discountType:null,discount_value:discountAmount>0?discountValue:0,discount_amount:discountAmount,total_price:finalPrice}).eq('id',b.databaseId||id);
-      if(br.error) throw br.error;
-      (b.items||[]).forEach(function(item){var u=updates.find(function(x){return String(x.id)===String(item.id);});if(u)item.price=u.price;});
-      b.subtotal_price=subtotal;b.discount_type=discountAmount>0?discountType:null;b.discount_value=discountAmount>0?discountValue:0;b.discount_amount=discountAmount;b.total=finalPrice;
-      persistBookings();renderBookings();renderBookingDetail(id);message('Booking pricing updated.','success');
-    }catch(e){console.error('Could not update booking pricing:',e);if(msg)msg.textContent='Could not save pricing: '+(e.message||'Unknown error');if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Save pricing';}}
+      var br = await window.salonSupabase.from('bookings').update({ subtotal_price: subtotal, discount_type: discountAmount > 0 ? discountType : null, discount_value: discountAmount > 0 ? discountValue : 0, discount_amount: discountAmount, total_price: finalPrice }).eq('id', b.databaseId || id);
+      if (br.error) throw br.error;
+      (b.items || []).forEach(function (item) { var u = updates.find(function (x) { return String(x.id) === String(item.id); }); if (u) item.price = u.price; });
+      b.subtotal_price = subtotal; b.discount_type = discountAmount > 0 ? discountType : null; b.discount_value = discountAmount > 0 ? discountValue : 0; b.discount_amount = discountAmount; b.total = finalPrice;
+      persistBookings(); renderBookings(); renderBookingDetail(id); message('Booking pricing updated.', 'success');
+    } catch (e) { console.error('Could not update booking pricing:', e); if (msg) msg.textContent = 'Could not save pricing: ' + (e.message || 'Unknown error'); if (button) { button.disabled = false; button.textContent = button.dataset.originalText || 'Save pricing'; } }
   }
 
   function closeBookingDetail() {
     $('booking-detail-modal').classList.add('crm-hidden');
-    $('booking-detail-modal').setAttribute('aria-hidden','true');
+    $('booking-detail-modal').setAttribute('aria-hidden', 'true');
   }
 
   async function updateBookingStatus(id, status) {
-    if(!requirePermission('bookings','update')) return;
+    if (!requirePermission('bookings', 'update')) return;
     var b = findBooking(id); if (!b) return;
     status = String(status || 'pending').toLowerCase();
 
     // Staff can cancel a booking, but once it is cancelled they cannot move it
     // back to another status. Managers/administrators retain the normal status controls.
-    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g,' ') === 'staff';
+    var isStaffRole = String(state.currentRole || '').toLowerCase().replace(/[-_]+/g, ' ') === 'staff';
     if (isStaffRole && bookingStatus(b) === 'cancelled') {
       message('Staff cannot change a cancelled booking to another status.', 'error');
       renderBookingDetail(id);
@@ -3493,9 +4010,9 @@
     }
 
     try {
-      await updateBookingStatusInDatabase(id,status);
-    } catch(e) {
-      message('Could not update the booking: '+(e.message||'Unknown error'),'error');
+      await updateBookingStatusInDatabase(id, status);
+    } catch (e) {
+      message('Could not update the booking: ' + (e.message || 'Unknown error'), 'error');
       return;
     }
 
@@ -3508,204 +4025,204 @@
   }
 
 
-  async function loadChartOfAccounts(){
-    if(!can('chart-of-accounts','read')) { state.chartOfAccounts=[]; renderChartOfAccounts(); return; }
-    var body=$('chart-of-accounts-table-body');
-    if(body) body.innerHTML='<tr><td colspan="7" class="crm-empty">Loading chart of accounts…</td></tr>';
+  async function loadChartOfAccounts() {
+    if (!can('chart-of-accounts', 'read')) { state.chartOfAccounts = []; renderChartOfAccounts(); return; }
+    var body = $('chart-of-accounts-table-body');
+    if (body) body.innerHTML = '<tr><td colspan="7" class="crm-empty">Loading chart of accounts…</td></tr>';
     try {
-      var result=await window.salonSupabase.from('chart_of_accounts')
+      var result = await window.salonSupabase.from('chart_of_accounts')
         .select('account_code,major_account,account_name,account_type,financial_statement,typical_balance,notes,active')
-        .order('account_code',{ascending:false});
-      if(result.error) throw result.error;
-      state.chartOfAccounts=result.data||[];
+        .order('account_code', { ascending: false });
+      if (result.error) throw result.error;
+      state.chartOfAccounts = result.data || [];
       syncChartOfAccountsFilters();
       renderChartOfAccounts();
-    } catch(e) {
-      state.chartOfAccounts=[];
-      if(body) body.innerHTML='<tr><td colspan="7" class="crm-empty">Could not load chart of accounts. Check the Supabase migration and permissions.</td></tr>';
+    } catch (e) {
+      state.chartOfAccounts = [];
+      if (body) body.innerHTML = '<tr><td colspan="7" class="crm-empty">Could not load chart of accounts. Check the Supabase migration and permissions.</td></tr>';
       throw e;
     }
   }
 
-  function syncChartOfAccountsFilters(){
-    var statements={}, types={};
-    state.chartOfAccounts.forEach(function(a){ if(a.financial_statement) statements[a.financial_statement]=true; if(a.account_type) types[a.account_type]=true; });
-    var sf=$('chart-statement-filter'), tf=$('chart-type-filter');
-    if(sf){ var sv=state.chartStatementFilter||'all'; sf.innerHTML='<option value="all">All statements</option>'+Object.keys(statements).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join(''); sf.value=statements[sv]?sv:'all'; }
-    if(tf){ var tv=state.chartTypeFilter||'all'; tf.innerHTML='<option value="all">All account types</option>'+Object.keys(types).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join(''); tf.value=types[tv]?tv:'all'; }
+  function syncChartOfAccountsFilters() {
+    var statements = {}, types = {};
+    state.chartOfAccounts.forEach(function (a) { if (a.financial_statement) statements[a.financial_statement] = true; if (a.account_type) types[a.account_type] = true; });
+    var sf = $('chart-statement-filter'), tf = $('chart-type-filter');
+    if (sf) { var sv = state.chartStatementFilter || 'all'; sf.innerHTML = '<option value="all">All statements</option>' + Object.keys(statements).sort().map(function (x) { return '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>'; }).join(''); sf.value = statements[sv] ? sv : 'all'; }
+    if (tf) { var tv = state.chartTypeFilter || 'all'; tf.innerHTML = '<option value="all">All account types</option>' + Object.keys(types).sort().map(function (x) { return '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>'; }).join(''); tf.value = types[tv] ? tv : 'all'; }
   }
 
-  function renderChartOfAccounts(){
-    var body=$('chart-of-accounts-table-body'); if(!body)return;
-    var q=String(($('chart-account-search')&&$('chart-account-search').value)||state.chartAccountSearch||'').trim().toLowerCase();
-    var statement=String(($('chart-statement-filter')&&$('chart-statement-filter').value)||state.chartStatementFilter||'all');
-    var type=String(($('chart-type-filter')&&$('chart-type-filter').value)||state.chartTypeFilter||'all');
-    var rows=state.chartOfAccounts.filter(function(a){
-      var hay=[a.account_code,a.major_account,a.account_name,a.account_type,a.financial_statement,a.typical_balance,a.notes].join(' ').toLowerCase();
-      return (!q || hay.indexOf(q)!==-1) && (statement==='all'||a.financial_statement===statement) && (type==='all'||a.account_type===type);
-    }).sort(function(a,b){ return crmDesc(a.account_code,b.account_code); });
-    body.innerHTML=rows.map(function(a){
-      var name=a.account_name || a.major_account || '—';
-      var isHeader=a.account_type==='Header';
-      var actions='';
-      if(can('chart-of-accounts','update')) actions+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-chart-account="'+escapeHtml(a.account_code)+'">Edit</button>';
-      if(can('chart-of-accounts','delete')) actions+='<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-chart-account="'+escapeHtml(a.account_code)+'">Delete</button>';
-      return '<tr class="'+(isHeader?'crm-account-header-row':'')+'"><td><strong>'+escapeHtml(a.account_code||'')+'</strong></td><td><strong>'+escapeHtml(name)+'</strong>'+(a.major_account && a.account_name?'<br><span class="crm-small">'+escapeHtml(a.major_account)+'</span>':'')+'</td><td>'+escapeHtml(a.account_type||'—')+'</td><td>'+escapeHtml(a.financial_statement||'—')+'</td><td>'+escapeHtml(a.typical_balance||'—')+'</td><td>'+escapeHtml(a.notes||'—')+'</td><td><div class="crm-actions-inline">'+actions+'</div></td></tr>';
+  function renderChartOfAccounts() {
+    var body = $('chart-of-accounts-table-body'); if (!body) return;
+    var q = String(($('chart-account-search') && $('chart-account-search').value) || state.chartAccountSearch || '').trim().toLowerCase();
+    var statement = String(($('chart-statement-filter') && $('chart-statement-filter').value) || state.chartStatementFilter || 'all');
+    var type = String(($('chart-type-filter') && $('chart-type-filter').value) || state.chartTypeFilter || 'all');
+    var rows = state.chartOfAccounts.filter(function (a) {
+      var hay = [a.account_code, a.major_account, a.account_name, a.account_type, a.financial_statement, a.typical_balance, a.notes].join(' ').toLowerCase();
+      return (!q || hay.indexOf(q) !== -1) && (statement === 'all' || a.financial_statement === statement) && (type === 'all' || a.account_type === type);
+    }).sort(function (a, b) { return crmDesc(a.account_code, b.account_code); });
+    body.innerHTML = rows.map(function (a) {
+      var name = a.account_name || a.major_account || '—';
+      var isHeader = a.account_type === 'Header';
+      var actions = '';
+      if (can('chart-of-accounts', 'update')) actions += '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-chart-account="' + escapeHtml(a.account_code) + '">Edit</button>';
+      if (can('chart-of-accounts', 'delete')) actions += '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-chart-account="' + escapeHtml(a.account_code) + '">Delete</button>';
+      return '<tr class="' + (isHeader ? 'crm-account-header-row' : '') + '"><td><strong>' + escapeHtml(a.account_code || '') + '</strong></td><td><strong>' + escapeHtml(name) + '</strong>' + (a.major_account && a.account_name ? '<br><span class="crm-small">' + escapeHtml(a.major_account) + '</span>' : '') + '</td><td>' + escapeHtml(a.account_type || '—') + '</td><td>' + escapeHtml(a.financial_statement || '—') + '</td><td>' + escapeHtml(a.typical_balance || '—') + '</td><td>' + escapeHtml(a.notes || '—') + '</td><td><div class="crm-actions-inline">' + actions + '</div></td></tr>';
     }).join('') || '<tr><td colspan="7" class="crm-empty">No accounts found.</td></tr>';
   }
 
-  function resetChartAccountForm(){
-    state.editingChartAccountCode=null;
-    var form=$('chart-account-form'); if(form) form.reset();
-    if($('chart-account-form-title')) $('chart-account-form-title').textContent='Add account';
-    if($('chart-account-save')) $('chart-account-save').textContent='Add account';
-    if($('chart-account-active')) $('chart-account-active').checked=true;
-    if($('chart-account-form-card')) closeCrmFormCardModal('chart-account-form-card');
+  function resetChartAccountForm() {
+    state.editingChartAccountCode = null;
+    var form = $('chart-account-form'); if (form) form.reset();
+    if ($('chart-account-form-title')) $('chart-account-form-title').textContent = 'Add account';
+    if ($('chart-account-save')) $('chart-account-save').textContent = 'Add account';
+    if ($('chart-account-active')) $('chart-account-active').checked = true;
+    if ($('chart-account-form-card')) closeCrmFormCardModal('chart-account-form-card');
   }
-  function openChartAccountForm(code){
-    if(code && !requirePermission('chart-of-accounts','update')) return;
-    if(!code && !requirePermission('chart-of-accounts','create')) return;
-    var a=code ? state.chartOfAccounts.find(function(x){return String(x.account_code)===String(code);}) : null;
-    if(code && !a) return;
-    state.editingChartAccountCode=a ? a.account_code : null;
-    if($('chart-account-form-title')) $('chart-account-form-title').textContent=a?'Edit account':'Add account';
-    if($('chart-account-save')) $('chart-account-save').textContent=a?'Save changes':'Add account';
-    if($('chart-account-code')) $('chart-account-code').value=a ? (a.account_code||'') : '';
-    if($('chart-account-major')) $('chart-account-major').value=a ? (a.major_account||'') : '';
-    if($('chart-account-name')) $('chart-account-name').value=a ? (a.account_name||'') : '';
-    if($('chart-account-type')) $('chart-account-type').value=a ? (a.account_type||'') : '';
-    if($('chart-account-financial-statement')) $('chart-account-financial-statement').value=a ? (a.financial_statement||'') : '';
-    if($('chart-account-balance')) $('chart-account-balance').value=a ? (a.typical_balance||'') : '';
-    if($('chart-account-notes')) $('chart-account-notes').value=a ? (a.notes||'') : '';
-    if($('chart-account-active')) $('chart-account-active').checked=!a || a.active!==false;
-    if($('chart-account-form-card')) openCrmFormCardModal('chart-account-form-card');
+  function openChartAccountForm(code) {
+    if (code && !requirePermission('chart-of-accounts', 'update')) return;
+    if (!code && !requirePermission('chart-of-accounts', 'create')) return;
+    var a = code ? state.chartOfAccounts.find(function (x) { return String(x.account_code) === String(code); }) : null;
+    if (code && !a) return;
+    state.editingChartAccountCode = a ? a.account_code : null;
+    if ($('chart-account-form-title')) $('chart-account-form-title').textContent = a ? 'Edit account' : 'Add account';
+    if ($('chart-account-save')) $('chart-account-save').textContent = a ? 'Save changes' : 'Add account';
+    if ($('chart-account-code')) $('chart-account-code').value = a ? (a.account_code || '') : '';
+    if ($('chart-account-major')) $('chart-account-major').value = a ? (a.major_account || '') : '';
+    if ($('chart-account-name')) $('chart-account-name').value = a ? (a.account_name || '') : '';
+    if ($('chart-account-type')) $('chart-account-type').value = a ? (a.account_type || '') : '';
+    if ($('chart-account-financial-statement')) $('chart-account-financial-statement').value = a ? (a.financial_statement || '') : '';
+    if ($('chart-account-balance')) $('chart-account-balance').value = a ? (a.typical_balance || '') : '';
+    if ($('chart-account-notes')) $('chart-account-notes').value = a ? (a.notes || '') : '';
+    if ($('chart-account-active')) $('chart-account-active').checked = !a || a.active !== false;
+    if ($('chart-account-form-card')) openCrmFormCardModal('chart-account-form-card');
     showView('chart-of-accounts');
-    window.scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  async function saveChartAccount(e){
+  async function saveChartAccount(e) {
     e.preventDefault();
-    var editing=state.editingChartAccountCode;
-    if(!requirePermission('chart-of-accounts',editing?'update':'create')) return;
-    var code=$('chart-account-code').value.trim();
-    var payload={account_code:code,major_account:$('chart-account-major').value.trim()||null,account_name:$('chart-account-name').value.trim()||null,account_type:$('chart-account-type').value.trim(),financial_statement:$('chart-account-financial-statement').value.trim(),typical_balance:$('chart-account-balance').value.trim()||null,notes:$('chart-account-notes').value.trim()||null,active:$('chart-account-active').checked};
-    if(!code||!payload.account_type||!payload.financial_statement||( !payload.account_name && !payload.major_account)){message('Enter an account code, type, financial statement, and account name or major account.','error');return;}
-    var result=editing
-      ? await window.salonSupabase.from('chart_of_accounts').update(payload).eq('account_code',editing)
+    var editing = state.editingChartAccountCode;
+    if (!requirePermission('chart-of-accounts', editing ? 'update' : 'create')) return;
+    var code = $('chart-account-code').value.trim();
+    var payload = { account_code: code, major_account: $('chart-account-major').value.trim() || null, account_name: $('chart-account-name').value.trim() || null, account_type: $('chart-account-type').value.trim(), financial_statement: $('chart-account-financial-statement').value.trim(), typical_balance: $('chart-account-balance').value.trim() || null, notes: $('chart-account-notes').value.trim() || null, active: $('chart-account-active').checked };
+    if (!code || !payload.account_type || !payload.financial_statement || (!payload.account_name && !payload.major_account)) { message('Enter an account code, type, financial statement, and account name or major account.', 'error'); return; }
+    var result = editing
+      ? await window.salonSupabase.from('chart_of_accounts').update(payload).eq('account_code', editing)
       : await window.salonSupabase.from('chart_of_accounts').insert(payload);
-    if(result.error){message(result.error.code==='23505'?'That account code already exists.':result.error.message,'error');return;}
-    resetChartAccountForm(); await loadChartOfAccounts(); message(editing?'Account updated.':'Account created.','success');
+    if (result.error) { message(result.error.code === '23505' ? 'That account code already exists.' : result.error.message, 'error'); return; }
+    resetChartAccountForm(); await loadChartOfAccounts(); message(editing ? 'Account updated.' : 'Account created.', 'success');
   }
-  async function deleteChartAccount(code){
-    if(!requirePermission('chart-of-accounts','delete')) return;
-    var a=state.chartOfAccounts.find(function(x){return String(x.account_code)===String(code);});
-    if(!a || !(await crmConfirm('Delete account', 'Delete account '+code+'? This cannot be undone.'))) return;
-    var result=await window.salonSupabase.from('chart_of_accounts').delete().eq('account_code',code);
-    if(result.error){message(result.error.message,'error');return;}
-    await loadChartOfAccounts(); message('Account deleted.','success');
+  async function deleteChartAccount(code) {
+    if (!requirePermission('chart-of-accounts', 'delete')) return;
+    var a = state.chartOfAccounts.find(function (x) { return String(x.account_code) === String(code); });
+    if (!a || !(await crmConfirm('Delete account', 'Delete account ' + code + '? This cannot be undone.'))) return;
+    var result = await window.salonSupabase.from('chart_of_accounts').delete().eq('account_code', code);
+    if (result.error) { message(result.error.message, 'error'); return; }
+    await loadChartOfAccounts(); message('Account deleted.', 'success');
   }
 
-  async function loadFinancialStatements(){
-    if(!can('financial-statements','read')) { state.financialStatements=[]; renderFinancialStatements(); return; }
-    var body=$('financial-statements-table-body');
-    if(body) body.innerHTML='<tr><td colspan="6" class="crm-empty">Loading financial statements…</td></tr>';
-    try{
-      var result=await window.salonSupabase.from('financial_statements').select('id,statement,account_code,account_name,classification_line,normal_balance,notes,active').eq('active',true).order('id',{ascending:false});
-      if(result.error) throw result.error;
-      state.financialStatements=result.data||[];
+  async function loadFinancialStatements() {
+    if (!can('financial-statements', 'read')) { state.financialStatements = []; renderFinancialStatements(); return; }
+    var body = $('financial-statements-table-body');
+    if (body) body.innerHTML = '<tr><td colspan="6" class="crm-empty">Loading financial statements…</td></tr>';
+    try {
+      var result = await window.salonSupabase.from('financial_statements').select('id,statement,account_code,account_name,classification_line,normal_balance,notes,active').eq('active', true).order('id', { ascending: false });
+      if (result.error) throw result.error;
+      state.financialStatements = result.data || [];
       syncFinancialStatementFilter(); renderFinancialStatements();
-    }catch(e){
-      state.financialStatements=[];
-      if(body) body.innerHTML='<tr><td colspan="6" class="crm-empty">Could not load financial statements. Run the finance migration in Supabase.</td></tr>';
+    } catch (e) {
+      state.financialStatements = [];
+      if (body) body.innerHTML = '<tr><td colspan="6" class="crm-empty">Could not load financial statements. Run the finance migration in Supabase.</td></tr>';
       throw e;
     }
   }
-  function syncFinancialStatementFilter(){
-    var values={}; state.financialStatements.forEach(function(x){if(x.statement)values[x.statement]=true;});
-    var select=$('financial-statement-filter'); if(!select)return;
-    var current=state.financialStatementFilter||'all';
-    select.innerHTML='<option value="all">All statements</option>'+Object.keys(values).sort().map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>';}).join('');
-    select.value=values[current]?current:'all';
+  function syncFinancialStatementFilter() {
+    var values = {}; state.financialStatements.forEach(function (x) { if (x.statement) values[x.statement] = true; });
+    var select = $('financial-statement-filter'); if (!select) return;
+    var current = state.financialStatementFilter || 'all';
+    select.innerHTML = '<option value="all">All statements</option>' + Object.keys(values).sort().map(function (x) { return '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>'; }).join('');
+    select.value = values[current] ? current : 'all';
   }
-  function renderFinancialStatements(){
-    var body=$('financial-statements-table-body'); if(!body)return;
-    var q=String(($('financial-statement-search')&&$('financial-statement-search').value)||state.financialStatementSearch||'').trim().toLowerCase();
-    var statement=String(($('financial-statement-filter')&&$('financial-statement-filter').value)||state.financialStatementFilter||'all');
-    var rows=state.financialStatements.filter(function(x){
-      var hay=[x.statement,x.account_code,x.account_name,x.classification_line,x.normal_balance,x.notes].join(' ').toLowerCase();
-      return (!q||hay.indexOf(q)!==-1)&&(statement==='all'||x.statement===statement);
-    }).sort(function(a,b){return crmIdDesc(a.id,b.id);});
-    body.innerHTML=rows.map(function(x){return '<tr><td><strong>'+escapeHtml(x.statement||'—')+'</strong></td><td>'+escapeHtml(x.account_code||'—')+'</td><td>'+escapeHtml(x.account_name||'—')+'</td><td>'+escapeHtml(x.classification_line||'—')+'</td><td>'+escapeHtml(x.normal_balance||'—')+'</td><td>'+escapeHtml(x.notes||'—')+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No financial statement lines found.</td></tr>';
+  function renderFinancialStatements() {
+    var body = $('financial-statements-table-body'); if (!body) return;
+    var q = String(($('financial-statement-search') && $('financial-statement-search').value) || state.financialStatementSearch || '').trim().toLowerCase();
+    var statement = String(($('financial-statement-filter') && $('financial-statement-filter').value) || state.financialStatementFilter || 'all');
+    var rows = state.financialStatements.filter(function (x) {
+      var hay = [x.statement, x.account_code, x.account_name, x.classification_line, x.normal_balance, x.notes].join(' ').toLowerCase();
+      return (!q || hay.indexOf(q) !== -1) && (statement === 'all' || x.statement === statement);
+    }).sort(function (a, b) { return crmIdDesc(a.id, b.id); });
+    body.innerHTML = rows.map(function (x) { return '<tr><td><strong>' + escapeHtml(x.statement || '—') + '</strong></td><td>' + escapeHtml(x.account_code || '—') + '</td><td>' + escapeHtml(x.account_name || '—') + '</td><td>' + escapeHtml(x.classification_line || '—') + '</td><td>' + escapeHtml(x.normal_balance || '—') + '</td><td>' + escapeHtml(x.notes || '—') + '</td></tr>'; }).join('') || '<tr><td colspan="6" class="crm-empty">No financial statement lines found.</td></tr>';
   }
 
   async function loadContactMessages() {
-    if(!can('contact-messages','read')) { state.contactMessages=[]; return; }
-    var result=await window.salonSupabase.from('contact_messages')
+    if (!can('contact-messages', 'read')) { state.contactMessages = []; return; }
+    var result = await window.salonSupabase.from('contact_messages')
       .select('id,name,phone,status,created_at')
-      .order('created_at',{ascending:false});
-    if(result.error) throw result.error;
-    state.contactMessages=result.data||[];
+      .order('created_at', { ascending: false });
+    if (result.error) throw result.error;
+    state.contactMessages = result.data || [];
     renderContactMessages();
   }
 
   function renderContactMessages() {
-    var body=$('contact-messages-table-body'); if(!body)return;
-    var query=String(state.contactMessageSearch||'').trim().toLowerCase();
-    var status=String(state.contactMessageStatusFilter||'all');
-    var rows=state.contactMessages.filter(function(item){
-      var matchesQuery=!query || [item.name,item.phone].join(' ').toLowerCase().indexOf(query)!==-1;
-      var matchesStatus=status==='all' || String(item.status||'new')===status;
+    var body = $('contact-messages-table-body'); if (!body) return;
+    var query = String(state.contactMessageSearch || '').trim().toLowerCase();
+    var status = String(state.contactMessageStatusFilter || 'all');
+    var rows = state.contactMessages.filter(function (item) {
+      var matchesQuery = !query || [item.name, item.phone].join(' ').toLowerCase().indexOf(query) !== -1;
+      var matchesStatus = status === 'all' || String(item.status || 'new') === status;
       return matchesQuery && matchesStatus;
-    }).sort(function(a,b){ return crmDateDesc(a.created_at,b.created_at) || crmIdDesc(a.id,b.id); });
-    body.innerHTML=rows.map(function(item){
-      var itemStatus=String(item.status||'new');
-      var badge=itemStatus==='contacted'?'active':'crm-booking-status-pending';
-      var action=itemStatus==='contacted'
-        ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="new" data-contact-id="'+escapeHtml(item.id)+'">Mark new</button>'
-        : '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="contacted" data-contact-id="'+escapeHtml(item.id)+'">Mark contacted</button>';
-      return '<tr>'+
-        '<td>'+escapeHtml(item.created_at?new Date(item.created_at).toLocaleString():'—')+'</td>'+
-        '<td><strong>'+escapeHtml(item.name||'—')+'</strong></td>'+
-        '<td>'+escapeHtml(item.phone||'—')+'</td>'+
-        '<td><span class="crm-badge '+badge+'">'+escapeHtml(itemStatus==='contacted'?'Contacted':'New')+'</span></td>'+
-        '<td><div class="crm-actions-inline">'+action+
-        (can('contact-messages','delete')?'<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-contact="'+escapeHtml(item.id)+'">Delete</button>':'')+
+    }).sort(function (a, b) { return crmDateDesc(a.created_at, b.created_at) || crmIdDesc(a.id, b.id); });
+    body.innerHTML = rows.map(function (item) {
+      var itemStatus = String(item.status || 'new');
+      var badge = itemStatus === 'contacted' ? 'active' : 'crm-booking-status-pending';
+      var action = itemStatus === 'contacted'
+        ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="new" data-contact-id="' + escapeHtml(item.id) + '">Mark new</button>'
+        : '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-contact-status="contacted" data-contact-id="' + escapeHtml(item.id) + '">Mark contacted</button>';
+      return '<tr>' +
+        '<td>' + escapeHtml(item.created_at ? new Date(item.created_at).toLocaleString() : '—') + '</td>' +
+        '<td><strong>' + escapeHtml(item.name || '—') + '</strong></td>' +
+        '<td>' + escapeHtml(item.phone || '—') + '</td>' +
+        '<td><span class="crm-badge ' + badge + '">' + escapeHtml(itemStatus === 'contacted' ? 'Contacted' : 'New') + '</span></td>' +
+        '<td><div class="crm-actions-inline">' + action +
+        (can('contact-messages', 'delete') ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-contact="' + escapeHtml(item.id) + '">Delete</button>' : '') +
         '</div></td></tr>';
     }).join('') || '<tr><td colspan="5" class="crm-empty">No contact requests found.</td></tr>';
   }
 
-  async function updateContactMessageStatus(status,id) {
-    if(!requirePermission('contact-messages','update')) return;
-    var result=await window.salonSupabase.from('contact_messages').update({status:status}).eq('id',id);
-    if(result.error){message(result.error.message,'error');return;}
-    var item=state.contactMessages.find(function(x){return String(x.id)===String(id);});
-    if(item)item.status=status;
+  async function updateContactMessageStatus(status, id) {
+    if (!requirePermission('contact-messages', 'update')) return;
+    var result = await window.salonSupabase.from('contact_messages').update({ status: status }).eq('id', id);
+    if (result.error) { message(result.error.message, 'error'); return; }
+    var item = state.contactMessages.find(function (x) { return String(x.id) === String(id); });
+    if (item) item.status = status;
     renderContactMessages();
-    message('Contact request updated.','success');
+    message('Contact request updated.', 'success');
   }
 
   async function deleteContactMessage(id) {
-    if(!requirePermission('contact-messages','delete')) return;
-    if(!await crmConfirm('Delete contact request', 'Delete this contact request? This cannot be undone.')) return;
-    var result=await window.salonSupabase.from('contact_messages').delete().eq('id',id);
-    if(result.error){message(result.error.message,'error');return;}
+    if (!requirePermission('contact-messages', 'delete')) return;
+    if (!await crmConfirm('Delete contact request', 'Delete this contact request? This cannot be undone.')) return;
+    var result = await window.salonSupabase.from('contact_messages').delete().eq('id', id);
+    if (result.error) { message(result.error.message, 'error'); return; }
     await loadContactMessages();
-    message('Contact request deleted.','success');
+    message('Contact request deleted.', 'success');
   }
 
   async function loadTranslations() {
-    if (!can('translations','read')) { state.translations = []; return; }
+    if (!can('translations', 'read')) { state.translations = []; return; }
     if (!window.salonDatabase || !window.salonDatabase.getTranslations) throw new Error('Translation database is not available.');
     state.translations = await window.salonDatabase.getTranslations();
     // Backward-compatible fallback: if the legacy FAQ settings table still
     // contains values and the new translation keys have not been migrated yet,
     // expose them in the same Key / English / Arabic catalogue.
-    var keys=state.translations.map(function(row){return row.key;});
-    if(keys.indexOf('faq.pageTitle')===-1 || keys.indexOf('faq.pageDescription')===-1){
-      var settingsResult=await window.salonSupabase.from('faq_settings').select('*').eq('id',1).maybeSingle();
-      if(!settingsResult.error && settingsResult.data){
-        var fs=settingsResult.data;
-        if(keys.indexOf('faq.pageTitle')===-1) state.translations.push({key:'faq.pageTitle',en:fs.title_en||'',ar:fs.title_ar||''});
-        if(keys.indexOf('faq.pageDescription')===-1) state.translations.push({key:'faq.pageDescription',en:fs.description_en||'',ar:fs.description_ar||''});
+    var keys = state.translations.map(function (row) { return row.key; });
+    if (keys.indexOf('faq.pageTitle') === -1 || keys.indexOf('faq.pageDescription') === -1) {
+      var settingsResult = await window.salonSupabase.from('faq_settings').select('*').eq('id', 1).maybeSingle();
+      if (!settingsResult.error && settingsResult.data) {
+        var fs = settingsResult.data;
+        if (keys.indexOf('faq.pageTitle') === -1) state.translations.push({ key: 'faq.pageTitle', en: fs.title_en || '', ar: fs.title_ar || '' });
+        if (keys.indexOf('faq.pageDescription') === -1) state.translations.push({ key: 'faq.pageDescription', en: fs.description_en || '', ar: fs.description_ar || '' });
       }
     }
     renderTranslations();
@@ -3715,28 +4232,28 @@
     var body = $('translation-table-body');
     if (!body) return;
     var query = String(($('translation-search') && $('translation-search').value) || '').trim().toLowerCase();
-    var rows = (state.translations || []).filter(function(row) {
+    var rows = (state.translations || []).filter(function (row) {
       if (!query) return true;
-      return [row.key, row.en, row.ar].some(function(value) {
+      return [row.key, row.en, row.ar].some(function (value) {
         return String(value || '').toLowerCase().indexOf(query) !== -1;
       });
     });
 
-    rows.sort(function(a,b){ return crmDesc(a.key,b.key); });
-    body.innerHTML = rows.map(function(row) {
+    rows.sort(function (a, b) { return crmDesc(a.key, b.key); });
+    body.innerHTML = rows.map(function (row) {
       return '<tr>' +
         '<td><code>' + escapeHtml(row.key) + '</code></td>' +
         '<td>' + escapeHtml(row.en || '') + '</td>' +
         '<td dir="rtl">' + escapeHtml(row.ar || '') + '</td>' +
         '<td><div class="crm-actions-inline">' +
-          (can('translations','update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-translation="' + escapeHtml(row.key) + '">Edit</button>' : '') +
+        (can('translations', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-translation="' + escapeHtml(row.key) + '">Edit</button>' : '') +
         '</div></td>' +
-      '</tr>';
+        '</tr>';
     }).join('') || '<tr><td colspan="4" class="crm-empty">No translations found.</td></tr>';
   }
 
   function openTranslationForm(key) {
-    var row = (state.translations || []).find(function(item) { return item.key === key; });
+    var row = (state.translations || []).find(function (item) { return item.key === key; });
     state.editingTranslationKey = row ? row.key : null;
     openCrmFormCardModal('translation-form-card');
     $('translation-key').value = row ? row.key : '';
@@ -3785,787 +4302,788 @@
   function restoreLastView() {
     var key = viewStorageKey(state.currentUserId);
     var saved = key ? sessionStorage.getItem(key) : null;
-    if (saved && (saved === 'dashboard' || can(saved,'read'))) showView(saved, true);
+    if (saved && (saved === 'dashboard' || can(saved, 'read'))) showView(saved, true);
     else showView('dashboard', true);
   }
 
 
   // ---------------- Finance module ----------------
-  function financeMoney(n){ return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function financeToday(){ return new Date().toISOString().slice(0,10); }
-  function financeAccountLabel(a){ return (a.account_code||'')+' — '+(a.account_name||a.major_account||''); }
+  function financeMoney(n) { return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function financeToday() { return new Date().toISOString().slice(0, 10); }
+  function financeAccountLabel(a) { return (a.account_code || '') + ' — ' + (a.account_name || a.major_account || ''); }
 
-  async function loadFinanceAccounts(){
-    if(!state.chartOfAccounts.length) await loadChartOfAccounts();
-    var opts='<option value="">Select account</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'">'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');
-    ['map-account'].forEach(function(id){var el=$(id);if(el){var v=el.value;el.innerHTML=opts; if(v)el.value=v;}});
+  async function loadFinanceAccounts() {
+    if (!state.chartOfAccounts.length) await loadChartOfAccounts();
+    var opts = '<option value="">Select account</option>' + state.chartOfAccounts.filter(function (a) { return a.active !== false; }).map(function (a) { return '<option value="' + escapeHtml(a.account_code) + '">' + escapeHtml(financeAccountLabel(a)) + '</option>'; }).join('');
+    ['map-account'].forEach(function (id) { var el = $(id); if (el) { var v = el.value; el.innerHTML = opts; if (v) el.value = v; } });
   }
 
-  function filterJournalAccountDropdown(search){
-    if(!search)return;
-    var menu=search.closest('.crm-journal-account-menu');
-    if(!menu)return;
-    var q=String(search.value||'').trim().toLowerCase();
-    var visible=0;
-    menu.querySelectorAll('[data-journal-account-option]').forEach(function(option){
-      var haystack=(String(option.getAttribute('data-journal-account-option')||'')+' '+String(option.textContent||'')).toLowerCase();
-      var match=!q||haystack.indexOf(q)!==-1;
-      option.classList.toggle('crm-journal-account-hidden',!match);
-      if(match)visible++;
+  function filterJournalAccountDropdown(search) {
+    if (!search) return;
+    var menu = search.closest('.crm-journal-account-menu');
+    if (!menu) return;
+    var q = String(search.value || '').trim().toLowerCase();
+    var visible = 0;
+    menu.querySelectorAll('[data-journal-account-option]').forEach(function (option) {
+      var haystack = (String(option.getAttribute('data-journal-account-option') || '') + ' ' + String(option.textContent || '')).toLowerCase();
+      var match = !q || haystack.indexOf(q) !== -1;
+      option.classList.toggle('crm-journal-account-hidden', !match);
+      if (match) visible++;
     });
-    var empty=menu.querySelector('[data-journal-account-no-results]');
-    if(!empty){
-      empty=document.createElement('div');
-      empty.setAttribute('data-journal-account-no-results','');
-      empty.className='crm-small crm-journal-account-no-results';
-      empty.textContent='No matching accounts found.';
-      var list=menu.querySelector('.crm-journal-account-list');
-      if(list)list.appendChild(empty);
+    var empty = menu.querySelector('[data-journal-account-no-results]');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.setAttribute('data-journal-account-no-results', '');
+      empty.className = 'crm-small crm-journal-account-no-results';
+      empty.textContent = 'No matching accounts found.';
+      var list = menu.querySelector('.crm-journal-account-list');
+      if (list) list.appendChild(empty);
     }
-    if(empty)empty.style.display=visible?'none':'';
+    if (empty) empty.style.display = visible ? 'none' : '';
   }
 
-  function journalLineHtml(line){
-    var selectedCode=String(line&&line.account_code||'');
-    var selectedAccount=state.chartOfAccounts.find(function(a){return String(a.account_code)===selectedCode;});
-    var selectedLabel=selectedAccount?financeAccountLabel(selectedAccount):'Select account';
-    var accountGroup='journal-account-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-    var accountOptions=state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){
-      var code=String(a.account_code);
-      return '<label class="crm-journal-account-option" data-journal-account-option="'+escapeHtml((financeAccountLabel(a)+' '+code).toLowerCase())+'"><input type="radio" name="'+accountGroup+'" value="'+escapeHtml(code)+'" data-journal-account-radio '+(code===selectedCode?'checked':'')+'><span><strong>'+escapeHtml(a.account_name||a.major_account||code)+'</strong><small>'+escapeHtml(code+(a.account_type?' • '+a.account_type:''))+'</small></span></label>';
+  function journalLineHtml(line) {
+    var selectedCode = String(line && line.account_code || '');
+    var selectedAccount = state.chartOfAccounts.find(function (a) { return String(a.account_code) === selectedCode; });
+    var selectedLabel = selectedAccount ? financeAccountLabel(selectedAccount) : 'Select account';
+    var accountGroup = 'journal-account-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    var accountOptions = state.chartOfAccounts.filter(function (a) { return a.active !== false; }).map(function (a) {
+      var code = String(a.account_code);
+      return '<label class="crm-journal-account-option" data-journal-account-option="' + escapeHtml((financeAccountLabel(a) + ' ' + code).toLowerCase()) + '"><input type="radio" name="' + accountGroup + '" value="' + escapeHtml(code) + '" data-journal-account-radio ' + (code === selectedCode ? 'checked' : '') + '><span><strong>' + escapeHtml(a.account_name || a.major_account || code) + '</strong><small>' + escapeHtml(code + (a.account_type ? ' • ' + a.account_type : '')) + '</small></span></label>';
     }).join('');
-    return '<tr data-journal-line><td><input type="hidden" data-line-account required value="'+escapeHtml(selectedCode)+'"><details class="crm-journal-account-dropdown"><summary><span data-journal-account-label>'+escapeHtml(selectedLabel)+'</span></summary><div class="crm-journal-account-menu"><div class="crm-walkin-service-search"><span>⌕</span><input type="search" data-journal-account-search placeholder="Search account by code or name" autocomplete="off"></div><div class="crm-journal-account-list">'+(accountOptions||'<div class="crm-small">No active accounts found.</div>')+'</div></div></details></td><td><input data-line-description maxlength="255" value="'+escapeHtml(line&&line.description||'')+'"></td><td><input data-line-debit type="number" min="0" step="0.01" value="'+(line&&line.debit||'')+'"></td><td><input data-line-credit type="number" min="0" step="0.01" value="'+(line&&line.credit||'')+'"></td><td><button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-remove-journal-line>×</button></td></tr>';
+    return '<tr data-journal-line><td><input type="hidden" data-line-account required value="' + escapeHtml(selectedCode) + '"><details class="crm-journal-account-dropdown"><summary><span data-journal-account-label>' + escapeHtml(selectedLabel) + '</span></summary><div class="crm-journal-account-menu"><div class="crm-walkin-service-search"><span>⌕</span><input type="search" data-journal-account-search placeholder="Search account by code or name" autocomplete="off"></div><div class="crm-journal-account-list">' + (accountOptions || '<div class="crm-small">No active accounts found.</div>') + '</div></div></details></td><td><input data-line-description maxlength="255" value="' + escapeHtml(line && line.description || '') + '"></td><td><input data-line-debit type="number" min="0" step="0.01" value="' + (line && line.debit || '') + '"></td><td><input data-line-credit type="number" min="0" step="0.01" value="' + (line && line.credit || '') + '"></td><td><button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-remove-journal-line>×</button></td></tr>';
   }
-  function addJournalLine(line){ var b=$('journal-lines-body');if(b){b.insertAdjacentHTML('beforeend',journalLineHtml(line||{}));updateJournalBalance();} }
-  function updateJournalBalance(){
-    var d=0,c=0; document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function(r){d+=Number(r.querySelector('[data-line-debit]')?.value||0);c+=Number(r.querySelector('[data-line-credit]')?.value||0);});
-    var el=$('journal-balance-summary');if(el)el.textContent='Debits: '+financeMoney(d)+' · Credits: '+financeMoney(c)+' · Difference: '+financeMoney(Math.abs(d-c));
-    var post=$('journal-entry-post');if(post)post.disabled=d<=0||Math.abs(d-c)>0.005;
+  function addJournalLine(line) { var b = $('journal-lines-body'); if (b) { b.insertAdjacentHTML('beforeend', journalLineHtml(line || {})); updateJournalBalance(); } }
+  function updateJournalBalance() {
+    var d = 0, c = 0; document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function (r) { d += Number(r.querySelector('[data-line-debit]')?.value || 0); c += Number(r.querySelector('[data-line-credit]')?.value || 0); });
+    var el = $('journal-balance-summary'); if (el) el.textContent = 'Debits: ' + financeMoney(d) + ' · Credits: ' + financeMoney(c) + ' · Difference: ' + financeMoney(Math.abs(d - c));
+    var post = $('journal-entry-post'); if (post) post.disabled = d <= 0 || Math.abs(d - c) > 0.005;
   }
-  function resetJournalForm(){
-    state.editingJournalEntryId=null; var f=$('journal-entry-form');if(f)f.reset();
-    if($('journal-entry-date'))$('journal-entry-date').value=financeToday();
-    if($('journal-lines-body'))$('journal-lines-body').innerHTML='';
-    addJournalLine({});addJournalLine({});
-    if($('journal-entry-form-card'))closeCrmFormCardModal('journal-entry-form-card');
+  function resetJournalForm() {
+    state.editingJournalEntryId = null; var f = $('journal-entry-form'); if (f) f.reset();
+    if ($('journal-entry-date')) $('journal-entry-date').value = financeToday();
+    if ($('journal-lines-body')) $('journal-lines-body').innerHTML = '';
+    addJournalLine({}); addJournalLine({});
+    if ($('journal-entry-form-card')) closeCrmFormCardModal('journal-entry-form-card');
   }
-  async function openJournalForm(id){
-    if(!requirePermission('journal-entries',id?'update':'create'))return;
+  async function openJournalForm(id) {
+    if (!requirePermission('journal-entries', id ? 'update' : 'create')) return;
     await loadFinanceAccounts();
-    state.editingJournalEntryId=id||null;
-    if($('journal-entry-form-title'))$('journal-entry-form-title').textContent=id?'Edit draft':'New journal entry';
-    if(id){
-      var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status').eq('id',id).single();
-      if(r.error){message(r.error.message,'error');return;}
-      if(r.data.status!=='draft'){message('Only draft journal entries can be edited.','error');return;}
-      var l=await window.salonSupabase.from('journal_entry_lines').select('account_code,description,debit,credit').eq('journal_entry_id',id).order('line_no',{ascending:true});
-      if(l.error){message(l.error.message,'error');return;}
-      $('journal-entry-date').value=r.data.entry_date||financeToday();$('journal-entry-reference').value=r.data.reference||'';$('journal-entry-description').value=r.data.description||'';
-      $('journal-lines-body').innerHTML='';(l.data||[]).forEach(addJournalLine);
-    }else resetJournalForm();
+    state.editingJournalEntryId = id || null;
+    if ($('journal-entry-form-title')) $('journal-entry-form-title').textContent = id ? 'Edit draft' : 'New journal entry';
+    if (id) {
+      var r = await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status').eq('id', id).single();
+      if (r.error) { message(r.error.message, 'error'); return; }
+      if (r.data.status !== 'draft') { message('Only draft journal entries can be edited.', 'error'); return; }
+      var l = await window.salonSupabase.from('journal_entry_lines').select('account_code,description,debit,credit').eq('journal_entry_id', id).order('line_no', { ascending: true });
+      if (l.error) { message(l.error.message, 'error'); return; }
+      $('journal-entry-date').value = r.data.entry_date || financeToday(); $('journal-entry-reference').value = r.data.reference || ''; $('journal-entry-description').value = r.data.description || '';
+      $('journal-lines-body').innerHTML = ''; (l.data || []).forEach(addJournalLine);
+    } else resetJournalForm();
     openCrmFormCardModal('journal-entry-form-card');
   }
-  function journalFormData(){
-    var lines=[];document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function(r,i){lines.push({line_no:i+1,account_code:r.querySelector('[data-line-account]').value,description:r.querySelector('[data-line-description]').value.trim()||null,debit:Number(r.querySelector('[data-line-debit]').value||0),credit:Number(r.querySelector('[data-line-credit]').value||0)});});
-    return {entry_date:$('journal-entry-date').value,reference:$('journal-entry-reference').value.trim()||null,description:$('journal-entry-description').value.trim(),lines:lines};
+  function journalFormData() {
+    var lines = []; document.querySelectorAll('#journal-lines-body [data-journal-line]').forEach(function (r, i) { lines.push({ line_no: i + 1, account_code: r.querySelector('[data-line-account]').value, description: r.querySelector('[data-line-description]').value.trim() || null, debit: Number(r.querySelector('[data-line-debit]').value || 0), credit: Number(r.querySelector('[data-line-credit]').value || 0) }); });
+    return { entry_date: $('journal-entry-date').value, reference: $('journal-entry-reference').value.trim() || null, description: $('journal-entry-description').value.trim(), lines: lines };
   }
-  async function saveJournalEntry(e,postIt){
-    e&&e.preventDefault(); if(!requirePermission('journal-entries',state.editingJournalEntryId?'update':'create'))return;
-    var data=journalFormData(), totalD=data.lines.reduce(function(x,l){return x+l.debit;},0),totalC=data.lines.reduce(function(x,l){return x+l.credit;},0);
-    if(!data.entry_date||!data.description||data.lines.length<2||data.lines.some(function(l){return !l.account_code||l.debit<0||l.credit<0||l.debit>0&&l.credit>0;})||totalD<=0||Math.abs(totalD-totalC)>0.005){message('A journal entry needs at least two valid lines and balanced debits and credits.','error');return;}
-    var entryId=state.editingJournalEntryId;
-    if(entryId){
-      var up=await window.salonSupabase.from('journal_entries').update({entry_date:data.entry_date,reference:data.reference,description:data.description}).eq('id',entryId).eq('status','draft');
-      if(up.error){message(up.error.message,'error');return;}
-      var dl=await window.salonSupabase.from('journal_entry_lines').delete().eq('journal_entry_id',entryId);if(dl.error){message(dl.error.message,'error');return;}
-    }else{
-      var ins=await window.salonSupabase.from('journal_entries').insert({entry_date:data.entry_date,reference:data.reference,description:data.description,status:'draft'}).select('id').single();
-      if(ins.error){message(ins.error.message,'error');return;} entryId=ins.data.id;
+  async function saveJournalEntry(e, postIt) {
+    e && e.preventDefault(); if (!requirePermission('journal-entries', state.editingJournalEntryId ? 'update' : 'create')) return;
+    var data = journalFormData(), totalD = data.lines.reduce(function (x, l) { return x + l.debit; }, 0), totalC = data.lines.reduce(function (x, l) { return x + l.credit; }, 0);
+    if (!data.entry_date || !data.description || data.lines.length < 2 || data.lines.some(function (l) { return !l.account_code || l.debit < 0 || l.credit < 0 || l.debit > 0 && l.credit > 0; }) || totalD <= 0 || Math.abs(totalD - totalC) > 0.005) { message('A journal entry needs at least two valid lines and balanced debits and credits.', 'error'); return; }
+    var entryId = state.editingJournalEntryId;
+    if (entryId) {
+      var up = await window.salonSupabase.from('journal_entries').update({ entry_date: data.entry_date, reference: data.reference, description: data.description }).eq('id', entryId).eq('status', 'draft');
+      if (up.error) { message(up.error.message, 'error'); return; }
+      var dl = await window.salonSupabase.from('journal_entry_lines').delete().eq('journal_entry_id', entryId); if (dl.error) { message(dl.error.message, 'error'); return; }
+    } else {
+      var ins = await window.salonSupabase.from('journal_entries').insert({ entry_date: data.entry_date, reference: data.reference, description: data.description, status: 'draft' }).select('id').single();
+      if (ins.error) { message(ins.error.message, 'error'); return; } entryId = ins.data.id;
     }
-    var li=await window.salonSupabase.from('journal_entry_lines').insert(data.lines.map(function(l){return Object.assign({},l,{journal_entry_id:entryId});}));
-    if(li.error){message(li.error.message,'error');return;}
-    if(postIt){
-      var posted=await window.salonSupabase.rpc('post_journal_entry',{p_entry_id:entryId});
-      if(posted.error){message(posted.error.message,'error');return;}
+    var li = await window.salonSupabase.from('journal_entry_lines').insert(data.lines.map(function (l) { return Object.assign({}, l, { journal_entry_id: entryId }); }));
+    if (li.error) { message(li.error.message, 'error'); return; }
+    if (postIt) {
+      var posted = await window.salonSupabase.rpc('post_journal_entry', { p_entry_id: entryId });
+      if (posted.error) { message(posted.error.message, 'error'); return; }
     }
-    resetJournalForm();await loadJournalEntries();message(postIt?'Journal entry posted.':'Journal draft saved.','success');
+    resetJournalForm(); await loadJournalEntries(); message(postIt ? 'Journal entry posted.' : 'Journal draft saved.', 'success');
   }
   // IMPORTANT: QR codes must always encode the public production resolver,
   // never localhost, a preview host, or whatever origin the admin is currently opened on.
   // This makes already-printed QR codes stable across destination URL changes and local/admin environments.
   var JASPREMIUM_PUBLIC_QR_RESOLVER = 'https://jaspremiumqa.github.io/JASPremium/url-redirect.html';
-  function urlQrResolverBase(){ return JASPREMIUM_PUBLIC_QR_RESOLVER; }
-  function createPermanentQrCode(){
-    var bytes=new Uint8Array(10);
-    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes); else for(var i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
-    return 'QR-' + Array.prototype.map.call(bytes,function(b){return b.toString(16).padStart(2,'0');}).join('').toUpperCase();
+  function urlQrResolverBase() { return JASPREMIUM_PUBLIC_QR_RESOLVER; }
+  function createPermanentQrCode() {
+    var bytes = new Uint8Array(10);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes); else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    return 'QR-' + Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
   }
-  function normalizeDestinationUrl(value){
-    var raw=String(value||'').trim();
-    if(!/^https?:\/\//i.test(raw)) throw new Error('Please enter a full URL starting with http:// or https://.');
-    try{var u=new URL(raw);if(u.protocol!=='http:'&&u.protocol!=='https:')throw new Error('Only web URLs are supported.');return u.toString();}catch(e){throw new Error('Please enter a valid web URL.');}
+  function normalizeDestinationUrl(value) {
+    var raw = String(value || '').trim();
+    if (!/^https?:\/\//i.test(raw)) throw new Error('Please enter a full URL starting with http:// or https://.');
+    try { var u = new URL(raw); if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Only web URLs are supported.'); return u.toString(); } catch (e) { throw new Error('Please enter a valid web URL.'); }
   }
-  async function loadUrlQrCodes(){
-    if(!can('url-qr-codes','read')) return;
-    var r=await window.salonSupabase.from('url_qr_codes').select('id,permanent_code,name,destination_url,created_at,updated_at').order('created_at',{ascending:false});
-    if(r.error){message(r.error.message,'error');return;}
-    state.urlQrCodes=r.data||[]; renderUrlQrCodes();
+  async function loadUrlQrCodes() {
+    if (!can('url-qr-codes', 'read')) return;
+    var r = await window.salonSupabase.from('url_qr_codes').select('id,permanent_code,name,destination_url,created_at,updated_at').order('created_at', { ascending: false });
+    if (r.error) { message(r.error.message, 'error'); return; }
+    state.urlQrCodes = r.data || []; renderUrlQrCodes();
   }
-  function renderUrlQrCodes(){
-    var body=$('url-qr-body');if(!body)return;
-    var q=String(($('url-qr-search')||{}).value||'').trim().toLowerCase();
-    var rows=state.urlQrCodes.filter(function(x){return !q || [x.permanent_code,x.name,x.destination_url].join(' ').toLowerCase().includes(q);});
-    body.innerHTML=rows.map(function(x){
-      var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);
-      var id=escapeHtml(x.id), code=escapeHtml(x.permanent_code), name=escapeHtml(x.name), dest=escapeHtml(x.destination_url);
-      return '<tr><td><strong>'+code+'</strong><small class="crm-url-qr-resolver">'+escapeHtml(resolver)+'</small></td><td>'+name+'</td><td><a href="'+dest+'" target="_blank" rel="noopener noreferrer" class="crm-url-qr-link">'+dest+'</a></td><td><div class="crm-url-qr-thumb" data-qr-code="'+code+'" data-qr-resolver="'+escapeHtml(resolver)+'"></div></td><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleDateString():'')+'</td><td><button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-edit="'+id+'">Edit URL</button> <button class="crm-btn crm-btn-secondary crm-btn-small crm-icon-action" data-url-qr-download="'+id+'" aria-label="Download QR" title="Download QR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></button></td></tr>';
-    }).join('')||'<tr><td colspan="6" class="crm-empty">No QR codes found.</td></tr>';
-    body.querySelectorAll('.crm-url-qr-thumb').forEach(function(el){
-      if(window.QRCode) new QRCode(el,{text:el.getAttribute('data-qr-resolver'),width:72,height:72,correctLevel:QRCode.CorrectLevel.M});
+  function renderUrlQrCodes() {
+    var body = $('url-qr-body'); if (!body) return;
+    var q = String(($('url-qr-search') || {}).value || '').trim().toLowerCase();
+    var rows = state.urlQrCodes.filter(function (x) { return !q || [x.permanent_code, x.name, x.destination_url].join(' ').toLowerCase().includes(q); });
+    body.innerHTML = rows.map(function (x) {
+      var resolver = urlQrResolverBase() + '?code=' + encodeURIComponent(x.permanent_code);
+      var id = escapeHtml(x.id), code = escapeHtml(x.permanent_code), name = escapeHtml(x.name), dest = escapeHtml(x.destination_url);
+      return '<tr><td><strong>' + code + '</strong><small class="crm-url-qr-resolver">' + escapeHtml(resolver) + '</small></td><td>' + name + '</td><td><a href="' + dest + '" target="_blank" rel="noopener noreferrer" class="crm-url-qr-link">' + dest + '</a></td><td><div class="crm-url-qr-thumb" data-qr-code="' + code + '" data-qr-resolver="' + escapeHtml(resolver) + '"></div></td><td>' + escapeHtml(x.created_at ? new Date(x.created_at).toLocaleDateString() : '') + '</td><td><button class="crm-btn crm-btn-secondary crm-btn-small" data-url-qr-edit="' + id + '">Edit URL</button> <button class="crm-btn crm-btn-secondary crm-btn-small crm-icon-action" data-url-qr-download="' + id + '" aria-label="Download QR" title="Download QR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></button></td></tr>';
+    }).join('') || '<tr><td colspan="6" class="crm-empty">No QR codes found.</td></tr>';
+    body.querySelectorAll('.crm-url-qr-thumb').forEach(function (el) {
+      if (window.QRCode) new QRCode(el, { text: el.getAttribute('data-qr-resolver'), width: 72, height: 72, correctLevel: QRCode.CorrectLevel.M });
     });
   }
-  function openUrlQrForm(id){
-    state.editingUrlQrId=id||null;
-    var x=id?state.urlQrCodes.find(function(r){return String(r.id)===String(id);}):null;
+  function openUrlQrForm(id) {
+    state.editingUrlQrId = id || null;
+    var x = id ? state.urlQrCodes.find(function (r) { return String(r.id) === String(id); }) : null;
     $('url-qr-form').reset();
-    $('url-qr-name').value=x?x.name:'';
-    $('url-qr-destination').value=x?x.destination_url:'';
-    $('url-qr-save').textContent=x?'Update URL':'Save QR code';
+    $('url-qr-name').value = x ? x.name : '';
+    $('url-qr-destination').value = x ? x.destination_url : '';
+    $('url-qr-save').textContent = x ? 'Update URL' : 'Save QR code';
     openCrmFormCardModal('url-qr-form-card');
-    $('url-qr-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+    $('url-qr-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  async function saveUrlQr(e){
+  async function saveUrlQr(e) {
     e.preventDefault();
-    var id=state.editingUrlQrId;
-    if(!requirePermission('url-qr-codes',id?'update':'create'))return;
+    var id = state.editingUrlQrId;
+    if (!requirePermission('url-qr-codes', id ? 'update' : 'create')) return;
     var destination;
-    try{destination=normalizeDestinationUrl($('url-qr-destination').value);}catch(err){message(err.message,'error');return;}
-    var name=$('url-qr-name').value.trim(); if(!name){message('Please enter a name or label.','error');return;}
-    var payload={name:name,destination_url:destination};
+    try { destination = normalizeDestinationUrl($('url-qr-destination').value); } catch (err) { message(err.message, 'error'); return; }
+    var name = $('url-qr-name').value.trim(); if (!name) { message('Please enter a name or label.', 'error'); return; }
+    var payload = { name: name, destination_url: destination };
     var r;
-    if(id){r=await window.salonSupabase.from('url_qr_codes').update(payload).eq('id',id);}else{
-      var code=createPermanentQrCode();
-      r=await window.salonSupabase.from('url_qr_codes').insert({permanent_code:code,name:name,destination_url:destination});
-      if(r.error && r.error.code==='23505'){code=createPermanentQrCode();r=await window.salonSupabase.from('url_qr_codes').insert({permanent_code:code,name:name,destination_url:destination});}
+    if (id) { r = await window.salonSupabase.from('url_qr_codes').update(payload).eq('id', id); } else {
+      var code = createPermanentQrCode();
+      r = await window.salonSupabase.from('url_qr_codes').insert({ permanent_code: code, name: name, destination_url: destination });
+      if (r.error && r.error.code === '23505') { code = createPermanentQrCode(); r = await window.salonSupabase.from('url_qr_codes').insert({ permanent_code: code, name: name, destination_url: destination }); }
     }
-    if(r.error){message(r.error.message,'error');return;}
-    closeCrmFormCardModal('url-qr-form-card');state.editingUrlQrId=null;await loadUrlQrCodes();message(id?'Destination URL updated. The existing printed QR code is unchanged.':'Permanent QR code created.','success');
+    if (r.error) { message(r.error.message, 'error'); return; }
+    closeCrmFormCardModal('url-qr-form-card'); state.editingUrlQrId = null; await loadUrlQrCodes(); message(id ? 'Destination URL updated. The existing printed QR code is unchanged.' : 'Permanent QR code created.', 'success');
   }
-  function getUrlQr(id){return state.urlQrCodes.find(function(x){return String(x.id)===String(id);});}
-  function downloadUrlQr(id){
-    var x=getUrlQr(id);if(!x)return;var resolver=urlQrResolverBase()+'?code='+encodeURIComponent(x.permanent_code);
-    var holder=document.createElement('div');holder.style.cssText='position:absolute;left:-99999px;top:-99999px;background:#fff;padding:24px;width:320px;text-align:center;';document.body.appendChild(holder);
-    var title=document.createElement('div');title.textContent=x.name;title.style.cssText='font:700 20px Arial,sans-serif;margin-bottom:14px;color:#111;';holder.appendChild(title);
-    var qr=document.createElement('div');holder.appendChild(qr);new QRCode(qr,{text:resolver,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
-    var code=document.createElement('div');code.textContent=x.permanent_code;code.style.cssText='font:700 14px Arial,sans-serif;margin-top:14px;letter-spacing:1px;color:#111;';holder.appendChild(code);
-    setTimeout(function(){
-      var canvas=holder.querySelector('canvas');
-      if(!canvas){message('Could not generate the QR image.','error');holder.remove();return;}
+  function getUrlQr(id) { return state.urlQrCodes.find(function (x) { return String(x.id) === String(id); }); }
+  function downloadUrlQr(id) {
+    var x = getUrlQr(id); if (!x) return; var resolver = urlQrResolverBase() + '?code=' + encodeURIComponent(x.permanent_code);
+    var holder = document.createElement('div'); holder.style.cssText = 'position:absolute;left:-99999px;top:-99999px;background:#fff;padding:24px;width:320px;text-align:center;'; document.body.appendChild(holder);
+    var title = document.createElement('div'); title.textContent = x.name; title.style.cssText = 'font:700 20px Arial,sans-serif;margin-bottom:14px;color:#111;'; holder.appendChild(title);
+    var qr = document.createElement('div'); holder.appendChild(qr); new QRCode(qr, { text: resolver, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+    var code = document.createElement('div'); code.textContent = x.permanent_code; code.style.cssText = 'font:700 14px Arial,sans-serif;margin-top:14px;letter-spacing:1px;color:#111;'; holder.appendChild(code);
+    setTimeout(function () {
+      var canvas = holder.querySelector('canvas');
+      if (!canvas) { message('Could not generate the QR image.', 'error'); holder.remove(); return; }
       // Add a real white quiet zone around the QR modules for reliable scanning/printing.
-      var pad=24, out=document.createElement('canvas');
-      out.width=canvas.width+(pad*2); out.height=canvas.height+(pad*2);
-      var ctx=out.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,out.width,out.height);
-      ctx.drawImage(canvas,pad,pad);
-      var a=document.createElement('a');a.href=out.toDataURL('image/png');a.download='JASPremium_'+x.permanent_code+'.png';a.click();holder.remove();
-    },100);
+      var pad = 24, out = document.createElement('canvas');
+      out.width = canvas.width + (pad * 2); out.height = canvas.height + (pad * 2);
+      var ctx = out.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, out.width, out.height);
+      ctx.drawImage(canvas, pad, pad);
+      var a = document.createElement('a'); a.href = out.toDataURL('image/png'); a.download = 'JASPremium_' + x.permanent_code + '.png'; a.click(); holder.remove();
+    }, 100);
   }
 
 
-  async function loadJournalEntries(){
-    if(!can('journal-entries','read'))return;
-    var q=String(($('journal-search')&&$('journal-search').value)||'').trim().toLowerCase(), st=($('journal-status-filter')||{}).value||'all', from=($('journal-date-from')||{}).value||'', to=($('journal-date-to')||{}).value||'';
-    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit,journal_entry_lines(account_code)').order('id',{ascending:false});
-    if(r.error){message(r.error.message,'error');return;}
-    var rows=(r.data||[]).filter(function(x){
-      var lineCodes=(x.journal_entry_lines||[]).map(function(l){return l.account_code;});
-      var lineNames=lineCodes.map(function(code){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(code);});return a?financeAccountLabel(a):'';});
-      var h=[x.entry_no,x.reference,x.description].concat(lineCodes,lineNames).join(' ').toLowerCase();
-      return(!q||h.includes(q))&&(st==='all'||x.status===st)&&(!from||x.entry_date>=from)&&(!to||x.entry_date<=to);
+  async function loadJournalEntries() {
+    if (!can('journal-entries', 'read')) return;
+    var q = String(($('journal-search') && $('journal-search').value) || '').trim().toLowerCase(), st = ($('journal-status-filter') || {}).value || 'all', from = ($('journal-date-from') || {}).value || '', to = ($('journal-date-to') || {}).value || '';
+    var r = await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit,journal_entry_lines(account_code)').order('id', { ascending: false });
+    if (r.error) { message(r.error.message, 'error'); return; }
+    var rows = (r.data || []).filter(function (x) {
+      var lineCodes = (x.journal_entry_lines || []).map(function (l) { return l.account_code; });
+      var lineNames = lineCodes.map(function (code) { var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(code); }); return a ? financeAccountLabel(a) : ''; });
+      var h = [x.entry_no, x.reference, x.description].concat(lineCodes, lineNames).join(' ').toLowerCase();
+      return (!q || h.includes(q)) && (st === 'all' || x.status === st) && (!from || x.entry_date >= from) && (!to || x.entry_date <= to);
     });
-    var body=$('journal-entries-body');if(!body)return;
-    body.innerHTML=rows.map(function(x){var acts='';if(can('journal-entries','read'))acts+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-journal="'+x.id+'">View</button> ';if(x.status==='draft'&&can('journal-entries','update'))acts+='<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="'+x.id+'">Edit</button> ';if(x.status==='draft'&&can('journal-entries','delete'))acts+='<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="'+x.id+'">Delete</button> ';if(x.status==='draft'&&can('journal-entries','post'))acts+='<button type="button" class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="'+x.id+'">Post</button>';return '<tr><td><strong>'+escapeHtml(x.entry_no||('JE-'+x.id))+'</strong></td><td>'+escapeHtml(x.entry_date||'')+'</td><td>'+escapeHtml(x.reference||'—')+'</td><td>'+escapeHtml(x.description||'')+'</td><td>'+financeMoney(x.total_debit)+'</td><td>'+escapeHtml(x.status||'')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
+    var body = $('journal-entries-body'); if (!body) return;
+    body.innerHTML = rows.map(function (x) { var acts = ''; if (can('journal-entries', 'read')) acts += '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-view-journal="' + x.id + '">View</button> '; if (x.status === 'draft' && can('journal-entries', 'update')) acts += '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-journal="' + x.id + '">Edit</button> '; if (x.status === 'draft' && can('journal-entries', 'delete')) acts += '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-journal="' + x.id + '">Delete</button> '; if (x.status === 'draft' && can('journal-entries', 'post')) acts += '<button type="button" class="crm-btn crm-btn-primary crm-btn-small" data-post-journal="' + x.id + '">Post</button>'; return '<tr><td><strong>' + escapeHtml(x.entry_no || ('JE-' + x.id)) + '</strong></td><td>' + escapeHtml(x.entry_date || '') + '</td><td>' + escapeHtml(x.reference || '—') + '</td><td>' + escapeHtml(x.description || '') + '</td><td>' + financeMoney(x.total_debit) + '</td><td>' + escapeHtml(x.status || '') + '</td><td>' + acts + '</td></tr>'; }).join('') || '<tr><td colspan="7" class="crm-empty">No journal entries found.</td></tr>';
   }
-  async function viewJournalEntry(id){
-    if(!can('journal-entries','read'))return;
-    var card=$('journal-entry-view-card'), body=$('journal-entry-view-body');
-    if(!card||!body)return;
-    body.innerHTML='<div class="crm-loading">Loading journal entry…</div>';
+  async function viewJournalEntry(id) {
+    if (!can('journal-entries', 'read')) return;
+    var card = $('journal-entry-view-card'), body = $('journal-entry-view-body');
+    if (!card || !body) return;
+    body.innerHTML = '<div class="crm-loading">Loading journal entry…</div>';
     openCrmFormCardModal('journal-entry-view-card');
-    var r=await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit').eq('id',id).single();
-    if(r.error){closeCrmFormCardModal('journal-entry-view-card');message(r.error.message,'error');return;}
-    var l=await window.salonSupabase.from('journal_entry_lines').select('line_no,account_code,description,debit,credit').eq('journal_entry_id',id).order('line_no',{ascending:true});
-    if(l.error){closeCrmFormCardModal('journal-entry-view-card');message(l.error.message,'error');return;}
-    var entry=r.data||{}, lines=l.data||[], totalD=lines.reduce(function(x,a){return x+Number(a.debit||0);},0), totalC=lines.reduce(function(x,a){return x+Number(a.credit||0);},0);
-    var status=String(entry.status||'').toLowerCase();
-    var statusClass=status==='posted'?'active':status==='draft'?'pending':'cancelled';
-    var rows=lines.map(function(line){
-      var account=state.chartOfAccounts.find(function(a){return String(a.account_code)===String(line.account_code);});
-      var accountName=account?(account.account_name||account.major_account||''):'Unknown account';
-      return '<tr><td><strong>'+escapeHtml(line.account_code||'')+'</strong><small>'+escapeHtml(accountName)+'</small></td><td>'+escapeHtml(line.description||'—')+'</td><td>'+financeMoney(line.debit)+'</td><td>'+financeMoney(line.credit)+'</td></tr>';
-    }).join('')||'<tr><td colspan="4" class="crm-empty">No journal lines found.</td></tr>';
-    body.innerHTML='<div class="crm-journal-view-meta"><div><span class="crm-eyebrow">Journal entry</span><h3>'+escapeHtml(entry.entry_no||('JE-'+entry.id))+'</h3></div><span class="crm-badge '+statusClass+'">'+escapeHtml(entry.status||'—')+'</span></div>'+
-      '<div class="crm-form-grid crm-journal-view-grid"><div class="crm-field"><label>Date</label><div class="crm-readonly-value">'+escapeHtml(entry.entry_date||'—')+'</div></div><div class="crm-field"><label>Reference</label><div class="crm-readonly-value">'+escapeHtml(entry.reference||'—')+'</div></div><div class="crm-field full"><label>Description</label><div class="crm-readonly-value">'+escapeHtml(entry.description||'—')+'</div></div></div>'+
-      '<div class="crm-card-inner crm-journal-view-lines"><div class="crm-card-header"><h3>Journal lines</h3></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><th colspan="2">Totals</th><th>'+financeMoney(totalD)+'</th><th>'+financeMoney(totalC)+'</th></tr></tfoot></table></div><div class="crm-finance-balance">'+(Math.abs(totalD-totalC)<=0.005?'✓ Balanced':'⚠ Difference: '+financeMoney(Math.abs(totalD-totalC)))+'</div></div>';
+    var r = await window.salonSupabase.from('journal_entries').select('id,entry_no,entry_date,reference,description,status,total_debit,total_credit').eq('id', id).single();
+    if (r.error) { closeCrmFormCardModal('journal-entry-view-card'); message(r.error.message, 'error'); return; }
+    var l = await window.salonSupabase.from('journal_entry_lines').select('line_no,account_code,description,debit,credit').eq('journal_entry_id', id).order('line_no', { ascending: true });
+    if (l.error) { closeCrmFormCardModal('journal-entry-view-card'); message(l.error.message, 'error'); return; }
+    var entry = r.data || {}, lines = l.data || [], totalD = lines.reduce(function (x, a) { return x + Number(a.debit || 0); }, 0), totalC = lines.reduce(function (x, a) { return x + Number(a.credit || 0); }, 0);
+    var status = String(entry.status || '').toLowerCase();
+    var statusClass = status === 'posted' ? 'active' : status === 'draft' ? 'pending' : 'cancelled';
+    var rows = lines.map(function (line) {
+      var account = state.chartOfAccounts.find(function (a) { return String(a.account_code) === String(line.account_code); });
+      var accountName = account ? (account.account_name || account.major_account || '') : 'Unknown account';
+      return '<tr><td><strong>' + escapeHtml(line.account_code || '') + '</strong><small>' + escapeHtml(accountName) + '</small></td><td>' + escapeHtml(line.description || '—') + '</td><td>' + financeMoney(line.debit) + '</td><td>' + financeMoney(line.credit) + '</td></tr>';
+    }).join('') || '<tr><td colspan="4" class="crm-empty">No journal lines found.</td></tr>';
+    body.innerHTML = '<div class="crm-journal-view-meta"><div><span class="crm-eyebrow">Journal entry</span><h3>' + escapeHtml(entry.entry_no || ('JE-' + entry.id)) + '</h3></div><span class="crm-badge ' + statusClass + '">' + escapeHtml(entry.status || '—') + '</span></div>' +
+      '<div class="crm-form-grid crm-journal-view-grid"><div class="crm-field"><label>Date</label><div class="crm-readonly-value">' + escapeHtml(entry.entry_date || '—') + '</div></div><div class="crm-field"><label>Reference</label><div class="crm-readonly-value">' + escapeHtml(entry.reference || '—') + '</div></div><div class="crm-field full"><label>Description</label><div class="crm-readonly-value">' + escapeHtml(entry.description || '—') + '</div></div></div>' +
+      '<div class="crm-card-inner crm-journal-view-lines"><div class="crm-card-header"><h3>Journal lines</h3></div><div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Account</th><th>Description</th><th>Debit</th><th>Credit</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><th colspan="2">Totals</th><th>' + financeMoney(totalD) + '</th><th>' + financeMoney(totalC) + '</th></tr></tfoot></table></div><div class="crm-finance-balance">' + (Math.abs(totalD - totalC) <= 0.005 ? '✓ Balanced' : '⚠ Difference: ' + financeMoney(Math.abs(totalD - totalC))) + '</div></div>';
   }
 
-  async function deleteJournal(id){if(!requirePermission('journal-entries','delete'))return;if(!await crmConfirm('Delete journal entry','Delete this draft journal entry?'))return;var r=await window.salonSupabase.from('journal_entries').delete().eq('id',id).eq('status','draft');if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Draft deleted.','success');}}
-  async function postJournal(id){if(!requirePermission('journal-entries','post'))return;if(!confirm('Post this journal entry? Posted entries cannot be edited.'))return;var r=await window.salonSupabase.rpc('post_journal_entry',{p_entry_id:id});if(r.error)message(r.error.message,'error');else{await loadJournalEntries();message('Journal entry posted.','success');}}
+  async function deleteJournal(id) { if (!requirePermission('journal-entries', 'delete')) return; if (!await crmConfirm('Delete journal entry', 'Delete this draft journal entry?')) return; var r = await window.salonSupabase.from('journal_entries').delete().eq('id', id).eq('status', 'draft'); if (r.error) message(r.error.message, 'error'); else { await loadJournalEntries(); message('Draft deleted.', 'success'); } }
+  async function postJournal(id) { if (!requirePermission('journal-entries', 'post')) return; if (!confirm('Post this journal entry? Posted entries cannot be edited.')) return; var r = await window.salonSupabase.rpc('post_journal_entry', { p_entry_id: id }); if (r.error) message(r.error.message, 'error'); else { await loadJournalEntries(); message('Journal entry posted.', 'success'); } }
 
-  async function loadGeneralLedger(){
-    if(!can('general-ledger','read'))return;
-    var r=await window.salonSupabase.from('journal_entry_lines').select('id,journal_entry_id,line_no,account_code,description,debit,credit,journal_entries!inner(entry_no,entry_date,description,status)').eq('journal_entries.status','posted').order('journal_entry_id',{ascending:false}).order('line_no',{ascending:true});
-    if(r.error){message(r.error.message,'error');return;}
-    var q=String(($('ledger-search')||{}).value||'').toLowerCase(), acc=($('ledger-account-filter')||{}).value||'all', from=($('ledger-date-from')||{}).value||'',to=($('ledger-date-to')||{}).value||'', balance={};
-    var af=$('ledger-account-filter'); if(af){var cur=acc; af.innerHTML='<option value="all">All accounts</option>'+state.chartOfAccounts.filter(function(a){return a.active!==false;}).map(function(a){return '<option value="'+escapeHtml(a.account_code)+'">'+escapeHtml(financeAccountLabel(a))+'</option>';}).join('');af.value=state.chartOfAccounts.some(function(a){return a.account_code===cur;})?cur:'all';}
-    var rows=(r.data||[]).filter(function(x){var je=x.journal_entries||{};var h=[x.account_code,x.description,je.entry_no,je.description].join(' ').toLowerCase();return(!q||h.includes(q))&&(acc==='all'||x.account_code===acc)&&(!from||je.entry_date>=from)&&(!to||je.entry_date<=to);}).sort(function(a,b){return String((b.journal_entries||{}).entry_date||'').localeCompare(String((a.journal_entries||{}).entry_date||''))||Number(b.journal_entry_id)-Number(a.journal_entry_id);});
-    var body=$('general-ledger-body');if(!body)return;
-    body.innerHTML=rows.map(function(x){var prev=balance[x.account_code]||0;var net=prev+Number(x.debit||0)-Number(x.credit||0);balance[x.account_code]=net;var a=state.chartOfAccounts.find(function(y){return y.account_code===x.account_code;});return '<tr><td>'+escapeHtml(x.journal_entries.entry_date||'')+'</td><td>'+escapeHtml(x.journal_entries.entry_no||'')+'</td><td>'+escapeHtml(x.account_code+' — '+(a?(a.account_name||a.major_account||''):'Unknown'))+'</td><td>'+escapeHtml(x.description||x.journal_entries.description||'')+'</td><td>'+financeMoney(x.debit)+'</td><td>'+financeMoney(x.credit)+'</td><td>'+financeMoney(net)+'</td></tr>';}).join('')||'<tr><td colspan="7" class="crm-empty">No posted transactions found.</td></tr>';
+  async function loadGeneralLedger() {
+    if (!can('general-ledger', 'read')) return;
+    var r = await window.salonSupabase.from('journal_entry_lines').select('id,journal_entry_id,line_no,account_code,description,debit,credit,journal_entries!inner(entry_no,entry_date,description,status)').eq('journal_entries.status', 'posted').order('journal_entry_id', { ascending: false }).order('line_no', { ascending: true });
+    if (r.error) { message(r.error.message, 'error'); return; }
+    var q = String(($('ledger-search') || {}).value || '').toLowerCase(), acc = ($('ledger-account-filter') || {}).value || 'all', from = ($('ledger-date-from') || {}).value || '', to = ($('ledger-date-to') || {}).value || '', balance = {};
+    var af = $('ledger-account-filter'); if (af) { var cur = acc; af.innerHTML = '<option value="all">All accounts</option>' + state.chartOfAccounts.filter(function (a) { return a.active !== false; }).map(function (a) { return '<option value="' + escapeHtml(a.account_code) + '">' + escapeHtml(financeAccountLabel(a)) + '</option>'; }).join(''); af.value = state.chartOfAccounts.some(function (a) { return a.account_code === cur; }) ? cur : 'all'; }
+    var rows = (r.data || []).filter(function (x) { var je = x.journal_entries || {}; var h = [x.account_code, x.description, je.entry_no, je.description].join(' ').toLowerCase(); return (!q || h.includes(q)) && (acc === 'all' || x.account_code === acc) && (!from || je.entry_date >= from) && (!to || je.entry_date <= to); }).sort(function (a, b) { return String((b.journal_entries || {}).entry_date || '').localeCompare(String((a.journal_entries || {}).entry_date || '')) || Number(b.journal_entry_id) - Number(a.journal_entry_id); });
+    var body = $('general-ledger-body'); if (!body) return;
+    body.innerHTML = rows.map(function (x) { var prev = balance[x.account_code] || 0; var net = prev + Number(x.debit || 0) - Number(x.credit || 0); balance[x.account_code] = net; var a = state.chartOfAccounts.find(function (y) { return y.account_code === x.account_code; }); return '<tr><td>' + escapeHtml(x.journal_entries.entry_date || '') + '</td><td>' + escapeHtml(x.journal_entries.entry_no || '') + '</td><td>' + escapeHtml(x.account_code + ' — ' + (a ? (a.account_name || a.major_account || '') : 'Unknown')) + '</td><td>' + escapeHtml(x.description || x.journal_entries.description || '') + '</td><td>' + financeMoney(x.debit) + '</td><td>' + financeMoney(x.credit) + '</td><td>' + financeMoney(net) + '</td></tr>'; }).join('') || '<tr><td colspan="7" class="crm-empty">No posted transactions found.</td></tr>';
   }
-  async function loadTrialBalance(){
-    if(!can('trial-balance','read'))return;
-    var from=($('trial-date-from')||{}).value||'',to=($('trial-date-to')||{}).value||'';
-    var r=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');if(r.error){message(r.error.message,'error');return;}
-    var sums={};(r.data||[]).filter(function(x){var d=x.journal_entries.entry_date;return(!from||d>=from)&&(!to||d<=to);}).forEach(function(x){sums[x.account_code]=sums[x.account_code]||{d:0,c:0};sums[x.account_code].d+=Number(x.debit||0);sums[x.account_code].c+=Number(x.credit||0);});
-    var rows=state.chartOfAccounts.filter(function(a){return a.active!==false&&String(a.account_type||'').toLowerCase()!=='header';}).map(function(a){var s=sums[a.account_code]||{d:0,c:0};return {a:a,d:s.d,c:s.c,n:s.d-s.c};}).sort(function(x,y){return crmDesc(x.a.account_code,y.a.account_code);});
-    var td=rows.reduce(function(n,x){return n+x.d;},0),tc=rows.reduce(function(n,x){return n+x.c;},0);var st=$('trial-balance-status');if(st)st.textContent='Total debits: '+financeMoney(td)+' · Total credits: '+financeMoney(tc)+' · '+(Math.abs(td-tc)<0.005?'Balanced ✓':'Difference: '+financeMoney(Math.abs(td-tc)));
-    var body=$('trial-balance-body');if(body)body.innerHTML=rows.map(function(x){return '<tr><td>'+escapeHtml(x.a.account_code)+'</td><td>'+escapeHtml(x.a.account_name||x.a.major_account||'')+'</td><td>'+escapeHtml(x.a.account_type||'')+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No posted transactions in this period.</td></tr>';
+  async function loadTrialBalance() {
+    if (!can('trial-balance', 'read')) return;
+    var from = ($('trial-date-from') || {}).value || '', to = ($('trial-date-to') || {}).value || '';
+    var r = await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status', 'posted'); if (r.error) { message(r.error.message, 'error'); return; }
+    var sums = {}; (r.data || []).filter(function (x) { var d = x.journal_entries.entry_date; return (!from || d >= from) && (!to || d <= to); }).forEach(function (x) { sums[x.account_code] = sums[x.account_code] || { d: 0, c: 0 }; sums[x.account_code].d += Number(x.debit || 0); sums[x.account_code].c += Number(x.credit || 0); });
+    var rows = state.chartOfAccounts.filter(function (a) { return a.active !== false && String(a.account_type || '').toLowerCase() !== 'header'; }).map(function (a) { var s = sums[a.account_code] || { d: 0, c: 0 }; return { a: a, d: s.d, c: s.c, n: s.d - s.c }; }).sort(function (x, y) { return crmDesc(x.a.account_code, y.a.account_code); });
+    var td = rows.reduce(function (n, x) { return n + x.d; }, 0), tc = rows.reduce(function (n, x) { return n + x.c; }, 0); var st = $('trial-balance-status'); if (st) st.textContent = 'Total debits: ' + financeMoney(td) + ' · Total credits: ' + financeMoney(tc) + ' · ' + (Math.abs(td - tc) < 0.005 ? 'Balanced ✓' : 'Difference: ' + financeMoney(Math.abs(td - tc)));
+    var body = $('trial-balance-body'); if (body) body.innerHTML = rows.map(function (x) { return '<tr><td>' + escapeHtml(x.a.account_code) + '</td><td>' + escapeHtml(x.a.account_name || x.a.major_account || '') + '</td><td>' + escapeHtml(x.a.account_type || '') + '</td><td>' + financeMoney(x.d) + '</td><td>' + financeMoney(x.c) + '</td><td>' + financeMoney(x.n) + '</td></tr>'; }).join('') || '<tr><td colspan="6" class="crm-empty">No posted transactions in this period.</td></tr>';
   }
 
-  async function loadStatementMappings(){
-    if(!can('statement-mapping','read'))return;
-    var r=await window.salonSupabase.from('financial_statement_mappings').select('id,statement,account_code,section_line,display_order,active').order('statement').order('display_order').order('account_code',{ascending:false});if(r.error){message(r.message||r.error.message,'error');return;}
-    state.statementMappings=r.data||[];renderStatementMappings();
+  async function loadStatementMappings() {
+    if (!can('statement-mapping', 'read')) return;
+    var r = await window.salonSupabase.from('financial_statement_mappings').select('id,statement,account_code,section_line,display_order,active').order('statement').order('display_order').order('account_code', { ascending: false }); if (r.error) { message(r.message || r.error.message, 'error'); return; }
+    state.statementMappings = r.data || []; renderStatementMappings();
     await loadFinanceAccounts();
   }
-  function renderStatementMappings(){
-    var body=$('statement-map-body');if(!body)return;var q=String(($('statement-map-search')||{}).value||'').toLowerCase(),st=($('statement-map-filter')||{}).value||'all';
-    var rows=state.statementMappings.filter(function(x){var h=[x.statement,x.account_code,x.section_line].join(' ').toLowerCase();return(!q||h.includes(q))&&(st==='all'||x.statement===st);});
-    var fs=$('statement-map-filter');if(fs){var vals=[...new Set(state.statementMappings.map(function(x){return x.statement;}).filter(Boolean))];var cur=st;fs.innerHTML='<option value="all">All statements</option>'+vals.map(function(x){return '<option>'+escapeHtml(x)+'</option>';}).join('');fs.value=vals.includes(cur)?cur:'all';}
-    body.innerHTML=rows.map(function(x){var acts='';if(can('statement-mapping','update'))acts+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-map="'+x.id+'">Edit</button> ';if(can('statement-mapping','delete'))acts+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-map="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.statement)+'</td><td>'+escapeHtml(x.account_code)+'</td><td>'+escapeHtml(x.section_line)+'</td><td>'+x.display_order+'</td><td>'+(x.active?'Yes':'No')+'</td><td>'+acts+'</td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No mappings found.</td></tr>';
+  function renderStatementMappings() {
+    var body = $('statement-map-body'); if (!body) return; var q = String(($('statement-map-search') || {}).value || '').toLowerCase(), st = ($('statement-map-filter') || {}).value || 'all';
+    var rows = state.statementMappings.filter(function (x) { var h = [x.statement, x.account_code, x.section_line].join(' ').toLowerCase(); return (!q || h.includes(q)) && (st === 'all' || x.statement === st); });
+    var fs = $('statement-map-filter'); if (fs) { var vals = [...new Set(state.statementMappings.map(function (x) { return x.statement; }).filter(Boolean))]; var cur = st; fs.innerHTML = '<option value="all">All statements</option>' + vals.map(function (x) { return '<option>' + escapeHtml(x) + '</option>'; }).join(''); fs.value = vals.includes(cur) ? cur : 'all'; }
+    body.innerHTML = rows.map(function (x) { var acts = ''; if (can('statement-mapping', 'update')) acts += '<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-map="' + x.id + '">Edit</button> '; if (can('statement-mapping', 'delete')) acts += '<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-map="' + x.id + '">Delete</button>'; return '<tr><td>' + escapeHtml(x.statement) + '</td><td>' + escapeHtml(x.account_code) + '</td><td>' + escapeHtml(x.section_line) + '</td><td>' + x.display_order + '</td><td>' + (x.active ? 'Yes' : 'No') + '</td><td>' + acts + '</td></tr>'; }).join('') || '<tr><td colspan="6" class="crm-empty">No mappings found.</td></tr>';
   }
-  function openMappingForm(id){
-    var x=id&&state.statementMappings.find(function(y){return String(y.id)===String(id);});state.editingMappingId=x?x.id:null;
-    openCrmFormCardModal('statement-map-form-card');$('map-statement').value=x?x.statement:'Profit & Loss';$('map-account').value=x?x.account_code:'';$('map-section').value=x?x.section_line:'';$('map-order').value=x?x.display_order:1;$('map-active').checked=x?x.active:true;
+  function openMappingForm(id) {
+    var x = id && state.statementMappings.find(function (y) { return String(y.id) === String(id); }); state.editingMappingId = x ? x.id : null;
+    openCrmFormCardModal('statement-map-form-card'); $('map-statement').value = x ? x.statement : 'Profit & Loss'; $('map-account').value = x ? x.account_code : ''; $('map-section').value = x ? x.section_line : ''; $('map-order').value = x ? x.display_order : 1; $('map-active').checked = x ? x.active : true;
   }
-  async function saveMapping(e){e.preventDefault();var id=state.editingMappingId;if(!requirePermission('statement-mapping',id?'update':'create'))return;var payload={statement:$('map-statement').value,account_code:$('map-account').value,section_line:$('map-section').value.trim(),display_order:Number($('map-order').value||1),active:$('map-active').checked};var r=id?await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id',id):await window.salonSupabase.from('financial_statement_mappings').insert(payload);if(r.error){message(r.error.message,'error');return;}closeCrmFormCardModal('statement-map-form-card');await loadStatementMappings();message('Statement mapping saved.','success');}
-  async function deleteMapping(id){if(!requirePermission('statement-mapping','delete'))return;if(!await crmConfirm('Delete statement mapping','Delete this statement mapping?'))return;var r=await window.salonSupabase.from('financial_statement_mappings').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadStatementMappings();message('Mapping deleted.','success');}}
+  async function saveMapping(e) { e.preventDefault(); var id = state.editingMappingId; if (!requirePermission('statement-mapping', id ? 'update' : 'create')) return; var payload = { statement: $('map-statement').value, account_code: $('map-account').value, section_line: $('map-section').value.trim(), display_order: Number($('map-order').value || 1), active: $('map-active').checked }; var r = id ? await window.salonSupabase.from('financial_statement_mappings').update(payload).eq('id', id) : await window.salonSupabase.from('financial_statement_mappings').insert(payload); if (r.error) { message(r.error.message, 'error'); return; } closeCrmFormCardModal('statement-map-form-card'); await loadStatementMappings(); message('Statement mapping saved.', 'success'); }
+  async function deleteMapping(id) { if (!requirePermission('statement-mapping', 'delete')) return; if (!await crmConfirm('Delete statement mapping', 'Delete this statement mapping?')) return; var r = await window.salonSupabase.from('financial_statement_mappings').delete().eq('id', id); if (r.error) message(r.error.message, 'error'); else { await loadStatementMappings(); message('Mapping deleted.', 'success'); } }
 
-  function financeDateInRange(date,from,to){ return (!from||date>=from)&&(!to||date<=to); }
-  function financeNormalAmount(account,debit,credit){
-    var normal=String(account&&account.typical_balance||'').toLowerCase();
-    if(normal.indexOf('credit')!==-1 && normal.indexOf('debit')===-1) return Number(credit||0)-Number(debit||0);
-    return Number(debit||0)-Number(credit||0);
+  function financeDateInRange(date, from, to) { return (!from || date >= from) && (!to || date <= to); }
+  function financeNormalAmount(account, debit, credit) {
+    var normal = String(account && account.typical_balance || '').toLowerCase();
+    if (normal.indexOf('credit') !== -1 && normal.indexOf('debit') === -1) return Number(credit || 0) - Number(debit || 0);
+    return Number(debit || 0) - Number(credit || 0);
   }
-  function financeRowsByAccount(lines,from,to,cumulative){
-    var sums={};
-    (lines||[]).filter(function(x){
-      var d=x.journal_entries&&x.journal_entries.entry_date;
-      return cumulative ? (!to||d<=to) : financeDateInRange(d,from,to);
-    }).forEach(function(x){
-      var code=String(x.account_code||'');
-      sums[code]=sums[code]||{d:0,c:0};
-      sums[code].d+=Number(x.debit||0); sums[code].c+=Number(x.credit||0);
+  function financeRowsByAccount(lines, from, to, cumulative) {
+    var sums = {};
+    (lines || []).filter(function (x) {
+      var d = x.journal_entries && x.journal_entries.entry_date;
+      return cumulative ? (!to || d <= to) : financeDateInRange(d, from, to);
+    }).forEach(function (x) {
+      var code = String(x.account_code || '');
+      sums[code] = sums[code] || { d: 0, c: 0 };
+      sums[code].d += Number(x.debit || 0); sums[code].c += Number(x.credit || 0);
     });
     return sums;
   }
-  function financePlCalculation(mappings,sums){
-    var totals={revenue:0,discounts:0,cogs:0,opex:0,otherIncome:0,financeCost:0,tax:0,otherExpense:0};
-    (mappings||[]).forEach(function(m){
-      var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
-      var ss=sums[m.account_code]||{d:0,c:0};
-      var t=String(a.account_type||'').toLowerCase();
-      var amount=0;
-      if(t==='revenue') totals.revenue += Number(ss.c)-Number(ss.d);
-      else if(t==='contra revenue') totals.discounts += Number(ss.d)-Number(ss.c);
-      else if(t==='cost of sales') totals.cogs += Number(ss.d)-Number(ss.c);
-      else if(t==='operating expense') totals.opex += Number(ss.d)-Number(ss.c);
-      else if(t==='other income') totals.otherIncome += Number(ss.c)-Number(ss.d);
-      else if(t==='finance cost') totals.financeCost += Number(ss.d)-Number(ss.c);
-      else if(t==='tax expense') totals.tax += Number(ss.d)-Number(ss.c);
-      else if(t==='other expense') totals.otherExpense += Number(ss.d)-Number(ss.c);
-      else if(t==='other income/expense') {
-        amount=Number(ss.c)-Number(ss.d);
-        if(amount>=0) totals.otherIncome += amount; else totals.otherExpense += Math.abs(amount);
+  function financePlCalculation(mappings, sums) {
+    var totals = { revenue: 0, discounts: 0, cogs: 0, opex: 0, otherIncome: 0, financeCost: 0, tax: 0, otherExpense: 0 };
+    (mappings || []).forEach(function (m) {
+      var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {};
+      var ss = sums[m.account_code] || { d: 0, c: 0 };
+      var t = String(a.account_type || '').toLowerCase();
+      var amount = 0;
+      if (t === 'revenue') totals.revenue += Number(ss.c) - Number(ss.d);
+      else if (t === 'contra revenue') totals.discounts += Number(ss.d) - Number(ss.c);
+      else if (t === 'cost of sales') totals.cogs += Number(ss.d) - Number(ss.c);
+      else if (t === 'operating expense') totals.opex += Number(ss.d) - Number(ss.c);
+      else if (t === 'other income') totals.otherIncome += Number(ss.c) - Number(ss.d);
+      else if (t === 'finance cost') totals.financeCost += Number(ss.d) - Number(ss.c);
+      else if (t === 'tax expense') totals.tax += Number(ss.d) - Number(ss.c);
+      else if (t === 'other expense') totals.otherExpense += Number(ss.d) - Number(ss.c);
+      else if (t === 'other income/expense') {
+        amount = Number(ss.c) - Number(ss.d);
+        if (amount >= 0) totals.otherIncome += amount; else totals.otherExpense += Math.abs(amount);
       }
     });
-    totals.grossProfit=totals.revenue-totals.discounts-totals.cogs;
-    totals.operatingProfit=totals.grossProfit-totals.opex;
-    totals.profitBeforeTax=totals.operatingProfit+totals.otherIncome-totals.financeCost-totals.otherExpense;
-    totals.netProfit=totals.profitBeforeTax-totals.tax;
+    totals.grossProfit = totals.revenue - totals.discounts - totals.cogs;
+    totals.operatingProfit = totals.grossProfit - totals.opex;
+    totals.profitBeforeTax = totals.operatingProfit + totals.otherIncome - totals.financeCost - totals.otherExpense;
+    totals.netProfit = totals.profitBeforeTax - totals.tax;
     return totals;
   }
-  function financeStatementRow(section,account,amount,kind){
-    return {section:section||'',account:account||'',amount:Number(amount||0),kind:kind||'detail'};
+  function financeStatementRow(section, account, amount, kind) {
+    return { section: section || '', account: account || '', amount: Number(amount || 0), kind: kind || 'detail' };
   }
-  function financeRenderReportRows(rows){
-    return rows.map(function(x){
-      var cls=x.kind==='total'?' class="crm-finance-total-row"':(x.kind==='section'?' class="crm-finance-section-row"':'');
-      var account=x.account||'';
-      return '<tr'+cls+'><td>'+escapeHtml(x.section||'')+'</td><td>'+escapeHtml(account)+'</td><td></td><td></td><td>'+financeMoney(x.amount)+'</td></tr>';
+  function financeRenderReportRows(rows) {
+    return rows.map(function (x) {
+      var cls = x.kind === 'total' ? ' class="crm-finance-total-row"' : (x.kind === 'section' ? ' class="crm-finance-section-row"' : '');
+      var account = x.account || '';
+      return '<tr' + cls + '><td>' + escapeHtml(x.section || '') + '</td><td>' + escapeHtml(account) + '</td><td></td><td></td><td>' + financeMoney(x.amount) + '</td></tr>';
     }).join('');
   }
-  async function loadFinancialReport(){
-    if(!can('financial-statements','read'))return;
-    var statement=($('report-statement-select')||{}).value||'Profit & Loss',from=($('report-date-from')||{}).value||'',to=($('report-date-to')||{}).value||'';
-    var q=await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status','posted');
-    if(q.error){message(q.error.message,'error');return;}
-    var m=await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement',statement).eq('active',true).order('display_order').order('account_code');
-    if(m.error){message(m.error.message,'error');return;}
-    var mappings=m.data||[], rows=[], summary='', title=statement;
+  async function loadFinancialReport() {
+    if (!can('financial-statements', 'read')) return;
+    var statement = ($('report-statement-select') || {}).value || 'Profit & Loss', from = ($('report-date-from') || {}).value || '', to = ($('report-date-to') || {}).value || '';
+    var q = await window.salonSupabase.from('journal_entry_lines').select('account_code,debit,credit,journal_entries!inner(entry_date,status)').eq('journal_entries.status', 'posted');
+    if (q.error) { message(q.error.message, 'error'); return; }
+    var m = await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement', statement).eq('active', true).order('display_order').order('account_code');
+    if (m.error) { message(m.error.message, 'error'); return; }
+    var mappings = m.data || [], rows = [], summary = '', title = statement;
 
-    if(statement==='Trial Balance'){
-      var sumsTB=financeRowsByAccount(q.data,from,to,false);
-      var tb=state.chartOfAccounts.filter(function(a){return a.active!==false&&String(a.account_type||'').toLowerCase()!=='header';}).map(function(a){
-        var ss=sumsTB[a.account_code]||{d:0,c:0}; return {a:a,d:ss.d,c:ss.c,n:ss.d-ss.c};
-      }).sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);});
-      var td=tb.reduce(function(n,x){return n+x.d;},0),tc=tb.reduce(function(n,x){return n+x.c;},0);
-      summary='Trial Balance · '+(from||'Beginning')+' to '+(to||'Today')+' · Debits '+financeMoney(td)+' · Credits '+financeMoney(tc)+' · '+(Math.abs(td-tc)<0.005?'Balanced ✓':'Difference '+financeMoney(Math.abs(td-tc)));
-      rows=tb.map(function(x){return {section:x.a.account_type,account:x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),d:x.d,c:x.c,n:x.n};});
-      var body=$('financial-report-body'); if(body) body.innerHTML=rows.map(function(x){return '<tr><td>'+escapeHtml(x.section)+'</td><td>'+escapeHtml(x.account)+'</td><td>'+financeMoney(x.d)+'</td><td>'+financeMoney(x.c)+'</td><td>'+financeMoney(x.n)+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounts found.</td></tr>';
-      var sumEl=$('financial-report-summary');if(sumEl)sumEl.textContent=summary;return;
+    if (statement === 'Trial Balance') {
+      var sumsTB = financeRowsByAccount(q.data, from, to, false);
+      var tb = state.chartOfAccounts.filter(function (a) { return a.active !== false && String(a.account_type || '').toLowerCase() !== 'header'; }).map(function (a) {
+        var ss = sumsTB[a.account_code] || { d: 0, c: 0 }; return { a: a, d: ss.d, c: ss.c, n: ss.d - ss.c };
+      }).sort(function (a, b) { return crmDesc(a.a.account_code, b.a.account_code); });
+      var td = tb.reduce(function (n, x) { return n + x.d; }, 0), tc = tb.reduce(function (n, x) { return n + x.c; }, 0);
+      summary = 'Trial Balance · ' + (from || 'Beginning') + ' to ' + (to || 'Today') + ' · Debits ' + financeMoney(td) + ' · Credits ' + financeMoney(tc) + ' · ' + (Math.abs(td - tc) < 0.005 ? 'Balanced ✓' : 'Difference ' + financeMoney(Math.abs(td - tc)));
+      rows = tb.map(function (x) { return { section: x.a.account_type, account: x.a.account_code + ' — ' + (x.a.account_name || x.a.major_account || ''), d: x.d, c: x.c, n: x.n }; });
+      var body = $('financial-report-body'); if (body) body.innerHTML = rows.map(function (x) { return '<tr><td>' + escapeHtml(x.section) + '</td><td>' + escapeHtml(x.account) + '</td><td>' + financeMoney(x.d) + '</td><td>' + financeMoney(x.c) + '</td><td>' + financeMoney(x.n) + '</td></tr>'; }).join('') || '<tr><td colspan="5" class="crm-empty">No accounts found.</td></tr>';
+      var sumEl = $('financial-report-summary'); if (sumEl) sumEl.textContent = summary; return;
     }
 
-    var cumulative=statement==='Balance Sheet';
-    var sums=financeRowsByAccount(q.data,from,to,cumulative);
+    var cumulative = statement === 'Balance Sheet';
+    var sums = financeRowsByAccount(q.data, from, to, cumulative);
 
-    if(statement==='Profit & Loss'){
-      var pl=financePlCalculation(mappings,sums);
-      function plDetails(type,positive){
-        return mappings.filter(function(m){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};return String(a.account_type||'').toLowerCase()===type;}).sort(function(a,b){return Number(a.display_order||0)-Number(b.display_order||0)||crmDesc(a.account_code,b.account_code);}).map(function(m){
-          var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{},ss=sums[m.account_code]||{d:0,c:0};
-          var amount=positive?Number(ss.c)-Number(ss.d):Number(ss.d)-Number(ss.c);
-          return financeStatementRow('',m.account_code+' — '+(a.account_name||a.major_account||''),positive?amount:-amount,'detail');
+    if (statement === 'Profit & Loss') {
+      var pl = financePlCalculation(mappings, sums);
+      function plDetails(type, positive) {
+        return mappings.filter(function (m) { var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {}; return String(a.account_type || '').toLowerCase() === type; }).sort(function (a, b) { return Number(a.display_order || 0) - Number(b.display_order || 0) || crmDesc(a.account_code, b.account_code); }).map(function (m) {
+          var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {}, ss = sums[m.account_code] || { d: 0, c: 0 };
+          var amount = positive ? Number(ss.c) - Number(ss.d) : Number(ss.d) - Number(ss.c);
+          return financeStatementRow('', m.account_code + ' — ' + (a.account_name || a.major_account || ''), positive ? amount : -amount, 'detail');
         });
       }
-      rows=[financeStatementRow('REVENUE','REVENUE',pl.revenue,'section')]
-        .concat(plDetails('revenue',true))
-        .concat([financeStatementRow('','Less: Discounts',-pl.discounts,'detail'),financeStatementRow('','Net Revenue',pl.revenue-pl.discounts,'total'),financeStatementRow('COST OF SALES','COST OF SALES',-pl.cogs,'section')])
-        .concat(plDetails('cost of sales',false))
-        .concat([financeStatementRow('','Gross Profit',pl.grossProfit,'total'),financeStatementRow('OPERATING EXPENSES','OPERATING EXPENSES',-pl.opex,'section')])
-        .concat(plDetails('operating expense',false))
-        .concat([financeStatementRow('','Operating Profit / (Loss)',pl.operatingProfit,'total'),financeStatementRow('OTHER INCOME / EXPENSE','Other Income',pl.otherIncome,'detail'),financeStatementRow('','Finance Costs',-pl.financeCost,'detail'),financeStatementRow('','Other Expenses',-pl.otherExpense,'detail'),financeStatementRow('','Profit Before Tax',pl.profitBeforeTax,'total'),financeStatementRow('','Income Tax Expense',-pl.tax,'detail'),financeStatementRow('','NET PROFIT / (LOSS)',pl.netProfit,'total')]);
-      summary='Profit & Loss · '+(from||'Beginning')+' to '+(to||'Today')+' · Net Profit / (Loss) '+financeMoney(pl.netProfit);
-    } else if(statement==='Balance Sheet'){
-      var bsGroups={};
-      mappings.forEach(function(m){
-        var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
-        var type=String(a.account_type||'').toLowerCase();
-        if(type==='header')return;
-        var ss=sums[m.account_code]||{d:0,c:0};
-        var amount=financeNormalAmount(a,ss.d,ss.c);
-        var key=type.indexOf('asset')>=0?'Assets':(type.indexOf('liability')>=0?'Liabilities':(type==='equity'?'Equity':'Other'));
-        bsGroups[key]=bsGroups[key]||[];bsGroups[key].push({m:m,a:a,amount:amount});
+      rows = [financeStatementRow('REVENUE', 'REVENUE', pl.revenue, 'section')]
+        .concat(plDetails('revenue', true))
+        .concat([financeStatementRow('', 'Less: Discounts', -pl.discounts, 'detail'), financeStatementRow('', 'Net Revenue', pl.revenue - pl.discounts, 'total'), financeStatementRow('COST OF SALES', 'COST OF SALES', -pl.cogs, 'section')])
+        .concat(plDetails('cost of sales', false))
+        .concat([financeStatementRow('', 'Gross Profit', pl.grossProfit, 'total'), financeStatementRow('OPERATING EXPENSES', 'OPERATING EXPENSES', -pl.opex, 'section')])
+        .concat(plDetails('operating expense', false))
+        .concat([financeStatementRow('', 'Operating Profit / (Loss)', pl.operatingProfit, 'total'), financeStatementRow('OTHER INCOME / EXPENSE', 'Other Income', pl.otherIncome, 'detail'), financeStatementRow('', 'Finance Costs', -pl.financeCost, 'detail'), financeStatementRow('', 'Other Expenses', -pl.otherExpense, 'detail'), financeStatementRow('', 'Profit Before Tax', pl.profitBeforeTax, 'total'), financeStatementRow('', 'Income Tax Expense', -pl.tax, 'detail'), financeStatementRow('', 'NET PROFIT / (LOSS)', pl.netProfit, 'total')]);
+      summary = 'Profit & Loss · ' + (from || 'Beginning') + ' to ' + (to || 'Today') + ' · Net Profit / (Loss) ' + financeMoney(pl.netProfit);
+    } else if (statement === 'Balance Sheet') {
+      var bsGroups = {};
+      mappings.forEach(function (m) {
+        var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {};
+        var type = String(a.account_type || '').toLowerCase();
+        if (type === 'header') return;
+        var ss = sums[m.account_code] || { d: 0, c: 0 };
+        var amount = financeNormalAmount(a, ss.d, ss.c);
+        var key = type.indexOf('asset') >= 0 ? 'Assets' : (type.indexOf('liability') >= 0 ? 'Liabilities' : (type === 'equity' ? 'Equity' : 'Other'));
+        bsGroups[key] = bsGroups[key] || []; bsGroups[key].push({ m: m, a: a, amount: amount });
       });
-      var assets=(bsGroups.Assets||[]).concat(bsGroups.Other||[]).filter(function(x){return String(x.a.account_type||'').toLowerCase().indexOf('asset')>=0;});
-      var liabilities=bsGroups.Liabilities||[], equity=bsGroups.Equity||[];
-      var plMap=mappings; var pl=financePlCalculation((await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement','Profit & Loss').eq('active',true)).data||[],sums);
-      var assetTotal=assets.reduce(function(n,x){return n+x.amount;},0),liabilityTotal=liabilities.reduce(function(n,x){return n+x.amount;},0);
-      var equityRaw=equity.filter(function(x){return String(x.a.account_code)!=='3500';}).reduce(function(n,x){return n+x.amount;},0);
-      var current3500=equity.find(function(x){return String(x.a.account_code)==='3500';});
-      var currentProfit=(current3500&&Math.abs(current3500.amount)>0.005)?current3500.amount:pl.netProfit;
-      var equityTotal=equityRaw+currentProfit;
-      rows.push(financeStatementRow('ASSETS','ASSETS',assetTotal,'section'));
-      assets.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
-      rows.push(financeStatementRow('','Total Assets',assetTotal,'total'));
-      rows.push(financeStatementRow('LIABILITIES','LIABILITIES',liabilityTotal,'section'));
-      liabilities.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
-      rows.push(financeStatementRow('','Total Liabilities',liabilityTotal,'total'));
-      rows.push(financeStatementRow('EQUITY','EQUITY',equityTotal,'section'));
-      equity.sort(function(a,b){return crmDesc(a.a.account_code,b.a.account_code);}).forEach(function(x){if(String(x.a.account_code)!=='3500')rows.push(financeStatementRow('',x.a.account_code+' — '+(x.a.account_name||x.a.major_account||''),x.amount,'detail'));});
-      rows.push(financeStatementRow('','Current Period Profit / (Loss)',currentProfit,'detail'));
-      rows.push(financeStatementRow('','Total Equity',equityTotal,'total'));
-      rows.push(financeStatementRow('','LIABILITIES + EQUITY',liabilityTotal+equityTotal,'total'));
-      rows.push(financeStatementRow('','Balance Check (Assets - Liabilities - Equity)',assetTotal-liabilityTotal-equityTotal,'total'));
-      summary='Balance Sheet · through '+(to||'Today')+' · Assets '+financeMoney(assetTotal)+' · Liabilities '+financeMoney(liabilityTotal)+' · Equity '+financeMoney(equityTotal)+' · '+(Math.abs(assetTotal-liabilityTotal-equityTotal)<0.005?'Balanced ✓':'Out of balance '+financeMoney(Math.abs(assetTotal-liabilityTotal-equityTotal)));
-    } else if(statement==='Cash Flow'){
-      var sections={};
-      mappings.forEach(function(m){
-        var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};
-        var ss=sums[m.account_code]||{d:0,c:0};
-        var type=String(a.account_type||'').toLowerCase(), line=String(m.section_line||'Unclassified');
+      var assets = (bsGroups.Assets || []).concat(bsGroups.Other || []).filter(function (x) { return String(x.a.account_type || '').toLowerCase().indexOf('asset') >= 0; });
+      var liabilities = bsGroups.Liabilities || [], equity = bsGroups.Equity || [];
+      var plMap = mappings; var pl = financePlCalculation((await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement', 'Profit & Loss').eq('active', true)).data || [], sums);
+      var assetTotal = assets.reduce(function (n, x) { return n + x.amount; }, 0), liabilityTotal = liabilities.reduce(function (n, x) { return n + x.amount; }, 0);
+      var equityRaw = equity.filter(function (x) { return String(x.a.account_code) !== '3500'; }).reduce(function (n, x) { return n + x.amount; }, 0);
+      var current3500 = equity.find(function (x) { return String(x.a.account_code) === '3500'; });
+      var currentProfit = (current3500 && Math.abs(current3500.amount) > 0.005) ? current3500.amount : pl.netProfit;
+      var equityTotal = equityRaw + currentProfit;
+      rows.push(financeStatementRow('ASSETS', 'ASSETS', assetTotal, 'section'));
+      assets.sort(function (a, b) { return crmDesc(a.a.account_code, b.a.account_code); }).forEach(function (x) { rows.push(financeStatementRow('', x.a.account_code + ' — ' + (x.a.account_name || x.a.major_account || ''), x.amount, 'detail')); });
+      rows.push(financeStatementRow('', 'Total Assets', assetTotal, 'total'));
+      rows.push(financeStatementRow('LIABILITIES', 'LIABILITIES', liabilityTotal, 'section'));
+      liabilities.sort(function (a, b) { return crmDesc(a.a.account_code, b.a.account_code); }).forEach(function (x) { rows.push(financeStatementRow('', x.a.account_code + ' — ' + (x.a.account_name || x.a.major_account || ''), x.amount, 'detail')); });
+      rows.push(financeStatementRow('', 'Total Liabilities', liabilityTotal, 'total'));
+      rows.push(financeStatementRow('EQUITY', 'EQUITY', equityTotal, 'section'));
+      equity.sort(function (a, b) { return crmDesc(a.a.account_code, b.a.account_code); }).forEach(function (x) { if (String(x.a.account_code) !== '3500') rows.push(financeStatementRow('', x.a.account_code + ' — ' + (x.a.account_name || x.a.major_account || ''), x.amount, 'detail')); });
+      rows.push(financeStatementRow('', 'Current Period Profit / (Loss)', currentProfit, 'detail'));
+      rows.push(financeStatementRow('', 'Total Equity', equityTotal, 'total'));
+      rows.push(financeStatementRow('', 'LIABILITIES + EQUITY', liabilityTotal + equityTotal, 'total'));
+      rows.push(financeStatementRow('', 'Balance Check (Assets - Liabilities - Equity)', assetTotal - liabilityTotal - equityTotal, 'total'));
+      summary = 'Balance Sheet · through ' + (to || 'Today') + ' · Assets ' + financeMoney(assetTotal) + ' · Liabilities ' + financeMoney(liabilityTotal) + ' · Equity ' + financeMoney(equityTotal) + ' · ' + (Math.abs(assetTotal - liabilityTotal - equityTotal) < 0.005 ? 'Balanced ✓' : 'Out of balance ' + financeMoney(Math.abs(assetTotal - liabilityTotal - equityTotal)));
+    } else if (statement === 'Cash Flow') {
+      var sections = {};
+      mappings.forEach(function (m) {
+        var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {};
+        var ss = sums[m.account_code] || { d: 0, c: 0 };
+        var type = String(a.account_type || '').toLowerCase(), line = String(m.section_line || 'Unclassified');
         var amount;
-        if(type.indexOf('asset')>=0) amount=-(Number(ss.d)-Number(ss.c));
-        else if(type.indexOf('liability')>=0||type==='equity') amount=Number(ss.c)-Number(ss.d);
-        else if(type==='revenue'||type==='other income') amount=Number(ss.c)-Number(ss.d);
-        else amount=-(Number(ss.d)-Number(ss.c));
-        sections[line]=sections[line]||0;sections[line]+=amount;
+        if (type.indexOf('asset') >= 0) amount = -(Number(ss.d) - Number(ss.c));
+        else if (type.indexOf('liability') >= 0 || type === 'equity') amount = Number(ss.c) - Number(ss.d);
+        else if (type === 'revenue' || type === 'other income') amount = Number(ss.c) - Number(ss.d);
+        else amount = -(Number(ss.d) - Number(ss.c));
+        sections[line] = sections[line] || 0; sections[line] += amount;
       });
-      Object.keys(sections).sort().forEach(function(k){rows.push(financeStatementRow(k,k,sections[k],'detail'));});
-      var cfTotal=Object.keys(sections).reduce(function(n,k){return n+sections[k];},0);
-      rows.push(financeStatementRow('','Net Cash Flow (mapped movements)',cfTotal,'total'));
-      summary='Cash Flow · '+(from||'Beginning')+' to '+(to||'Today')+' · Net mapped cash movement '+financeMoney(cfTotal)+' · Note: cash flow is based on the configured statement mappings.';
-    } else if(statement==='Statement of Changes in Equity'){
-      var eqSums=financeRowsByAccount(q.data,from,to,true),eqRows=mappings.filter(function(m){return ['3100','3200','3400','3500','3600'].indexOf(String(m.account_code))>=0;});
-      var vals={};eqRows.forEach(function(m){var a=state.chartOfAccounts.find(function(y){return String(y.account_code)===String(m.account_code);})||{};var ss=eqSums[m.account_code]||{d:0,c:0};vals[m.account_code]=financeNormalAmount(a,ss.d,ss.c);});
-      var plMappings=(await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement','Profit & Loss').eq('active',true)).data||[];
-      var pl=financePlCalculation(plMappings,financeRowsByAccount(q.data,from,to,false));
-      var closing=(vals['3100']||0)+(vals['3200']||0)+(vals['3400']||0)+(Math.abs(vals['3500']||0)>0.005?(vals['3500']||0):pl.netProfit)-(vals['3600']||0);
-      rows=[
-        financeStatementRow('EQUITY','Share Capital',vals['3100']||0,'detail'),
-        financeStatementRow('','Additional Paid-in Capital',vals['3200']||0,'detail'),
-        financeStatementRow('','Retained Earnings',vals['3400']||0,'detail'),
-        financeStatementRow('','Current Period Profit / (Loss)',Math.abs(vals['3500']||0)>0.005?(vals['3500']||0):pl.netProfit,'detail'),
-        financeStatementRow('','Dividends / Drawings',-(vals['3600']||0),'detail'),
-        financeStatementRow('','Closing Equity',closing,'total')
+      Object.keys(sections).sort().forEach(function (k) { rows.push(financeStatementRow(k, k, sections[k], 'detail')); });
+      var cfTotal = Object.keys(sections).reduce(function (n, k) { return n + sections[k]; }, 0);
+      rows.push(financeStatementRow('', 'Net Cash Flow (mapped movements)', cfTotal, 'total'));
+      summary = 'Cash Flow · ' + (from || 'Beginning') + ' to ' + (to || 'Today') + ' · Net mapped cash movement ' + financeMoney(cfTotal) + ' · Note: cash flow is based on the configured statement mappings.';
+    } else if (statement === 'Statement of Changes in Equity') {
+      var eqSums = financeRowsByAccount(q.data, from, to, true), eqRows = mappings.filter(function (m) { return ['3100', '3200', '3400', '3500', '3600'].indexOf(String(m.account_code)) >= 0; });
+      var vals = {}; eqRows.forEach(function (m) { var a = state.chartOfAccounts.find(function (y) { return String(y.account_code) === String(m.account_code); }) || {}; var ss = eqSums[m.account_code] || { d: 0, c: 0 }; vals[m.account_code] = financeNormalAmount(a, ss.d, ss.c); });
+      var plMappings = (await window.salonSupabase.from('financial_statement_mappings').select('statement,account_code,section_line,display_order').eq('statement', 'Profit & Loss').eq('active', true)).data || [];
+      var pl = financePlCalculation(plMappings, financeRowsByAccount(q.data, from, to, false));
+      var closing = (vals['3100'] || 0) + (vals['3200'] || 0) + (vals['3400'] || 0) + (Math.abs(vals['3500'] || 0) > 0.005 ? (vals['3500'] || 0) : pl.netProfit) - (vals['3600'] || 0);
+      rows = [
+        financeStatementRow('EQUITY', 'Share Capital', vals['3100'] || 0, 'detail'),
+        financeStatementRow('', 'Additional Paid-in Capital', vals['3200'] || 0, 'detail'),
+        financeStatementRow('', 'Retained Earnings', vals['3400'] || 0, 'detail'),
+        financeStatementRow('', 'Current Period Profit / (Loss)', Math.abs(vals['3500'] || 0) > 0.005 ? (vals['3500'] || 0) : pl.netProfit, 'detail'),
+        financeStatementRow('', 'Dividends / Drawings', -(vals['3600'] || 0), 'detail'),
+        financeStatementRow('', 'Closing Equity', closing, 'total')
       ];
-      summary='Statement of Changes in Equity · '+(from||'Beginning')+' to '+(to||'Today')+' · Closing Equity '+financeMoney(closing);
+      summary = 'Statement of Changes in Equity · ' + (from || 'Beginning') + ' to ' + (to || 'Today') + ' · Closing Equity ' + financeMoney(closing);
     }
-    var sumEl=$('financial-report-summary');if(sumEl)sumEl.textContent=summary;
-    var body=$('financial-report-body');if(body)body.innerHTML=financeRenderReportRows(rows)||'<tr><td colspan="5" class="crm-empty">No financial data found for this period.</td></tr>';
+    var sumEl = $('financial-report-summary'); if (sumEl) sumEl.textContent = summary;
+    var body = $('financial-report-body'); if (body) body.innerHTML = financeRenderReportRows(rows) || '<tr><td colspan="5" class="crm-empty">No financial data found for this period.</td></tr>';
   }
 
-  async function recordFinanceAudit(action,tableName,recordId,details){
-    try{
-      if(window.salonSupabase && window.salonSupabase.rpc){
-        var r=await window.salonSupabase.rpc('log_finance_audit',{p_action:action,p_table_name:tableName||null,p_record_id:recordId==null?null:String(recordId),p_details:details||{}});
-        if(r.error) console.warn('Audit log failed:',r.error.message);
+  async function recordFinanceAudit(action, tableName, recordId, details) {
+    try {
+      if (window.salonSupabase && window.salonSupabase.rpc) {
+        var r = await window.salonSupabase.rpc('log_finance_audit', { p_action: action, p_table_name: tableName || null, p_record_id: recordId == null ? null : String(recordId), p_details: details || {} });
+        if (r.error) console.warn('Audit log failed:', r.error.message);
       }
-    }catch(e){console.warn('Audit log failed:',e);}
+    } catch (e) { console.warn('Audit log failed:', e); }
   }
-  function csvEscape(value){var s=String(value==null?'':value);return '"'+s.replace(/"/g,'""')+'"';}
-  function financeExportTable(tableId,stripLast){
-    var body=$(tableId);if(!body)return null;
-    var table=body.closest('table')||body;
-    var rows=[].map.call(table.querySelectorAll('tr'),function(tr){
-      var cells=[].map.call(tr.querySelectorAll('th,td'),function(cell){return cell.innerText.replace(/\s+/g,' ').trim();});
-      if(stripLast&&cells.length)cells.pop();
+  function csvEscape(value) { var s = String(value == null ? '' : value); return '"' + s.replace(/"/g, '""') + '"'; }
+  function financeExportTable(tableId, stripLast) {
+    var body = $(tableId); if (!body) return null;
+    var table = body.closest('table') || body;
+    var rows = [].map.call(table.querySelectorAll('tr'), function (tr) {
+      var cells = [].map.call(tr.querySelectorAll('th,td'), function (cell) { return cell.innerText.replace(/\s+/g, ' ').trim(); });
+      if (stripLast && cells.length) cells.pop();
       return cells;
-    }).filter(function(r){return r.length;});
-    return {table:table,rows:rows};
+    }).filter(function (r) { return r.length; });
+    return { table: table, rows: rows };
   }
-  function exportTableCsv(tableId,filename,stripLast,context){
-    var data=financeExportTable(tableId,stripLast);if(!data||!data.rows.length){message('Nothing to export.','error');return;}
-    var rows=data.rows.map(function(r){return r.map(csvEscape).join(',');});
-    var blob=new Blob(['\ufeff'+rows.join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
-    recordFinanceAudit('EXPORT_CSV',context||tableId,null,{filename:filename});
-    message('CSV downloaded.','success');
+  function exportTableCsv(tableId, filename, stripLast, context) {
+    var data = financeExportTable(tableId, stripLast); if (!data || !data.rows.length) { message('Nothing to export.', 'error'); return; }
+    var rows = data.rows.map(function (r) { return r.map(csvEscape).join(','); });
+    var blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    recordFinanceAudit('EXPORT_CSV', context || tableId, null, { filename: filename });
+    message('CSV downloaded.', 'success');
   }
-  function pdfEscape(s){
-    return String(s==null?'':s)
-      .replace(/\\/g,'\\\\')
-      .replace(/\(/g,'\\(')
-      .replace(/\)/g,'\\)')
-      .replace(/[\r\n]+/g,' ')
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ');
+  function pdfEscape(s) {
+    return String(s == null ? '' : s)
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
   }
-  function pdfAscii(s){return String(s==null?'':s).replace(/[^\x20-\x7E]/g,'?');}
-  function wrapPdfText(text,maxChars){
-    text=pdfAscii(text);var words=text.split(/\s+/),out=[],line='';
-    words.forEach(function(w){if(!w)return;if((line+' '+w).trim().length>maxChars){if(line)out.push(line);line=w;}else line=(line+' '+w).trim();});
-    if(line)out.push(line);return out.length?out:[''];
+  function pdfAscii(s) { return String(s == null ? '' : s).replace(/[^\x20-\x7E]/g, '?'); }
+  function wrapPdfText(text, maxChars) {
+    text = pdfAscii(text); var words = text.split(/\s+/), out = [], line = '';
+    words.forEach(function (w) { if (!w) return; if ((line + ' ' + w).trim().length > maxChars) { if (line) out.push(line); line = w; } else line = (line + ' ' + w).trim(); });
+    if (line) out.push(line); return out.length ? out : [''];
   }
-  function buildFinancePdf(title,summary,rows){
-    var headers=rows[0]||[], dataRows=rows.slice(1), pageW=842,pageH=595,margin=34,rowH=22,bottom=34;
-    var colCount=headers.length||1, weights=Array(colCount).fill(1);
-    if(colCount===7)weights=[1.0,1.0,1.5,2.2,1.0,0.9,1.0];
-    else if(colCount===6)weights=[1.2,1.8,1.2,1.1,1.1,2.4];
-    else if(colCount===5)weights=[1.4,2.5,1.1,1.1,1.1];
-    var totalW=pageW-margin*2,ws=weights.reduce(function(a,b){return a+b;},0),widths=weights.map(function(w){return totalW*w/ws;});
-    var pages=[],ops=[],y=0,pageNumber=0;
-    function addText(x,yy,text,size,bold){ops.push('BT /F'+(bold?'2':'1')+' '+size+' Tf 1 0 0 1 '+x.toFixed(2)+' '+yy.toFixed(2)+' Tm ('+pdfEscape(pdfAscii(text))+') Tj ET');}
-    function drawLine(x1,y1,x2,y2){ops.push(x1.toFixed(2)+' '+y1.toFixed(2)+' m '+x2.toFixed(2)+' '+y2.toFixed(2)+' l S');}
-    function header(){
-      var brandY=pageH-34,metaY=pageH-50,summaryY=pageH-66,tableY=pageH-92;
-      addText(margin,brandY,'JAS PREMIUM',12,true);
-      addText(pageW-margin-170,brandY,pdfAscii(title).slice(0,28),10,true);
-      addText(margin,metaY,'Accountant report',7,false);
-      addText(pageW-margin-175,metaY,'Generated: '+pdfAscii(new Date().toLocaleString()),7,false);
-      if(summary) addText(margin,summaryY,pdfAscii(summary).slice(0,135),7,false);
-      var x=margin;
-      ops.push('0.92 g '+margin+' '+(tableY-4)+' '+totalW+' '+rowH+' re f 0 g');
-      headers.forEach(function(h,i){addText(x+4,tableY+4,h,7,true);x+=widths[i];});
-      drawLine(margin,tableY-4,pageW-margin,tableY-4);
-      return tableY-rowH;
+  function buildFinancePdf(title, summary, rows) {
+    var headers = rows[0] || [], dataRows = rows.slice(1), pageW = 842, pageH = 595, margin = 34, rowH = 22, bottom = 34;
+    var colCount = headers.length || 1, weights = Array(colCount).fill(1);
+    if (colCount === 7) weights = [1.0, 1.0, 1.5, 2.2, 1.0, 0.9, 1.0];
+    else if (colCount === 6) weights = [1.2, 1.8, 1.2, 1.1, 1.1, 2.4];
+    else if (colCount === 5) weights = [1.4, 2.5, 1.1, 1.1, 1.1];
+    var totalW = pageW - margin * 2, ws = weights.reduce(function (a, b) { return a + b; }, 0), widths = weights.map(function (w) { return totalW * w / ws; });
+    var pages = [], ops = [], y = 0, pageNumber = 0;
+    function addText(x, yy, text, size, bold) { ops.push('BT /F' + (bold ? '2' : '1') + ' ' + size + ' Tf 1 0 0 1 ' + x.toFixed(2) + ' ' + yy.toFixed(2) + ' Tm (' + pdfEscape(pdfAscii(text)) + ') Tj ET'); }
+    function drawLine(x1, y1, x2, y2) { ops.push(x1.toFixed(2) + ' ' + y1.toFixed(2) + ' m ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + ' l S'); }
+    function header() {
+      var brandY = pageH - 34, metaY = pageH - 50, summaryY = pageH - 66, tableY = pageH - 92;
+      addText(margin, brandY, 'JAS PREMIUM', 12, true);
+      addText(pageW - margin - 170, brandY, pdfAscii(title).slice(0, 28), 10, true);
+      addText(margin, metaY, 'Accountant report', 7, false);
+      addText(pageW - margin - 175, metaY, 'Generated: ' + pdfAscii(new Date().toLocaleString()), 7, false);
+      if (summary) addText(margin, summaryY, pdfAscii(summary).slice(0, 135), 7, false);
+      var x = margin;
+      ops.push('0.92 g ' + margin + ' ' + (tableY - 4) + ' ' + totalW + ' ' + rowH + ' re f 0 g');
+      headers.forEach(function (h, i) { addText(x + 4, tableY + 4, h, 7, true); x += widths[i]; });
+      drawLine(margin, tableY - 4, pageW - margin, tableY - 4);
+      return tableY - rowH;
     }
-    function newPage(){
-      if(ops.length){addText(pageW-margin-55,bottom-10,'Page '+pageNumber,7,false);pages.push(ops.join('\n'));}
-      ops=[];pageNumber++;y=header();
+    function newPage() {
+      if (ops.length) { addText(pageW - margin - 55, bottom - 10, 'Page ' + pageNumber, 7, false); pages.push(ops.join('\n')); }
+      ops = []; pageNumber++; y = header();
     }
     newPage();
-    dataRows.forEach(function(row){
-      var cellLines=row.map(function(v,i){return wrapPdfText(v,Math.max(8,Math.floor(widths[i]/4.7))).slice(0,3);});
-      var lines=Math.max.apply(null,cellLines.map(function(x){return x.length;}));
-      var h=Math.max(rowH,lines*10+8);
-      if(y-h<bottom)newPage();
-      var x=margin;
-      cellLines.forEach(function(linesArr,i){linesArr.forEach(function(txt,j){addText(x+4,y-j*10-11,txt,7,false);});x+=widths[i];});
-      drawLine(margin,y-h,pageW-margin,y-h);
-      x=margin;for(var i=0;i<widths.length;i++){drawLine(x,y,x,y-h);x+=widths[i];}
-      drawLine(pageW-margin,y,pageW-margin,y-h);y-=h;
+    dataRows.forEach(function (row) {
+      var cellLines = row.map(function (v, i) { return wrapPdfText(v, Math.max(8, Math.floor(widths[i] / 4.7))).slice(0, 3); });
+      var lines = Math.max.apply(null, cellLines.map(function (x) { return x.length; }));
+      var h = Math.max(rowH, lines * 10 + 8);
+      if (y - h < bottom) newPage();
+      var x = margin;
+      cellLines.forEach(function (linesArr, i) { linesArr.forEach(function (txt, j) { addText(x + 4, y - j * 10 - 11, txt, 7, false); }); x += widths[i]; });
+      drawLine(margin, y - h, pageW - margin, y - h);
+      x = margin; for (var i = 0; i < widths.length; i++) { drawLine(x, y, x, y - h); x += widths[i]; }
+      drawLine(pageW - margin, y, pageW - margin, y - h); y -= h;
     });
-    if(ops.length){addText(pageW-margin-55,bottom-10,'Page '+pageNumber,7,false);pages.push(ops.join('\n'));}
+    if (ops.length) { addText(pageW - margin - 55, bottom - 10, 'Page ' + pageNumber, 7, false); pages.push(ops.join('\n')); }
 
     // Build a strict ASCII PDF with explicitly declared fonts and exact byte offsets.
     // Acrobat requires every font resource referenced by a page to exist in the PDF.
-    var objs=[];
-    function obj(body){objs.push(body);return objs.length;}
-    var catalog=obj('<< /Type /Catalog /Pages 2 0 R /PageMode /UseNone >>');
-    var pagesObj=2;
-    var font1=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-    var font2=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    var objs = [];
+    function obj(body) { objs.push(body); return objs.length; }
+    var catalog = obj('<< /Type /Catalog /Pages 2 0 R /PageMode /UseNone >>');
+    var pagesObj = 2;
+    var font1 = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    var font2 = obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
     // Keep these references immutable; do not assume object numbers elsewhere.
-    var fontResources='<< /F1 '+font1+' 0 R /F2 '+font2+' 0 R >>';
-    var kids=[];
-    pages.forEach(function(content){
-      var stream=content+'\n';
+    var fontResources = '<< /F1 ' + font1 + ' 0 R /F2 ' + font2 + ' 0 R >>';
+    var kids = [];
+    pages.forEach(function (content) {
+      var stream = content + '\n';
       // PDF stream length MUST be the encoded byte length, not a JavaScript character count.
       // Use TextEncoder so Acrobat receives an exact /Length even if a future report contains
       // non-ASCII characters or the runtime normalizes text differently.
-      var streamBytes=new TextEncoder().encode(stream);
-      var contentObj=obj('<< /Length '+streamBytes.length+' >>\nstream\n'+stream+'endstream');
-      var pageObj=obj('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pageW+' '+pageH+'] /Resources << /ProcSet [/PDF /Text] /Font '+fontResources+' >> /Contents '+contentObj+' 0 R >>');
-      kids.push(pageObj+' 0 R');
+      var streamBytes = new TextEncoder().encode(stream);
+      var contentObj = obj('<< /Length ' + streamBytes.length + ' >>\nstream\n' + stream + 'endstream');
+      var pageObj = obj('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pageW + ' ' + pageH + '] /Resources << /ProcSet [/PDF /Text] /Font ' + fontResources + ' >> /Contents ' + contentObj + ' 0 R >>');
+      kids.push(pageObj + ' 0 R');
     });
-    objs[1]='<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+kids.length+' >>';
-    var info=obj('<< /Title ('+pdfEscape(pdfAscii(title))+') /Author (JAS Premium) /Subject (Accountant report) /Producer (JAS Premium CRM) >>');
+    objs[1] = '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + kids.length + ' >>';
+    var info = obj('<< /Title (' + pdfEscape(pdfAscii(title)) + ') /Author (JAS Premium) /Subject (Accountant report) /Producer (JAS Premium CRM) >>');
 
     // Build the PDF from encoded bytes. Acrobat is strict about byte offsets and stream lengths.
-    var encoder=new TextEncoder();
-    var headerBytes=encoder.encode('%PDF-1.4\n%JASPremium\n');
-    var chunks=[headerBytes],offsets=[0],byteOffset=headerBytes.length;
-    objs.forEach(function(o,i){
-      var chunk=(i+1)+' 0 obj\n'+o+'\nendobj\n';
-      var bytes=encoder.encode(chunk);
+    var encoder = new TextEncoder();
+    var headerBytes = encoder.encode('%PDF-1.4\n%JASPremium\n');
+    var chunks = [headerBytes], offsets = [0], byteOffset = headerBytes.length;
+    objs.forEach(function (o, i) {
+      var chunk = (i + 1) + ' 0 obj\n' + o + '\nendobj\n';
+      var bytes = encoder.encode(chunk);
       offsets.push(byteOffset);
       chunks.push(bytes);
-      byteOffset+=bytes.length;
+      byteOffset += bytes.length;
     });
-    var xrefOffset=byteOffset;
-    var xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
-    for(var j=1;j<offsets.length;j++)xref+=String(offsets[j]).padStart(10,'0')+' 00000 n \n';
-    var trailer='trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R /Info '+info+' 0 R >>\nstartxref\n'+xrefOffset+'\n%%EOF\n';
-    chunks.push(encoder.encode(xref+trailer));
+    var xrefOffset = byteOffset;
+    var xref = 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n';
+    for (var j = 1; j < offsets.length; j++)xref += String(offsets[j]).padStart(10, '0') + ' 00000 n \n';
+    var trailer = 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root ' + catalog + ' 0 R /Info ' + info + ' 0 R >>\nstartxref\n' + xrefOffset + '\n%%EOF\n';
+    chunks.push(encoder.encode(xref + trailer));
     // Concatenate exact bytes into one Blob. No browser print pipeline is involved.
     // PDF version is intentionally kept at 1.4 for maximum Acrobat compatibility.
-    var total=chunks.reduce(function(sum,part){return sum+part.length;},0);
-    var pdfBytes=new Uint8Array(total),cursor=0;
-    chunks.forEach(function(part){pdfBytes.set(part,cursor);cursor+=part.length;});
-    return new Blob([pdfBytes],{type:'application/pdf'});
+    var total = chunks.reduce(function (sum, part) { return sum + part.length; }, 0);
+    var pdfBytes = new Uint8Array(total), cursor = 0;
+    chunks.forEach(function (part) { pdfBytes.set(part, cursor); cursor += part.length; });
+    return new Blob([pdfBytes], { type: 'application/pdf' });
   }
-  function downloadFinancePdf(tableId,title,summary,stripLast,context){
-    var data=financeExportTable(tableId,stripLast);if(!data||!data.rows.length){message('Nothing to export.','error');return;}
-    var rows=data.rows,blob=buildFinancePdf(title,summary,rows),url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='JASPremium_'+title.replace(/[^A-Za-z0-9]+/g,'_')+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
-    recordFinanceAudit('EXPORT_PDF',context||tableId,null,{title:title,filename:a.download});
-    message('PDF downloaded.','success');
+  function downloadFinancePdf(tableId, title, summary, stripLast, context) {
+    var data = financeExportTable(tableId, stripLast); if (!data || !data.rows.length) { message('Nothing to export.', 'error'); return; }
+    var rows = data.rows, blob = buildFinancePdf(title, summary, rows), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'JASPremium_' + title.replace(/[^A-Za-z0-9]+/g, '_') + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    recordFinanceAudit('EXPORT_PDF', context || tableId, null, { title: title, filename: a.download });
+    message('PDF downloaded.', 'success');
   }
-  async function loadAuditTrail(){
-    if(!can('audit-trail','read'))return;
-    var body=$('audit-trail-body');if(body)body.innerHTML='<tr><td colspan="6" class="crm-empty">Loading audit trail…</td></tr>';
-    var r=await window.salonSupabase.from('finance_audit_trail').select('id,created_at,actor_id,actor_email,action,table_name,record_id,details').order('created_at',{ascending:false}).limit(1000);
-    if(r.error){if(body)body.innerHTML='<tr><td colspan="6" class="crm-empty">Could not load audit trail.</td></tr>';message(r.error.message,'error');return;}
-    state.auditTrail=r.data||[];renderAuditTrail();
+  async function loadAuditTrail() {
+    if (!can('audit-trail', 'read')) return;
+    var body = $('audit-trail-body'); if (body) body.innerHTML = '<tr><td colspan="6" class="crm-empty">Loading audit trail…</td></tr>';
+    var r = await window.salonSupabase.from('finance_audit_trail').select('id,created_at,actor_id,actor_email,action,table_name,record_id,details').order('created_at', { ascending: false }).limit(1000);
+    if (r.error) { if (body) body.innerHTML = '<tr><td colspan="6" class="crm-empty">Could not load audit trail.</td></tr>'; message(r.error.message, 'error'); return; }
+    state.auditTrail = r.data || []; renderAuditTrail();
   }
-  function renderAuditTrail(){
-    var body=$('audit-trail-body');if(!body)return;
-    var q=String(($('audit-search')||{}).value||'').trim().toLowerCase(),action=($('audit-action-filter')||{}).value||'all',from=($('audit-date-from')||{}).value||'',to=($('audit-date-to')||{}).value||'';
-    var actions=[...new Set(state.auditTrail.map(function(x){return x.action;}).filter(Boolean))].sort();
-    var af=$('audit-action-filter');if(af){var cur=action;af.innerHTML='<option value="all">All actions</option>'+actions.map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x.replace(/_/g,' '))+'</option>';}).join('');af.value=actions.indexOf(cur)>=0?cur:'all';}
-    var rows=state.auditTrail.filter(function(x){var date=String(x.created_at||'').slice(0,10),details=typeof x.details==='string'?x.details:JSON.stringify(x.details||{});var hay=[x.actor_email,x.action,x.table_name,x.record_id,details].join(' ').toLowerCase();return(!q||hay.includes(q))&&(action==='all'||x.action===action)&&(!from||date>=from)&&(!to||date<=to);});
-    body.innerHTML=rows.map(function(x){var d=typeof x.details==='string'?x.details:JSON.stringify(x.details||{});return '<tr><td>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString():'—')+'</td><td>'+escapeHtml(x.actor_email||x.actor_id||'System')+'</td><td><span class="crm-badge active">'+escapeHtml(String(x.action||'').replace(/_/g,' '))+'</span></td><td>'+escapeHtml(x.table_name||'—')+'</td><td>'+escapeHtml(x.record_id||'—')+'</td><td><code class="crm-audit-details">'+escapeHtml(d)+'</code></td></tr>';}).join('')||'<tr><td colspan="6" class="crm-empty">No audit events found.</td></tr>';
+  function renderAuditTrail() {
+    var body = $('audit-trail-body'); if (!body) return;
+    var q = String(($('audit-search') || {}).value || '').trim().toLowerCase(), action = ($('audit-action-filter') || {}).value || 'all', from = ($('audit-date-from') || {}).value || '', to = ($('audit-date-to') || {}).value || '';
+    var actions = [...new Set(state.auditTrail.map(function (x) { return x.action; }).filter(Boolean))].sort();
+    var af = $('audit-action-filter'); if (af) { var cur = action; af.innerHTML = '<option value="all">All actions</option>' + actions.map(function (x) { return '<option value="' + escapeHtml(x) + '">' + escapeHtml(x.replace(/_/g, ' ')) + '</option>'; }).join(''); af.value = actions.indexOf(cur) >= 0 ? cur : 'all'; }
+    var rows = state.auditTrail.filter(function (x) { var date = String(x.created_at || '').slice(0, 10), details = typeof x.details === 'string' ? x.details : JSON.stringify(x.details || {}); var hay = [x.actor_email, x.action, x.table_name, x.record_id, details].join(' ').toLowerCase(); return (!q || hay.includes(q)) && (action === 'all' || x.action === action) && (!from || date >= from) && (!to || date <= to); });
+    body.innerHTML = rows.map(function (x) { var d = typeof x.details === 'string' ? x.details : JSON.stringify(x.details || {}); return '<tr><td>' + escapeHtml(x.created_at ? new Date(x.created_at).toLocaleString() : '—') + '</td><td>' + escapeHtml(x.actor_email || x.actor_id || 'System') + '</td><td><span class="crm-badge active">' + escapeHtml(String(x.action || '').replace(/_/g, ' ')) + '</span></td><td>' + escapeHtml(x.table_name || '—') + '</td><td>' + escapeHtml(x.record_id || '—') + '</td><td><code class="crm-audit-details">' + escapeHtml(d) + '</code></td></tr>'; }).join('') || '<tr><td colspan="6" class="crm-empty">No audit events found.</td></tr>';
   }
-  async function loadAccountingPeriods(){
-    if(!can('accounting-periods','read'))return;var r=await window.salonSupabase.from('accounting_periods').select('id,name,start_date,end_date,status').order('start_date',{ascending:false});if(r.error){message(r.error.message,'error');return;}state.accountingPeriods=r.data||[];var b=$('periods-body');if(b)b.innerHTML=state.accountingPeriods.map(function(x){var a='';if(can('accounting-periods','update'))a+='<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-period="'+x.id+'">Edit</button> ';if(can('accounting-periods','delete'))a+='<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-period="'+x.id+'">Delete</button>';return '<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.start_date+'</td><td>'+x.end_date+'</td><td>'+escapeHtml(x.status)+'</td><td>'+a+'</td></tr>';}).join('')||'<tr><td colspan="5" class="crm-empty">No accounting periods configured.</td></tr>';}
-  function openPeriodForm(id){var x=id&&state.accountingPeriods.find(function(y){return String(y.id)===String(id);});state.editingPeriodId=x?x.id:null;openCrmFormCardModal('period-form-card');$('period-name').value=x?x.name:'';$('period-start').value=x?x.start_date:financeToday();$('period-end').value=x?x.end_date:financeToday();$('period-status').value=x?x.status:'open';}
-  async function savePeriod(e){e.preventDefault();var id=state.editingPeriodId;if(!requirePermission('accounting-periods',id?'update':'create'))return;var payload={name:$('period-name').value.trim(),start_date:$('period-start').value,end_date:$('period-end').value,status:$('period-status').value};if(payload.end_date<payload.start_date){message('End date must be after start date.','error');return;}var r=id?await window.salonSupabase.from('accounting_periods').update(payload).eq('id',id):await window.salonSupabase.from('accounting_periods').insert(payload);if(r.error){message(r.error.message,'error');return;}closeCrmFormCardModal('period-form-card');await loadAccountingPeriods();message('Accounting period saved.','success');}
-  async function deletePeriod(id){if(!requirePermission('accounting-periods','delete'))return;if(!await crmConfirm('Delete accounting period','Delete this accounting period?'))return;var r=await window.salonSupabase.from('accounting_periods').delete().eq('id',id);if(r.error)message(r.error.message,'error');else{await loadAccountingPeriods();message('Period deleted.','success');}}
+  async function loadAccountingPeriods() {
+    if (!can('accounting-periods', 'read')) return; var r = await window.salonSupabase.from('accounting_periods').select('id,name,start_date,end_date,status').order('start_date', { ascending: false }); if (r.error) { message(r.error.message, 'error'); return; } state.accountingPeriods = r.data || []; var b = $('periods-body'); if (b) b.innerHTML = state.accountingPeriods.map(function (x) { var a = ''; if (can('accounting-periods', 'update')) a += '<button class="crm-btn crm-btn-secondary crm-btn-small" data-edit-period="' + x.id + '">Edit</button> '; if (can('accounting-periods', 'delete')) a += '<button class="crm-btn crm-btn-danger crm-btn-small" data-delete-period="' + x.id + '">Delete</button>'; return '<tr><td>' + escapeHtml(x.name) + '</td><td>' + x.start_date + '</td><td>' + x.end_date + '</td><td>' + escapeHtml(x.status) + '</td><td>' + a + '</td></tr>'; }).join('') || '<tr><td colspan="5" class="crm-empty">No accounting periods configured.</td></tr>';
+  }
+  function openPeriodForm(id) { var x = id && state.accountingPeriods.find(function (y) { return String(y.id) === String(id); }); state.editingPeriodId = x ? x.id : null; openCrmFormCardModal('period-form-card'); $('period-name').value = x ? x.name : ''; $('period-start').value = x ? x.start_date : financeToday(); $('period-end').value = x ? x.end_date : financeToday(); $('period-status').value = x ? x.status : 'open'; }
+  async function savePeriod(e) { e.preventDefault(); var id = state.editingPeriodId; if (!requirePermission('accounting-periods', id ? 'update' : 'create')) return; var payload = { name: $('period-name').value.trim(), start_date: $('period-start').value, end_date: $('period-end').value, status: $('period-status').value }; if (payload.end_date < payload.start_date) { message('End date must be after start date.', 'error'); return; } var r = id ? await window.salonSupabase.from('accounting_periods').update(payload).eq('id', id) : await window.salonSupabase.from('accounting_periods').insert(payload); if (r.error) { message(r.error.message, 'error'); return; } closeCrmFormCardModal('period-form-card'); await loadAccountingPeriods(); message('Accounting period saved.', 'success'); }
+  async function deletePeriod(id) { if (!requirePermission('accounting-periods', 'delete')) return; if (!await crmConfirm('Delete accounting period', 'Delete this accounting period?')) return; var r = await window.salonSupabase.from('accounting_periods').delete().eq('id', id); if (r.error) message(r.error.message, 'error'); else { await loadAccountingPeriods(); message('Period deleted.', 'success'); } }
 
-  function enhanceCrudActionButtons(root){
-    var scope=root||document;
-    scope.querySelectorAll('button.crm-btn, a.crm-btn').forEach(function(btn){
+  function enhanceCrudActionButtons(root) {
+    var scope = root || document;
+    scope.querySelectorAll('button.crm-btn, a.crm-btn').forEach(function (btn) {
       // Keep the destructive action in the confirmation dialog as text.
       // Table/list Delete actions remain icon-only.
-      if(btn.closest && btn.closest('.crm-confirm-modal')) return;
-      if(btn.classList.contains('crm-icon-action')) return;
-      var label=String(btn.textContent||'').trim();
-      var match=label.match(/^(Edit|Delete|View)(?:\s|$)/i);
-      if(!match) return;
-      var action=match[1].toLowerCase();
-      var title=label||action.charAt(0).toUpperCase()+action.slice(1);
-      var icon='';
-      if(action==='edit') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
-      if(action==='delete') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>';
-      if(action==='view') icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
-      btn.setAttribute('title',title);btn.setAttribute('aria-label',title);btn.classList.add('crm-icon-action');btn.innerHTML=icon+'<span class="crm-action-text">'+escapeHtml(title)+'</span>';
+      if (btn.closest && btn.closest('.crm-confirm-modal')) return;
+      if (btn.classList.contains('crm-icon-action')) return;
+      var label = String(btn.textContent || '').trim();
+      var match = label.match(/^(Edit|Delete|View)(?:\s|$)/i);
+      if (!match) return;
+      var action = match[1].toLowerCase();
+      var title = label || action.charAt(0).toUpperCase() + action.slice(1);
+      var icon = '';
+      if (action === 'edit') icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
+      if (action === 'delete') icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>';
+      if (action === 'view') icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+      btn.setAttribute('title', title); btn.setAttribute('aria-label', title); btn.classList.add('crm-icon-action'); btn.innerHTML = icon + '<span class="crm-action-text">' + escapeHtml(title) + '</span>';
     });
   }
-  function startCrudIconObserver(){
+  function startCrudIconObserver() {
     enhanceCrudActionButtons(document);
-    if(window.MutationObserver){
-      var target=document.querySelector('.crm-main')||document.body;
-      var observer=new MutationObserver(function(){enhanceCrudActionButtons(target);});
-      observer.observe(target,{childList:true,subtree:true});
+    if (window.MutationObserver) {
+      var target = document.querySelector('.crm-main') || document.body;
+      var observer = new MutationObserver(function () { enhanceCrudActionButtons(target); });
+      observer.observe(target, { childList: true, subtree: true });
     }
   }
 
-  function showView(view, restoring){
-    if(view!=='dashboard' && !can(view,'read')){
-      message('You do not have permission to view this section.','error');
+  function showView(view, restoring) {
+    if (view !== 'dashboard' && !can(view, 'read')) {
+      message('You do not have permission to view this section.', 'error');
       return;
     }
-    state.currentView=view;
+    state.currentView = view;
     if (!restoring) { var key = viewStorageKey(state.currentUserId); if (key) sessionStorage.setItem(key, view); }
-    document.querySelectorAll('.crm-view').forEach(function(el){el.classList.add('crm-hidden');});
-    var target=$('view-'+view); if(target)target.classList.remove('crm-hidden');
-    document.querySelectorAll('.crm-nav-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
-    var titles={dashboard:['Overview','Dashboard'],services:['Catalog','Services'],users:['Access control','Users & Access'],vouchers:['Catalog','Vouchers'],faqs:['Content','FAQs'],bookings:['Appointments','Bookings'],customers:['Customers','Customers'],'booking-config':['Booking','Booking Setup'],settings:['Configuration','Application Settings'],translations:['Content','Translation'],'contact-messages':['Website enquiries','Contact Us'],roles:['Access control','Roles & Permissions'],'chart-of-accounts':['Finance','Chart of Accounts'],'journal-entries':['Finance','Journal Entries'],'general-ledger':['Finance','General Ledger'],'trial-balance':['Finance','Trial Balance'],'financial-statements':['Finance','Financial Statements'],'statement-mapping':['Finance','Statement Mapping'],'accounting-periods':['Finance','Accounting Periods'],'audit-trail':['Finance / Control','Audit Trail'],'url-qr-codes':['Tools','URL QR Codes']};
-    var t=titles[view]||titles.dashboard;
-    var eyebrow=$('view-eyebrow');
-    var title=$('view-title');
-    if(eyebrow) eyebrow.textContent=t[0];
-    if(title) title.textContent=t[1];
-    if(view==='users') loadUsers().catch(function(e){message(e.message,'error');});
-    if(view==='roles') loadRoles().catch(function(e){message(e.message,'error');});
-    if(view==='chart-of-accounts') loadChartOfAccounts().catch(function(e){console.error('Chart of Accounts load failed:',e);message(e.message||'Could not load chart of accounts.','error');});
-    if(view==='financial-statements') loadFinancialReport().catch(function(e){console.error('Financial Statements load failed:',e);message(e.message||'Could not load financial statements.','error');});
-    if(view==='journal-entries') { loadFinanceAccounts().then(loadJournalEntries).catch(function(e){message(e.message||'Could not load journal entries.','error');}); }
-    if(view==='general-ledger') { loadFinanceAccounts().then(loadGeneralLedger).catch(function(e){message(e.message||'Could not load general ledger.','error');}); }
-    if(view==='trial-balance') { loadFinanceAccounts().then(loadTrialBalance).catch(function(e){message(e.message||'Could not load trial balance.','error');}); }
-    if(view==='statement-mapping') loadStatementMappings().catch(function(e){message(e.message||'Could not load statement mappings.','error');});
-    if(view==='accounting-periods') loadAccountingPeriods().catch(function(e){message(e.message||'Could not load accounting periods.','error');});
-    if(view==='audit-trail') loadAuditTrail().catch(function(e){message(e.message||'Could not load audit trail.','error');});
-    if(view==='url-qr-codes') loadUrlQrCodes().catch(function(e){message(e.message||'Could not load URL QR codes.','error');});
-    if(view==='settings') loadApplicationSettings().catch(function(e){message(e.message,'error');});
-    if(view==='vouchers') loadVouchers().catch(function(e){message(e.message,'error');});
-    if(view==='bookings') loadBookings().catch(function(e){message(e.message,'error');});
-    if(view==='dashboard') updateDashboard();
-    if(view==='customers') loadCustomers().catch(function(e){message(e.message,'error');});
-    if(view==='booking-config') loadBookingConfig().catch(function(e){message(e.message||'Could not load booking configuration.','error');});
-    if(view==='translations') loadTranslations().catch(function(e){message(e.message||'Could not load translations.','error');});
+    document.querySelectorAll('.crm-view').forEach(function (el) { el.classList.add('crm-hidden'); });
+    var target = $('view-' + view); if (target) target.classList.remove('crm-hidden');
+    document.querySelectorAll('.crm-nav-item').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    var titles = { dashboard: ['Overview', 'Dashboard'], services: ['Catalog', 'Services'], users: ['Access control', 'Users & Access'], vouchers: ['Catalog', 'Vouchers'], faqs: ['Content', 'FAQs'], bookings: ['Appointments', 'Bookings'], customers: ['Customers', 'Customers'], 'booking-config': ['Booking', 'Booking Setup'], settings: ['Configuration', 'Application Settings'], translations: ['Content', 'Translation'], 'contact-messages': ['Website enquiries', 'Contact Us'], roles: ['Access control', 'Roles & Permissions'], 'chart-of-accounts': ['Finance', 'Chart of Accounts'], 'journal-entries': ['Finance', 'Journal Entries'], 'general-ledger': ['Finance', 'General Ledger'], 'trial-balance': ['Finance', 'Trial Balance'], 'financial-statements': ['Finance', 'Financial Statements'], 'statement-mapping': ['Finance', 'Statement Mapping'], 'accounting-periods': ['Finance', 'Accounting Periods'], 'audit-trail': ['Finance / Control', 'Audit Trail'], 'url-qr-codes': ['Tools', 'URL QR Codes'] };
+    var t = titles[view] || titles.dashboard;
+    var eyebrow = $('view-eyebrow');
+    var title = $('view-title');
+    if (eyebrow) eyebrow.textContent = t[0];
+    if (title) title.textContent = t[1];
+    if (view === 'users') loadUsers().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'roles') loadRoles().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'chart-of-accounts') loadChartOfAccounts().catch(function (e) { console.error('Chart of Accounts load failed:', e); message(e.message || 'Could not load chart of accounts.', 'error'); });
+    if (view === 'financial-statements') loadFinancialReport().catch(function (e) { console.error('Financial Statements load failed:', e); message(e.message || 'Could not load financial statements.', 'error'); });
+    if (view === 'journal-entries') { loadFinanceAccounts().then(loadJournalEntries).catch(function (e) { message(e.message || 'Could not load journal entries.', 'error'); }); }
+    if (view === 'general-ledger') { loadFinanceAccounts().then(loadGeneralLedger).catch(function (e) { message(e.message || 'Could not load general ledger.', 'error'); }); }
+    if (view === 'trial-balance') { loadFinanceAccounts().then(loadTrialBalance).catch(function (e) { message(e.message || 'Could not load trial balance.', 'error'); }); }
+    if (view === 'statement-mapping') loadStatementMappings().catch(function (e) { message(e.message || 'Could not load statement mappings.', 'error'); });
+    if (view === 'accounting-periods') loadAccountingPeriods().catch(function (e) { message(e.message || 'Could not load accounting periods.', 'error'); });
+    if (view === 'audit-trail') loadAuditTrail().catch(function (e) { message(e.message || 'Could not load audit trail.', 'error'); });
+    if (view === 'url-qr-codes') loadUrlQrCodes().catch(function (e) { message(e.message || 'Could not load URL QR codes.', 'error'); });
+    if (view === 'settings') loadApplicationSettings().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'vouchers') loadVouchers().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'bookings') loadBookings().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'dashboard') updateDashboard();
+    if (view === 'customers') loadCustomers().catch(function (e) { message(e.message, 'error'); });
+    if (view === 'booking-config') loadBookingConfig().catch(function (e) { message(e.message || 'Could not load booking configuration.', 'error'); });
+    if (view === 'translations') loadTranslations().catch(function (e) { message(e.message || 'Could not load translations.', 'error'); });
     $('crm-sidebar').classList.remove('open');
   }
 
-  async function inviteUser(e){
-    e.preventDefault();clearMessage();
-    if(!can('users','create')){message('You do not have permission to invite CRM users.','error');return;}
-    var payload={email:$('user-email').value.trim(),full_name:$('user-name').value.trim(),role_id:Number($('user-role').value),redirect_to:CRM_INVITE_REDIRECT};
-    if(!payload.email||!payload.full_name){message('Please enter a name and email.','error');return;}
-    var button=e.submitter || $('user-form').querySelector('button[type="submit"]');
-    if(button){button.disabled=true;button.textContent='Sending…';}
-    try{
-      var result=await window.salonSupabase.functions.invoke('invite-crm-user',{body:payload});
-      if(result.error){
-        var detail=(result.data&&result.data.error)||result.error.message||'Could not send invitation.';
-        message(detail,'error');return;
+  async function inviteUser(e) {
+    e.preventDefault(); clearMessage();
+    if (!can('users', 'create')) { message('You do not have permission to invite CRM users.', 'error'); return; }
+    var payload = { email: $('user-email').value.trim(), full_name: $('user-name').value.trim(), role_id: Number($('user-role').value), redirect_to: CRM_INVITE_REDIRECT };
+    if (!payload.email || !payload.full_name) { message('Please enter a name and email.', 'error'); return; }
+    var button = e.submitter || $('user-form').querySelector('button[type="submit"]');
+    if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+    try {
+      var result = await window.salonSupabase.functions.invoke('invite-crm-user', { body: payload });
+      if (result.error) {
+        var detail = (result.data && result.data.error) || result.error.message || 'Could not send invitation.';
+        message(detail, 'error'); return;
       }
-      message('Invitation sent to '+payload.email+'.','success');$('user-form').reset();closeCrmFormCardModal('user-form-card');await loadUsers();
+      message('Invitation sent to ' + payload.email + '.', 'success'); $('user-form').reset(); closeCrmFormCardModal('user-form-card'); await loadUsers();
     } finally {
-      if(button){button.disabled=false;button.textContent='Send invitation';}
+      if (button) { button.disabled = false; button.textContent = 'Send invitation'; }
     }
   }
-  function editUser(id){
-    if(!can('users','update')) return;
-    var u=state.users.find(function(x){return String(x.user_id)===String(id);}); if(!u)return;
-    state.editingUserId=u.user_id; applyRoleVisibility();
-    $('edit-user-name').value=u.full_name||'';
-    $('edit-user-role').value=String(u.role_id || (state.roles.find(function(r){return String(r.name).toLowerCase()===String(u.role||'staff').toLowerCase();})||{}).id || '');
-    $('edit-user-active').checked=u.active!==false;
-    $('user-edit-email').textContent=u.email||'';
+  function editUser(id) {
+    if (!can('users', 'update')) return;
+    var u = state.users.find(function (x) { return String(x.user_id) === String(id); }); if (!u) return;
+    state.editingUserId = u.user_id; applyRoleVisibility();
+    $('edit-user-name').value = u.full_name || '';
+    $('edit-user-role').value = String(u.role_id || (state.roles.find(function (r) { return String(r.name).toLowerCase() === String(u.role || 'staff').toLowerCase(); }) || {}).id || '');
+    $('edit-user-active').checked = u.active !== false;
+    $('user-edit-email').textContent = u.email || '';
     openCrmFormCardModal('user-edit-card');
     closeCrmFormCardModal('user-form-card');
-    var tempCard=$('temporary-password-card');
-    if(tempCard) tempCard.classList.toggle('crm-hidden', !(state.currentRole === 'admin' && String(state.editingUserId)!==String(state.currentUserId)));
-    if($('temporary-password')) $('temporary-password').value='';
-    if($('temporary-password-confirm')) $('temporary-password-confirm').value='';
-    if($('temporary-password-message')) { $('temporary-password-message').textContent=''; $('temporary-password-message').className='crm-message'; }
+    var tempCard = $('temporary-password-card');
+    if (tempCard) tempCard.classList.toggle('crm-hidden', !(state.currentRole === 'admin' && String(state.editingUserId) !== String(state.currentUserId)));
+    if ($('temporary-password')) $('temporary-password').value = '';
+    if ($('temporary-password-confirm')) $('temporary-password-confirm').value = '';
+    if ($('temporary-password-message')) { $('temporary-password-message').textContent = ''; $('temporary-password-message').className = 'crm-message'; }
     $('edit-user-name').focus();
   }
-  function generateTemporaryPassword(){
-    var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
-    var values=new Uint32Array(14);
-    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(values);
-    else for(var i=0;i<values.length;i++) values[i]=Math.floor(Math.random()*chars.length);
-    var password='';
-    for(var j=0;j<values.length;j++) password+=chars[values[j]%chars.length];
-    $('temporary-password').value=password;
-    $('temporary-password-confirm').value=password;
-    $('temporary-password').type='text';
-    setTimeout(function(){if($('temporary-password')) $('temporary-password').type='password';},3000);
+  function generateTemporaryPassword() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    var values = new Uint32Array(14);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(values);
+    else for (var i = 0; i < values.length; i++) values[i] = Math.floor(Math.random() * chars.length);
+    var password = '';
+    for (var j = 0; j < values.length; j++) password += chars[values[j] % chars.length];
+    $('temporary-password').value = password;
+    $('temporary-password-confirm').value = password;
+    $('temporary-password').type = 'text';
+    setTimeout(function () { if ($('temporary-password')) $('temporary-password').type = 'password'; }, 3000);
   }
-  async function setTemporaryPassword(){
-    if(state.currentRole !== 'admin'){message('Only administrators can set temporary passwords.','error');return;}
-    if(!state.editingUserId || String(state.editingUserId)===String(state.currentUserId)){message('You cannot set a temporary password for your own account.','error');return;}
-    var password=$('temporary-password').value;
-    var confirm=$('temporary-password-confirm').value;
-    var msg=$('temporary-password-message');
-    if(password.length<8){if(msg){msg.textContent='Temporary password must be at least 8 characters.';msg.className='crm-message show error';}return;}
-    if(password!==confirm){if(msg){msg.textContent='The passwords do not match.';msg.className='crm-message show error';}return;}
-    var button=$('set-temporary-password');
-    if(button){button.disabled=true;button.textContent='Setting password…';}
-    try{
-      var result=await window.salonSupabase.functions.invoke('set-crm-temp-password',{body:{user_id:state.editingUserId,password:password}});
-      if(result.error){throw new Error((result.data&&result.data.error)||result.error.message||'Could not set temporary password.');}
-      if(msg){msg.textContent='Temporary password set. The user must change it before entering the CRM.';msg.className='crm-message show success';}
-      $('temporary-password').value='';$('temporary-password-confirm').value='';
+  async function setTemporaryPassword() {
+    if (state.currentRole !== 'admin') { message('Only administrators can set temporary passwords.', 'error'); return; }
+    if (!state.editingUserId || String(state.editingUserId) === String(state.currentUserId)) { message('You cannot set a temporary password for your own account.', 'error'); return; }
+    var password = $('temporary-password').value;
+    var confirm = $('temporary-password-confirm').value;
+    var msg = $('temporary-password-message');
+    if (password.length < 8) { if (msg) { msg.textContent = 'Temporary password must be at least 8 characters.'; msg.className = 'crm-message show error'; } return; }
+    if (password !== confirm) { if (msg) { msg.textContent = 'The passwords do not match.'; msg.className = 'crm-message show error'; } return; }
+    var button = $('set-temporary-password');
+    if (button) { button.disabled = true; button.textContent = 'Setting password…'; }
+    try {
+      var result = await window.salonSupabase.functions.invoke('set-crm-temp-password', { body: { user_id: state.editingUserId, password: password } });
+      if (result.error) { throw new Error((result.data && result.data.error) || result.error.message || 'Could not set temporary password.'); }
+      if (msg) { msg.textContent = 'Temporary password set. The user must change it before entering the CRM.'; msg.className = 'crm-message show success'; }
+      $('temporary-password').value = ''; $('temporary-password-confirm').value = '';
       await loadUsers();
-    }catch(err){
-      if(msg){msg.textContent=err.message||'Could not set temporary password.';msg.className='crm-message show error';}
-    }finally{
-      if(button){button.disabled=false;button.textContent='Set temporary password';}
+    } catch (err) {
+      if (msg) { msg.textContent = err.message || 'Could not set temporary password.'; msg.className = 'crm-message show error'; }
+    } finally {
+      if (button) { button.disabled = false; button.textContent = 'Set temporary password'; }
     }
   }
-    async function saveUser(e){
-    e.preventDefault();clearMessage();
-    if(!can('users','update') || !state.editingUserId) return;
-    if(String(state.editingUserId)===String(state.currentUserId) && !$('edit-user-active').checked){
-      message('You cannot deactivate your own administrator account.','error');return;
+  async function saveUser(e) {
+    e.preventDefault(); clearMessage();
+    if (!can('users', 'update') || !state.editingUserId) return;
+    if (String(state.editingUserId) === String(state.currentUserId) && !$('edit-user-active').checked) {
+      message('You cannot deactivate your own administrator account.', 'error'); return;
     }
-    var payload={full_name:$('edit-user-name').value.trim(),role_id:Number($('edit-user-role').value),active:$('edit-user-active').checked};
-    if(!payload.full_name){message('Please enter a display name.','error');return;}
-    var result=await window.salonSupabase.from('admin_users').update(payload).eq('user_id',state.editingUserId);
-    if(result.error){message(result.error.message,'error');return;}
-    message('User updated.','success');state.editingUserId=null;closeCrmFormCardModal('user-edit-card');await loadUsers();
+    var payload = { full_name: $('edit-user-name').value.trim(), role_id: Number($('edit-user-role').value), active: $('edit-user-active').checked };
+    if (!payload.full_name) { message('Please enter a display name.', 'error'); return; }
+    var result = await window.salonSupabase.from('admin_users').update(payload).eq('user_id', state.editingUserId);
+    if (result.error) { message(result.error.message, 'error'); return; }
+    message('User updated.', 'success'); state.editingUserId = null; closeCrmFormCardModal('user-edit-card'); await loadUsers();
   }
-  async function toggleUser(id){
-    if(!can('users','update')) return;
-    if(String(id)===String(state.currentUserId)){message('You cannot deactivate your own administrator account.','error');return;}
-    var u=state.users.find(function(x){return String(x.user_id)===String(id);});if(!u)return;
-    var next=u.active===false;
-    var result=await window.salonSupabase.from('admin_users').update({active:next}).eq('user_id',id);
-    if(result.error){message(result.error.message,'error');return;}
-    message(next?'User activated.':'User deactivated.','success');await loadUsers();
+  async function toggleUser(id) {
+    if (!can('users', 'update')) return;
+    if (String(id) === String(state.currentUserId)) { message('You cannot deactivate your own administrator account.', 'error'); return; }
+    var u = state.users.find(function (x) { return String(x.user_id) === String(id); }); if (!u) return;
+    var next = u.active === false;
+    var result = await window.salonSupabase.from('admin_users').update({ active: next }).eq('user_id', id);
+    if (result.error) { message(result.error.message, 'error'); return; }
+    message(next ? 'User activated.' : 'User deactivated.', 'success'); await loadUsers();
   }
 
-  async function resetUserPassword(id){
-    if(!can('users','update')){message('You do not have permission to reset CRM user passwords.','error');return;}
-    if(String(id)===String(state.currentUserId)){message('Use the normal forgot-password flow to reset your own password.','error');return;}
-    var u=state.users.find(function(x){return String(x.user_id)===String(id);}); if(!u)return;
-    if(u.active===false){message('Activate the CRM user before sending a password reset.','error');return;}
-    if(!window.confirm('Send a password reset email to '+(u.email||'this user')+'?'))return;
-    try{
-      var redirectTo=window.location.origin+window.location.pathname;
-      var result=await window.salonSupabase.functions.invoke('reset-crm-user-password',{body:{user_id:id,redirect_to:redirectTo}});
-      if(result.error)throw new Error((result.data&&result.data.error)||result.error.message||'Could not send password reset email.');
-      if(!result.data||result.data.ok!==true)throw new Error((result.data&&result.data.error)||'Could not send password reset email.');
-      message('Password reset email sent to '+(u.email||'the user')+'.','success');
-    }catch(err){console.error('Could not send CRM password reset:',err);message(err.message||'Could not send password reset email.','error');}
+  async function resetUserPassword(id) {
+    if (!can('users', 'update')) { message('You do not have permission to reset CRM user passwords.', 'error'); return; }
+    if (String(id) === String(state.currentUserId)) { message('Use the normal forgot-password flow to reset your own password.', 'error'); return; }
+    var u = state.users.find(function (x) { return String(x.user_id) === String(id); }); if (!u) return;
+    if (u.active === false) { message('Activate the CRM user before sending a password reset.', 'error'); return; }
+    if (!window.confirm('Send a password reset email to ' + (u.email || 'this user') + '?')) return;
+    try {
+      var redirectTo = window.location.origin + window.location.pathname;
+      var result = await window.salonSupabase.functions.invoke('reset-crm-user-password', { body: { user_id: id, redirect_to: redirectTo } });
+      if (result.error) throw new Error((result.data && result.data.error) || result.error.message || 'Could not send password reset email.');
+      if (!result.data || result.data.ok !== true) throw new Error((result.data && result.data.error) || 'Could not send password reset email.');
+      message('Password reset email sent to ' + (u.email || 'the user') + '.', 'success');
+    } catch (err) { console.error('Could not send CRM password reset:', err); message(err.message || 'Could not send password reset email.', 'error'); }
   }
-  async function deleteUser(id){
-    if(!can('users','delete')){
-      message('You do not have permission to delete CRM users.','error');
+  async function deleteUser(id) {
+    if (!can('users', 'delete')) {
+      message('You do not have permission to delete CRM users.', 'error');
       return;
     }
-    if(String(id)===String(state.currentUserId)){
-      message('You cannot delete your own CRM account.','error');
+    if (String(id) === String(state.currentUserId)) {
+      message('You cannot delete your own CRM account.', 'error');
       return;
     }
 
-    var u=state.users.find(function(x){return String(x.user_id)===String(id);});
-    if(!u) return;
+    var u = state.users.find(function (x) { return String(x.user_id) === String(id); });
+    if (!u) return;
 
-    var displayName=u.full_name || u.email || 'this user';
-    var confirmed=await crmConfirm('Delete CRM user',
-      'Delete "'+displayName+'" permanently? This permanently removes the user account and CRM access.'
+    var displayName = u.full_name || u.email || 'this user';
+    var confirmed = await crmConfirm('Delete CRM user',
+      'Delete "' + displayName + '" permanently? This permanently removes the user account and CRM access.'
     );
-    if(!confirmed) return;
+    if (!confirmed) return;
 
-    try{
-      var result=await window.salonSupabase.functions.invoke('delete-crm-user',{
-        body:{user_id:id}
+    try {
+      var result = await window.salonSupabase.functions.invoke('delete-crm-user', {
+        body: { user_id: id }
       });
 
-      if(result.error){
+      if (result.error) {
         throw new Error(
           (result.data && result.data.error) ||
           result.error.message ||
@@ -4573,36 +5091,36 @@
         );
       }
 
-      if(!result.data || result.data.ok!==true){
+      if (!result.data || result.data.ok !== true) {
         throw new Error(
           (result.data && result.data.error) ||
           'Could not delete the CRM user.'
         );
       }
 
-      state.editingUserId=null;
-      var editCard=$('user-edit-card');
-      if(editCard) editCard.classList.add('crm-hidden');
+      state.editingUserId = null;
+      var editCard = $('user-edit-card');
+      if (editCard) editCard.classList.add('crm-hidden');
 
-      message('CRM user deleted successfully.','success');
+      message('CRM user deleted successfully.', 'success');
       await loadUsers();
-    }catch(err){
-      console.error('Could not delete CRM user:',err);
-      message(err.message || 'Could not delete the CRM user.','error');
+    } catch (err) {
+      console.error('Could not delete CRM user:', err);
+      message(err.message || 'Could not delete the CRM user.', 'error');
     }
   }
-  function isInviteSetup(){
-    return new URLSearchParams(window.location.search).get('invite')==='1';
+  function isInviteSetup() {
+    return new URLSearchParams(window.location.search).get('invite') === '1';
   }
-  function isPasswordRecovery(){
-    return new URLSearchParams(window.location.search).get('recovery')==='1';
+  function isPasswordRecovery() {
+    return new URLSearchParams(window.location.search).get('recovery') === '1';
   }
 
   // Supabase can receive an invitation while another CRM user is already
   // signed in in the same browser.  The invitation must take ownership of
   // the browser session before we allow password setup; otherwise the old
   // user's session can be mistaken for the invited user's session.
-  function getInviteArtifact(){
+  function getInviteArtifact() {
     var params = new URLSearchParams(window.location.search);
     var hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
     return {
@@ -4615,97 +5133,97 @@
     };
   }
 
-  function decodeJwtPayload(token){
-    try{
-      var part=String(token||'').split('.')[1];
-      if(!part) return null;
-      var base64=part.replace(/-/g,'+').replace(/_/g,'/');
-      while(base64.length%4) base64+='=';
+  function decodeJwtPayload(token) {
+    try {
+      var part = String(token || '').split('.')[1];
+      if (!part) return null;
+      var base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
       return JSON.parse(atob(base64));
-    }catch(_){ return null; }
+    } catch (_) { return null; }
   }
 
-  function inviteMarkerKey(){
+  function inviteMarkerKey() {
     return 'salon_crm_invite_user_id';
   }
 
-  function getInviteMarker(){
-    try{return sessionStorage.getItem(inviteMarkerKey())||'';}catch(_){return '';}
+  function getInviteMarker() {
+    try { return sessionStorage.getItem(inviteMarkerKey()) || ''; } catch (_) { return ''; }
   }
 
-  function setInviteMarker(userId){
-    try{sessionStorage.setItem(inviteMarkerKey(),String(userId||''));}catch(_){}
+  function setInviteMarker(userId) {
+    try { sessionStorage.setItem(inviteMarkerKey(), String(userId || '')); } catch (_) { }
   }
 
-  function clearInviteMarker(){
-    try{sessionStorage.removeItem(inviteMarkerKey());}catch(_){}
+  function clearInviteMarker() {
+    try { sessionStorage.removeItem(inviteMarkerKey()); } catch (_) { }
   }
 
-  async function waitForAuthSession(timeoutMs){
-    var deadline=Date.now()+(timeoutMs||5000);
-    var last=null;
-    while(Date.now()<deadline){
-      try{
-        var result=await window.salonSupabase.auth.getSession();
-        last=result&&result.data?result.data.session:null;
-        if(last) return last;
-      }catch(_){}
-      await new Promise(function(resolve){setTimeout(resolve,100);});
+  async function waitForAuthSession(timeoutMs) {
+    var deadline = Date.now() + (timeoutMs || 5000);
+    var last = null;
+    while (Date.now() < deadline) {
+      try {
+        var result = await window.salonSupabase.auth.getSession();
+        last = result && result.data ? result.data.session : null;
+        if (last) return last;
+      } catch (_) { }
+      await new Promise(function (resolve) { setTimeout(resolve, 100); });
     }
     return last;
   }
 
-  async function establishInviteSession(){
-    var artifact=getInviteArtifact();
-    var existing=(await window.salonSupabase.auth.getSession()).data.session;
+  async function establishInviteSession() {
+    var artifact = getInviteArtifact();
+    var existing = (await window.salonSupabase.auth.getSession()).data.session;
 
     // If this is a real invitation artifact, do not let a previously logged-in
     // CRM account win the race.  Explicitly sign it out before applying the
     // invitation token/code.
-    if(artifact.hasAuthArtifact){
+    if (artifact.hasAuthArtifact) {
       // createClient() may already have consumed the invite URL by the time
       // this function runs. Reuse that session when it is demonstrably the
       // invitation session instead of signing it out and trying to exchange a
       // one-time PKCE code a second time.
-      if(existing && artifact.accessToken){
-        var existingPayload=decodeJwtPayload(artifact.accessToken);
-        if(!existingPayload || !existingPayload.sub || String(existingPayload.sub)===String(existing.user.id)){
+      if (existing && artifact.accessToken) {
+        var existingPayload = decodeJwtPayload(artifact.accessToken);
+        if (!existingPayload || !existingPayload.sub || String(existingPayload.sub) === String(existing.user.id)) {
           setInviteMarker(existing.user.id);
           return existing;
         }
       }
-      if(existing && artifact.code){
+      if (existing && artifact.code) {
         // A PKCE invitation code is one-time-use. If Supabase has already
         // exchanged it, getSession() is the authoritative result.
         setInviteMarker(existing.user.id);
         return existing;
       }
 
-      if(existing) {
-        try{ await window.salonSupabase.auth.signOut({scope:'local'}); }catch(_){}
+      if (existing) {
+        try { await window.salonSupabase.auth.signOut({ scope: 'local' }); } catch (_) { }
       }
 
-      if(artifact.accessToken && artifact.refreshToken){
-        var setResult=await window.salonSupabase.auth.setSession({
-          access_token:artifact.accessToken,
-          refresh_token:artifact.refreshToken
+      if (artifact.accessToken && artifact.refreshToken) {
+        var setResult = await window.salonSupabase.auth.setSession({
+          access_token: artifact.accessToken,
+          refresh_token: artifact.refreshToken
         });
-        if(setResult.error) throw setResult.error;
-      } else if(artifact.code){
-        var exchangeResult=await window.salonSupabase.auth.exchangeCodeForSession(artifact.code);
-        if(exchangeResult.error) throw exchangeResult.error;
+        if (setResult.error) throw setResult.error;
+      } else if (artifact.code) {
+        var exchangeResult = await window.salonSupabase.auth.exchangeCodeForSession(artifact.code);
+        if (exchangeResult.error) throw exchangeResult.error;
       }
 
-      var invitedSession=await waitForAuthSession(5000);
-      if(!invitedSession) throw new Error('This invitation could not be activated. Please open the latest invitation email again.');
+      var invitedSession = await waitForAuthSession(5000);
+      if (!invitedSession) throw new Error('This invitation could not be activated. Please open the latest invitation email again.');
 
       // If an implicit-flow access token is available, verify the session is
       // the user encoded in that token. This prevents an old browser session
       // from ever reaching the password form.
-      if(artifact.accessToken){
-        var payload=decodeJwtPayload(artifact.accessToken);
-        if(payload && payload.sub && String(payload.sub)!==String(invitedSession.user.id)){
-          await window.salonSupabase.auth.signOut({scope:'local'});
+      if (artifact.accessToken) {
+        var payload = decodeJwtPayload(artifact.accessToken);
+        if (payload && payload.sub && String(payload.sub) !== String(invitedSession.user.id)) {
+          await window.salonSupabase.auth.signOut({ scope: 'local' });
           throw new Error('The invitation session could not be verified. Please open the latest invitation email again.');
         }
       }
@@ -4716,16 +5234,16 @@
 
     // On refresh after Supabase has consumed the invite URL, the marker tells
     // us which authenticated user is allowed to remain on the password form.
-    var marker=getInviteMarker();
-    if(!marker) return null;
-    var session=await waitForAuthSession(2500);
-    if(!session || String(session.user.id)!==String(marker)){
+    var marker = getInviteMarker();
+    if (!marker) return null;
+    var session = await waitForAuthSession(2500);
+    if (!session || String(session.user.id) !== String(marker)) {
       clearInviteMarker();
       return null;
     }
     return session;
   }
-  function showPasswordSetup(mode){
+  function showPasswordSetup(mode) {
     passwordSetupMode = mode || 'invite';
     $('crm-login').classList.add('crm-hidden');
     $('crm-app').classList.add('crm-hidden');
@@ -4748,84 +5266,84 @@
     }
     $('setup-password').focus();
   }
-  function passwordSetupMessage(text,type){
+  function passwordSetupMessage(text, type) {
     message(text, type || 'success');
   }
-  async function finishPasswordSetup(e){
+  async function finishPasswordSetup(e) {
     e.preventDefault();
-    var password=$('setup-password').value, confirm=$('setup-password-confirm').value;
-    if(password.length<8){passwordSetupMessage('Password must be at least 8 characters.','error');return;}
-    if(password!==confirm){passwordSetupMessage('The passwords do not match.','error');return;}
-    var button=e.submitter;
-    if(button){button.disabled=true;button.textContent='Saving…';}
-    try{
+    var password = $('setup-password').value, confirm = $('setup-password-confirm').value;
+    if (password.length < 8) { passwordSetupMessage('Password must be at least 8 characters.', 'error'); return; }
+    if (password !== confirm) { passwordSetupMessage('The passwords do not match.', 'error'); return; }
+    var button = e.submitter;
+    if (button) { button.disabled = true; button.textContent = 'Saving…'; }
+    try {
       if (passwordSetupMode === 'invite') {
-        var setupSessionResult=await window.salonSupabase.auth.getSession();
-        var setupSession=setupSessionResult.data&&setupSessionResult.data.session;
-        var invitedUserId=getInviteMarker();
-        if(!setupSession || !invitedUserId || String(setupSession.user.id)!==String(invitedUserId)){
-          passwordSetupMessage('Your invitation session is no longer active. Please open the latest invitation email again.','error');
+        var setupSessionResult = await window.salonSupabase.auth.getSession();
+        var setupSession = setupSessionResult.data && setupSessionResult.data.session;
+        var invitedUserId = getInviteMarker();
+        if (!setupSession || !invitedUserId || String(setupSession.user.id) !== String(invitedUserId)) {
+          passwordSetupMessage('Your invitation session is no longer active. Please open the latest invitation email again.', 'error');
           return;
         }
       }
       var result;
       if (passwordSetupMode === 'forced') {
-        result = await window.salonSupabase.functions.invoke('complete-crm-password-change', {body:{password:password}});
-        if(result.error){
-          var detail=(result.data&&result.data.error)||result.error.message||'Could not change the password.';
-          passwordSetupMessage(detail,'error');return;
+        result = await window.salonSupabase.functions.invoke('complete-crm-password-change', { body: { password: password } });
+        if (result.error) {
+          var detail = (result.data && result.data.error) || result.error.message || 'Could not change the password.';
+          passwordSetupMessage(detail, 'error'); return;
         }
-        state.mustChangePassword=false;
+        state.mustChangePassword = false;
       } else {
-        result=await window.salonSupabase.auth.updateUser({password:password});
-        if(result.error){passwordSetupMessage(result.error.message,'error');return;}
+        result = await window.salonSupabase.auth.updateUser({ password: password });
+        if (result.error) { passwordSetupMessage(result.error.message, 'error'); return; }
       }
       clearInviteMarker();
-      history.replaceState({},document.title,window.location.pathname);
-      if (window.location.hash) history.replaceState({},document.title,window.location.pathname);
+      history.replaceState({}, document.title, window.location.pathname);
+      if (window.location.hash) history.replaceState({}, document.title, window.location.pathname);
       $('crm-password-setup').classList.add('crm-hidden');
-      if(!(await requireAdmin())){await window.salonSupabase.auth.signOut();showLogin();message('This account is not authorized for the salon CRM.','error');return;}
-      var sessionNow=await window.salonSupabase.auth.getSession();
-      state.currentUserId=sessionNow.data.session&&sessionNow.data.session.user?sessionNow.data.session.user.id:state.currentUserId;
+      if (!(await requireAdmin())) { await window.salonSupabase.auth.signOut(); showLogin(); message('This account is not authorized for the salon CRM.', 'error'); return; }
+      var sessionNow = await window.salonSupabase.auth.getSession();
+      state.currentUserId = sessionNow.data.session && sessionNow.data.session.user ? sessionNow.data.session.user.id : state.currentUserId;
       showApp();
-      $('current-user-email').textContent=(sessionNow.data.session&&sessionNow.data.session.user&&sessionNow.data.session.user.email)||'CRM user';
+      $('current-user-email').textContent = (sessionNow.data.session && sessionNow.data.session.user && sessionNow.data.session.user.email) || 'CRM user';
       await loadAccess();
       await loadRoles();
       await loadData();
       await loadUsers();
-      if(can('settings','read')) await loadApplicationSettings();
-      if(can('faqs','read')) await loadFaqs();
-      if(can('bookings','read')) await loadBookings();
-    if(can('contact-messages','read')) await loadContactMessages();
-      message(passwordSetupMode === 'forced' ? 'Password changed successfully. Welcome back to the salon CRM.' : 'Password created. Welcome to the salon CRM.','success');
+      if (can('settings', 'read')) await loadApplicationSettings();
+      if (can('faqs', 'read')) await loadFaqs();
+      if (can('bookings', 'read')) await loadBookings();
+      if (can('contact-messages', 'read')) await loadContactMessages();
+      message(passwordSetupMode === 'forced' ? 'Password changed successfully. Welcome back to the salon CRM.' : 'Password created. Welcome to the salon CRM.', 'success');
     } finally {
-      if(button){button.disabled=false;button.textContent='Create password →';}
+      if (button) { button.disabled = false; button.textContent = 'Create password →'; }
     }
   }
   function clearCrmSessionState() {
-    state.customers=[]; state.categories=[]; state.services=[]; state.vouchers=[]; state.users=[]; state.roles=[]; state.permissions=[]; state.access={}; state.rolePermissions=[]; state.bookings=[]; state.faqs=[]; state.translations=[]; state.contactMessages=[]; state.auditTrail=[]; state.contactMessageSearch=''; state.contactMessageStatusFilter='all'; state.currentRole=null; state.currentUserId=null; state.currentView='dashboard'; state.mustChangePassword=false;
-    document.querySelectorAll('.crm-view').forEach(function(el){ el.classList.add('crm-hidden'); });
-    var dashboard=$('view-dashboard'); if(dashboard) dashboard.classList.remove('crm-hidden');
-    document.querySelectorAll('.crm-nav-item').forEach(function(el){ el.classList.remove('active'); });
-    var dashNav=document.querySelector('.crm-nav-item[data-view="dashboard"]'); if(dashNav) dashNav.classList.add('active');
+    state.customers = []; state.categories = []; state.services = []; state.vouchers = []; state.users = []; state.roles = []; state.permissions = []; state.access = {}; state.rolePermissions = []; state.bookings = []; state.faqs = []; state.translations = []; state.contactMessages = []; state.auditTrail = []; state.contactMessageSearch = ''; state.contactMessageStatusFilter = 'all'; state.currentRole = null; state.currentUserId = null; state.currentView = 'dashboard'; state.mustChangePassword = false;
+    document.querySelectorAll('.crm-view').forEach(function (el) { el.classList.add('crm-hidden'); });
+    var dashboard = $('view-dashboard'); if (dashboard) dashboard.classList.remove('crm-hidden');
+    document.querySelectorAll('.crm-nav-item').forEach(function (el) { el.classList.remove('active'); });
+    var dashNav = document.querySelector('.crm-nav-item[data-view="dashboard"]'); if (dashNav) dashNav.classList.add('active');
   }
-  function showLogin(){ clearCrmSessionState(); $('crm-login').classList.remove('crm-hidden'); $('crm-app').classList.add('crm-hidden'); $('crm-password-setup').classList.add('crm-hidden'); }
-  async function signOut(){
-    var oldUserId=state.currentUserId;
-    if(oldUserId) sessionStorage.removeItem(viewStorageKey(oldUserId));
-    try { await window.salonSupabase.auth.signOut({scope:'global'}); } finally { window.location.replace(window.location.pathname); }
+  function showLogin() { clearCrmSessionState(); $('crm-login').classList.remove('crm-hidden'); $('crm-app').classList.add('crm-hidden'); $('crm-password-setup').classList.add('crm-hidden'); }
+  async function signOut() {
+    var oldUserId = state.currentUserId;
+    if (oldUserId) sessionStorage.removeItem(viewStorageKey(oldUserId));
+    try { await window.salonSupabase.auth.signOut({ scope: 'global' }); } finally { window.location.replace(window.location.pathname); }
   }
-  async function login(e){
-    e.preventDefault();clearMessage();
+  async function login(e) {
+    e.preventDefault(); clearMessage();
     clearInviteMarker();
-    var result=await window.salonSupabase.auth.signInWithPassword({email:$('login-email').value.trim(),password:$('login-password').value});
-    if(result.error){message(result.error.message,'error');return;}
+    var result = await window.salonSupabase.auth.signInWithPassword({ email: $('login-email').value.trim(), password: $('login-password').value });
+    if (result.error) { message(result.error.message, 'error'); return; }
 
     // Authentication succeeded. Now load the authorization record through the
     // security-definer access RPC. This also gives us must_change_password.
     // Never sign the user out merely because a direct crm_roles SELECT is
     // blocked by RLS.
-    state.currentUserId=result.data.user.id;
+    state.currentUserId = result.data.user.id;
     try {
       await loadAccess();
     } catch (err) {
@@ -4834,51 +5352,51 @@
       return;
     }
 
-    if(!state.currentRole){
+    if (!state.currentRole) {
       await window.salonSupabase.auth.signOut();
-      message('This account is not authorized to access the salon CRM.','error');
+      message('This account is not authorized to access the salon CRM.', 'error');
       return;
     }
 
-    if(state.mustChangePassword){ showPasswordSetup('forced'); return; }
-    $('current-user-email').textContent=result.data.user.email||'CRM user';
+    if (state.mustChangePassword) { showPasswordSetup('forced'); return; }
+    $('current-user-email').textContent = result.data.user.email || 'CRM user';
     await loadRoles();
     await loadData();
     await loadUsers();
-    if(can('settings','read')) await loadApplicationSettings();
-    if(can('faqs','read')) await loadFaqs();
-    if(can('bookings','read')) await loadBookings();
-    if(can('contact-messages','read')) await loadContactMessages();
+    if (can('settings', 'read')) await loadApplicationSettings();
+    if (can('faqs', 'read')) await loadFaqs();
+    if (can('bookings', 'read')) await loadBookings();
+    if (can('contact-messages', 'read')) await loadContactMessages();
     // Restore the user's last authorized view before the app becomes visible.
     restoreLastView();
     showApp();
   }
-  function applyRoleVisibility(){
+  function applyRoleVisibility() {
     // Navigation visibility is permission-based, but content visibility is
     // view-state-based. Do not unhide every permitted view when refreshing
     // permissions or opening an editor. Only the active view is displayed.
-    document.querySelectorAll('.crm-nav-item[data-view]').forEach(function(el){
-      var view=el.getAttribute('data-view');
-      var allowed = view === 'dashboard' || can(view,'read');
+    document.querySelectorAll('.crm-nav-item[data-view]').forEach(function (el) {
+      var view = el.getAttribute('data-view');
+      var allowed = view === 'dashboard' || can(view, 'read');
       el.classList.toggle('crm-hidden', !allowed);
       if (!allowed && view === state.currentView) state.currentView = 'dashboard';
     });
-    document.querySelectorAll('.crm-view[id^="view-"]').forEach(function(el){
-      var view=el.id.replace(/^view-/,'');
-      var allowed = view === 'dashboard' || can(view,'read');
+    document.querySelectorAll('.crm-view[id^="view-"]').forEach(function (el) {
+      var view = el.id.replace(/^view-/, '');
+      var allowed = view === 'dashboard' || can(view, 'read');
       var active = view === state.currentView;
       el.classList.toggle('crm-hidden', !(allowed && active));
     });
-    var actionMap={
-      'new-category-top':['services','create'],'new-service-top':['services','create'],'new-voucher-top':['vouchers','create'],'new-faq-top':['faqs','create'],
-      'invite-user-btn':['users','create'],'new-role-top':['roles','create'],
-      'service-save':['services',state.editingServiceId?'update':'create'],'category-save':['services',state.editingCategoryId?'update':'create'],
-      'voucher-save':['vouchers',state.editingVoucherId?'update':'create'],'faq-save':['faqs',state.editingFaqId?'update':'create'],
-      'role-save':['roles',state.editingRoleId?'update':'create'],'application-settings-save':['settings','update'],'journal-entry-save':['journal-entries','create'],'journal-entry-post':['journal-entries','post'],'statement-map-add':['statement-mapping','create'],'period-add':['accounting-periods','create'],'url-qr-add':['url-qr-codes','create'],'url-qr-save':['url-qr-codes','create']
+    var actionMap = {
+      'new-category-top': ['services', 'create'], 'new-service-top': ['services', 'create'], 'new-voucher-top': ['vouchers', 'create'], 'new-faq-top': ['faqs', 'create'],
+      'invite-user-btn': ['users', 'create'], 'new-role-top': ['roles', 'create'],
+      'service-save': ['services', state.editingServiceId ? 'update' : 'create'], 'category-save': ['services', state.editingCategoryId ? 'update' : 'create'],
+      'voucher-save': ['vouchers', state.editingVoucherId ? 'update' : 'create'], 'faq-save': ['faqs', state.editingFaqId ? 'update' : 'create'],
+      'role-save': ['roles', state.editingRoleId ? 'update' : 'create'], 'application-settings-save': ['settings', 'update'], 'journal-entry-save': ['journal-entries', 'create'], 'journal-entry-post': ['journal-entries', 'post'], 'statement-map-add': ['statement-mapping', 'create'], 'period-add': ['accounting-periods', 'create'], 'url-qr-add': ['url-qr-codes', 'create'], 'url-qr-save': ['url-qr-codes', 'create']
     };
-    Object.keys(actionMap).forEach(function(id){var el=$(id),rule=actionMap[id];if(el)el.disabled=!can(rule[0],rule[1]);});
+    Object.keys(actionMap).forEach(function (id) { var el = $(id), rule = actionMap[id]; if (el) el.disabled = !can(rule[0], rule[1]); });
   }
-  function convertCrmFormCardsToModals(){
+  function convertCrmFormCardsToModals() {
     var selectors = [
       '[id$="-form-card"]',
       '[id$="-edit-card"]',
@@ -4887,41 +5405,41 @@
       '#customer-detail-card'
     ];
     var nodes = document.querySelectorAll(selectors.join(','));
-    nodes.forEach(function(card){
-      if(!card || card.dataset.crmModalized==='1') return;
-      if(card.id==='category-form-modal' || card.id==='service-form-modal' || card.id==='booking-detail-modal') return;
-      card.dataset.crmModalized='1';
+    nodes.forEach(function (card) {
+      if (!card || card.dataset.crmModalized === '1') return;
+      if (card.id === 'category-form-modal' || card.id === 'service-form-modal' || card.id === 'booking-detail-modal') return;
+      card.dataset.crmModalized = '1';
       card.classList.add('crm-form-card-modal');
-      card.setAttribute('role','dialog');
-      card.setAttribute('aria-modal','true');
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-modal', 'true');
       card.setAttribute('aria-hidden', card.classList.contains('crm-hidden') ? 'true' : 'false');
       var heading = card.querySelector('h1,h2,h3');
-      if(heading) card.setAttribute('aria-labelledby', heading.id || (heading.id = card.id+'-title'));
+      if (heading) card.setAttribute('aria-labelledby', heading.id || (heading.id = card.id + '-title'));
 
       // Put every modal's actual content inside the same white panel. This prevents
       // individual forms/cards from inheriting transparent backgrounds and keeps
       // Add, Edit and View dialogs visually identical to the Service popup.
       var panel = document.createElement('div');
-      panel.className='crm-form-card-modal-panel';
-      while(card.firstChild) panel.appendChild(card.firstChild);
+      panel.className = 'crm-form-card-modal-panel';
+      while (card.firstChild) panel.appendChild(card.firstChild);
 
       var close = document.createElement('button');
-      close.type='button';
-      close.className='crm-form-card-modal-close';
-      close.setAttribute('aria-label','Close');
-      close.title='Close';
-      close.innerHTML='×';
-      close.addEventListener('click',function(){
+      close.type = 'button';
+      close.className = 'crm-form-card-modal-close';
+      close.setAttribute('aria-label', 'Close');
+      close.title = 'Close';
+      close.innerHTML = '×';
+      close.addEventListener('click', function () {
         card.classList.add('crm-hidden');
-        card.setAttribute('aria-hidden','true');
+        card.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('crm-form-modal-open');
       });
 
       var backdrop = document.createElement('div');
-      backdrop.className='crm-form-card-modal-backdrop';
-      backdrop.addEventListener('click',function(){
+      backdrop.className = 'crm-form-card-modal-backdrop';
+      backdrop.addEventListener('click', function () {
         card.classList.add('crm-hidden');
-        card.setAttribute('aria-hidden','true');
+        card.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('crm-form-modal-open');
       });
 
@@ -4930,252 +5448,253 @@
       // Customer View intentionally has no visible Close button. It can still be
       // dismissed through the backdrop or Escape, while Add/Edit popups keep their
       // normal in-panel Close button.
-      if(card.id !== 'customer-detail-card') panel.appendChild(close);
+      if (card.id !== 'customer-detail-card') panel.appendChild(close);
       document.body.appendChild(card);
     });
   }
 
-  function openCrmFormCardModal(id){
-    var card=$(id); if(!card) return;
+  function openCrmFormCardModal(id) {
+    var card = $(id); if (!card) return;
     card.classList.remove('crm-hidden');
-    card.setAttribute('aria-hidden','false');
+    card.setAttribute('aria-hidden', 'false');
     document.body.classList.add('crm-form-modal-open');
-    var focusable=card.querySelector('input:not([type=hidden]),select,textarea,button:not(.crm-form-card-modal-close)');
-    if(focusable) setTimeout(function(){try{focusable.focus();}catch(e){}},30);
+    var focusable = card.querySelector('input:not([type=hidden]),select,textarea,button:not(.crm-form-card-modal-close)');
+    if (focusable) setTimeout(function () { try { focusable.focus(); } catch (e) { } }, 30);
   }
 
-  function closeCrmFormCardModal(id){
-    var card=$(id); if(!card) return;
+  function closeCrmFormCardModal(id) {
+    var card = $(id); if (!card) return;
     card.classList.add('crm-hidden');
-    card.setAttribute('aria-hidden','true');
+    card.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('crm-form-modal-open');
   }
 
-  function showApp(){$('crm-login').classList.add('crm-hidden');$('crm-app').classList.remove('crm-hidden');applyRoleVisibility();}
+  function showApp() { $('crm-login').classList.add('crm-hidden'); $('crm-app').classList.remove('crm-hidden'); applyRoleVisibility(); }
 
-  document.addEventListener('DOMContentLoaded',async function(){
+  document.addEventListener('DOMContentLoaded', async function () {
     convertCrmFormCardsToModals();
 
-    $('login-form').addEventListener('submit',login);$('faq-form').addEventListener('submit',saveFaq);$('faq-cancel').addEventListener('click',resetFaqForm);$('new-faq-top').addEventListener('click',startFaqCreate);$('faqs-refresh').addEventListener('click',function(){loadFaqs().catch(function(e){message(e.message,'error');});});$('faq-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-faq]');if(edit)editFaq(edit.getAttribute('data-edit-faq'));var del=e.target.closest('[data-delete-faq]');if(del)deleteFaq(del.getAttribute('data-delete-faq'));});$('service-form').addEventListener('submit',saveService);$('category-form').addEventListener('submit',saveCategory);if($('new-category-top'))$('new-category-top').addEventListener('click',function(){openCategoryForm();});if($('new-service-top'))$('new-service-top').addEventListener('click',function(){openServiceForm();});document.querySelectorAll('[data-services-tab]').forEach(function(btn){btn.addEventListener('click',function(){setServicesTab(btn.getAttribute('data-services-tab'));});});document.querySelectorAll('[data-booking-config-tab]').forEach(function(btn){btn.addEventListener('click',function(){setBookingConfigTab(btn.getAttribute('data-booking-config-tab'));});});document.querySelectorAll('[data-settings-tab]').forEach(function(btn){btn.addEventListener('click',function(){setSettingsTab(btn.getAttribute('data-settings-tab'));});});setBookingConfigTab('settings');setSettingsTab('language-currency');document.querySelectorAll('[data-close-category-form]').forEach(function(el){el.addEventListener('click',closeCategoryForm);});document.querySelectorAll('[data-close-service-form]').forEach(function(el){el.addEventListener('click',closeServiceForm);});$('customer-form').addEventListener('submit',saveCustomer);$('customer-search').addEventListener('input',renderCustomers);if($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change',function(e){state.customerLoyaltyFilter=e.target.value;renderCustomers();});$('customer-phone').addEventListener('input',function(){var v=this.value.replace(/[^0-9+]/g,'');if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');this.value=v;});$('customer-cancel').addEventListener('click',cancelCustomerEdit);document.querySelectorAll('[data-close-customer-detail]').forEach(function(el){el.addEventListener('click',closeCustomerDetails);});$('customer-loyalty-rewards').addEventListener('click',function(e){var btn=e.target.closest('.crm-reward-btn');if(!btn||btn.disabled)return;var cost=Number(btn.getAttribute('data-reward-points'));var label=btn.getAttribute('data-reward-label')||'Reward';if(!window.confirm('Redeem '+cost+' points for '+label+'?'))return;changeCustomerLoyalty(-cost,'Redeemed '+label,'reward_redeemed');});$('add-loyalty-reward').addEventListener('click',function(){var container=$('loyalty-reward-settings-list');if(!container)return;var row=document.createElement('div');row.className='crm-loyalty-reward-setting-row';row.setAttribute('data-loyalty-reward-row','');row.innerHTML='<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>';container.appendChild(row);row.querySelector('[data-loyalty-reward-points]').focus();});$('loyalty-reward-settings-list').addEventListener('click',function(e){var btn=e.target.closest('[data-remove-loyalty-reward]');if(!btn)return;btn.closest('[data-loyalty-reward-row]').remove();});$('customer-loyalty-adjust-form').addEventListener('submit',function(e){e.preventDefault();var pts=Number($('customer-loyalty-adjust-points').value);var note=$('customer-loyalty-adjust-note').value.trim();if(!Number.isInteger(pts)||pts===0){message('Enter a non-zero whole number of points.','error');return;}if(!note){message('Enter a reason for the adjustment.','error');return;}changeCustomerLoyalty(pts,note,'manual_adjustment').then(function(){$('customer-loyalty-adjust-form').reset();});});$('application-settings-form').addEventListener('submit',saveApplicationSettings);$('add-currency-option').addEventListener('click',addCurrencyOption);$('upload-main-page-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('main_page_nav_logo_image','main-page-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-main-page-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('main_page_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-other-pages-nav-logo-image').addEventListener('click',function(){uploadBrandingImage('other_pages_nav_logo_image','other-pages-nav-logo-image-file').catch(function(e){message(e.message,'error');});});$('delete-other-pages-nav-logo-image').addEventListener('click',function(){deleteBrandingImage('other_pages_nav_logo_image').catch(function(e){message(e.message,'error');});});$('upload-banner-image').addEventListener('click',function(){uploadBrandingImage('banner_image','banner-image-file').catch(function(e){message(e.message,'error');});});$('delete-banner-image').addEventListener('click',function(){deleteBrandingImage('banner_image').catch(function(e){message(e.message,'error');});});$('upload-favicon-image').addEventListener('click',function(){uploadBrandingImage('favicon_image','favicon-image-file',2).catch(function(e){message(e.message,'error');});});$('delete-favicon-image').addEventListener('click',function(){deleteBrandingImage('favicon_image').catch(function(e){message(e.message,'error');});});
-    function updateFooterLogoDimensionsPreview(){
-      var preview=$('footer-logo-image-preview');
-      if(!preview || preview.hidden) return;
-      var widthInput=$('footer-logo-image-width');
-      var heightInput=$('footer-logo-image-height');
-      if(widthInput && widthInput.value.trim()) preview.style.width=widthInput.value.trim();
-      if(heightInput && heightInput.value.trim()) preview.style.height=heightInput.value.trim();
+    $('login-form').addEventListener('submit', login); $('faq-form').addEventListener('submit', saveFaq); $('faq-cancel').addEventListener('click', resetFaqForm); $('new-faq-top').addEventListener('click', startFaqCreate); $('faqs-refresh').addEventListener('click', function () { loadFaqs().catch(function (e) { message(e.message, 'error'); }); }); $('faq-table-body').addEventListener('click', function (e) { var edit = e.target.closest('[data-edit-faq]'); if (edit) editFaq(edit.getAttribute('data-edit-faq')); var del = e.target.closest('[data-delete-faq]'); if (del) deleteFaq(del.getAttribute('data-delete-faq')); }); $('service-form').addEventListener('submit', saveService); $('category-form').addEventListener('submit', saveCategory); if ($('new-category-top')) $('new-category-top').addEventListener('click', function () { openCategoryForm(); }); if ($('new-service-top')) $('new-service-top').addEventListener('click', function () { openServiceForm(); }); document.querySelectorAll('[data-services-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setServicesTab(btn.getAttribute('data-services-tab')); }); }); document.querySelectorAll('[data-booking-config-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setBookingConfigTab(btn.getAttribute('data-booking-config-tab')); }); }); document.querySelectorAll('[data-settings-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setSettingsTab(btn.getAttribute('data-settings-tab')); }); }); setBookingConfigTab('settings'); setSettingsTab('language-currency'); document.querySelectorAll('[data-close-category-form]').forEach(function (el) { el.addEventListener('click', closeCategoryForm); }); document.querySelectorAll('[data-close-service-form]').forEach(function (el) { el.addEventListener('click', closeServiceForm); }); $('customer-form').addEventListener('submit', saveCustomer); $('customer-search').addEventListener('input', renderCustomers); if ($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change', function (e) { state.customerLoyaltyFilter = e.target.value; renderCustomers(); }); $('customer-phone').addEventListener('input', function () { var v = this.value.replace(/[^0-9+]/g, ''); if (v.indexOf('+') > 0) v = '+' + v.replace(/\+/g, ''); if (v.charAt(0) !== '+') v = v.replace(/\+/g, ''); this.value = v; }); $('customer-cancel').addEventListener('click', cancelCustomerEdit); document.querySelectorAll('[data-close-customer-detail]').forEach(function (el) { el.addEventListener('click', closeCustomerDetails); }); $('customer-loyalty-rewards').addEventListener('click', function (e) { var btn = e.target.closest('.crm-reward-btn'); if (!btn || btn.disabled) return; var cost = Number(btn.getAttribute('data-reward-points')); var label = btn.getAttribute('data-reward-label') || 'Reward'; if (!window.confirm('Redeem ' + cost + ' points for ' + label + '?')) return; changeCustomerLoyalty(-cost, 'Redeemed ' + label, 'reward_redeemed'); }); $('add-loyalty-reward').addEventListener('click', function () { var container = $('loyalty-reward-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-loyalty-reward-setting-row'; row.setAttribute('data-loyalty-reward-row', ''); row.innerHTML = '<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>'; container.appendChild(row); row.querySelector('[data-loyalty-reward-points]').focus(); }); $('loyalty-reward-settings-list').addEventListener('click', async function (e) { var btn = e.target.closest('[data-remove-loyalty-reward]'); if (!btn) return; var row = btn.closest('[data-loyalty-reward-row]'); if (!row) return; var label = row.querySelector('[data-loyalty-reward-label]'); var name = label ? label.value.trim() : 'this reward'; var ok = await crmConfirm('Delete reward', 'Are you sure you want to delete ' + (name || 'this reward') + '?'); if (ok) row.remove(); }); $('add-loyalty-tier').addEventListener('click', function () { var container = $('loyalty-tier-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-loyalty-tier-setting-row'; row.setAttribute('data-loyalty-tier-row', ''); row.innerHTML = '<div class="crm-field"><label>Tier name</label><input type="text" maxlength="80" data-loyalty-tier-name placeholder="New tier"></div><div class="crm-field"><label>Minimum lifetime points</label><input type="number" min="0" step="1" data-loyalty-tier-min placeholder="0"></div><div class="crm-field"><label>Sort order</label><input type="number" min="0" step="1" data-loyalty-tier-sort value="0" placeholder="1"></div><div class="crm-field crm-loyalty-tier-active"><label>Active</label><label class="crm-toggle"><input type="checkbox" data-loyalty-tier-active checked><span></span></label></div><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-loyalty-tier aria-label="Delete tier" title="Delete tier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>'; container.appendChild(row); row.querySelector('[data-loyalty-tier-name]').focus(); }); $('loyalty-tier-settings-list').addEventListener('click', async function (e) { var btn = e.target.closest('[data-remove-loyalty-tier]'); if (!btn) return; var row = btn.closest('[data-loyalty-tier-row]'); if (!row) return; var name = row.querySelector('[data-loyalty-tier-name]'); var tierName = name ? name.value.trim() : 'this loyalty tier'; var ok = await crmConfirm('Delete loyalty tier', 'Are you sure you want to delete ' + (tierName || 'this loyalty tier') + '?'); if (ok) row.remove(); }); $('customer-loyalty-adjust-form').addEventListener('submit', function (e) { e.preventDefault(); var pts = Number($('customer-loyalty-adjust-points').value); var note = $('customer-loyalty-adjust-note').value.trim(); if (!Number.isInteger(pts) || pts === 0) { message('Enter a non-zero whole number of points.', 'error'); return; } if (!note) { message('Enter a reason for the adjustment.', 'error'); return; } changeCustomerLoyalty(pts, note, 'manual_adjustment').then(function () { $('customer-loyalty-adjust-form').reset(); }); }); $('application-settings-form').addEventListener('submit', saveApplicationSettings); if ($('add-language-option')) $('add-language-option').addEventListener('click', addLanguageOption); $('add-currency-option').addEventListener('click', addCurrencyOption); if ($('add-social-media')) $('add-social-media').addEventListener('click', function () { var container = $('social-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-social-row'; row.setAttribute('data-social-row-id', ''); row.innerHTML = '<div class="crm-social-channel"><div class="crm-social-icon-preview" aria-hidden="true"><span>+</span></div><div class="crm-social-name"><input type="text" data-social-platform-new maxlength="60" placeholder="Platform name"><input type="text" data-social-slug-new maxlength="60" placeholder="slug"></div></div><div class="crm-field crm-social-field-url"><input type="url" data-social-url-id="" placeholder="https://..."></div><div class="crm-field"><input type="number" min="0" step="1" data-social-sort-id="" value="0" placeholder="1"></div><div class="crm-social-status"><label class="crm-toggle"><input type="checkbox" data-social-active-id="" checked><span></span></label></div><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-social-id="" aria-label="Delete social media" title="Delete social media"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>'; container.appendChild(row); bindSocialRowEvents(); row.querySelector('[data-social-url-id]').focus(); }); $('upload-application-logo-image').addEventListener('click', function () { uploadBrandingImage('logo_image', 'application-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-application-logo-image').addEventListener('click', function () { deleteBrandingImage('logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-main-page-nav-logo-image').addEventListener('click', function () { uploadBrandingImage('main_page_nav_logo_image', 'main-page-nav-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-main-page-nav-logo-image').addEventListener('click', function () { deleteBrandingImage('main_page_nav_logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-other-pages-nav-logo-image').addEventListener('click', function () { uploadBrandingImage('other_pages_nav_logo_image', 'other-pages-nav-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-other-pages-nav-logo-image').addEventListener('click', function () { deleteBrandingImage('other_pages_nav_logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-banner-image').addEventListener('click', function () { uploadBrandingImage('banner_image', 'banner-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-banner-image').addEventListener('click', function () { deleteBrandingImage('banner_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-favicon-image').addEventListener('click', function () { uploadBrandingImage('favicon_image', 'favicon-image-file', 2).catch(function (e) { message(e.message, 'error'); }); }); $('delete-favicon-image').addEventListener('click', function () { deleteBrandingImage('favicon_image').catch(function (e) { message(e.message, 'error'); }); });
+    function updateFooterLogoDimensionsPreview() {
+      var preview = $('footer-logo-image-preview');
+      if (!preview || preview.hidden) return;
+      var widthInput = $('footer-logo-image-width');
+      var heightInput = $('footer-logo-image-height');
+      if (widthInput && widthInput.value.trim()) preview.style.width = widthInput.value.trim();
+      if (heightInput && heightInput.value.trim()) preview.style.height = heightInput.value.trim();
     }
     function updateImageDimensionsPreview(widthId, heightId, previewId) {
-      var preview=$(previewId);
-      if(!preview || preview.hidden) return;
-      var widthInput=$(widthId), heightInput=$(heightId);
-      if(widthInput && widthInput.value.trim()) preview.style.setProperty('width', widthInput.value.trim(), '');
-      if(heightInput && heightInput.value.trim()) preview.style.setProperty('height', heightInput.value.trim(), '');
+      var preview = $(previewId);
+      if (!preview || preview.hidden) return;
+      var widthInput = $(widthId), heightInput = $(heightId);
+      if (widthInput && widthInput.value.trim()) preview.style.setProperty('width', widthInput.value.trim(), '');
+      if (heightInput && heightInput.value.trim()) preview.style.setProperty('height', heightInput.value.trim(), '');
     }
     function bindImageDimensionInputs(widthId, heightId, previewId, saveFn) {
-      [widthId,heightId].forEach(function(id){
-        var input=$(id);
-        if(!input) return;
-        input.addEventListener('input',function(){ updateImageDimensionsPreview(widthId,heightId,previewId); });
-        input.addEventListener('change',function(){ saveFn(); });
-        input.addEventListener('blur',function(){ saveFn(); });
+      [widthId, heightId].forEach(function (id) {
+        var input = $(id);
+        if (!input) return;
+        input.addEventListener('input', function () { updateImageDimensionsPreview(widthId, heightId, previewId); });
+        input.addEventListener('change', function () { saveFn(); });
+        input.addEventListener('blur', function () { saveFn(); });
       });
     }
-    bindImageDimensionInputs('main-page-nav-logo-image-width','main-page-nav-logo-image-height','main-page-nav-logo-image-preview',saveMainPageNavLogoDimensions);
-    bindImageDimensionInputs('other-pages-nav-logo-image-width','other-pages-nav-logo-image-height','other-pages-nav-logo-image-preview',saveOtherPagesNavLogoDimensions);
-    bindImageDimensionInputs('footer-logo-image-width','footer-logo-image-height','footer-logo-image-preview',saveFooterLogoDimensions);
-    WEBSITE_IMAGE_SLOTS.forEach(function(slot){
+    bindImageDimensionInputs('application-logo-image-width', 'application-logo-image-height', 'application-logo-image-preview', saveApplicationLogoDimensions);
+    bindImageDimensionInputs('main-page-nav-logo-image-width', 'main-page-nav-logo-image-height', 'main-page-nav-logo-image-preview', saveMainPageNavLogoDimensions);
+    bindImageDimensionInputs('other-pages-nav-logo-image-width', 'other-pages-nav-logo-image-height', 'other-pages-nav-logo-image-preview', saveOtherPagesNavLogoDimensions);
+    bindImageDimensionInputs('footer-logo-image-width', 'footer-logo-image-height', 'footer-logo-image-preview', saveFooterLogoDimensions);
+    WEBSITE_IMAGE_SLOTS.forEach(function (slot) {
       var uploadButton = $(slot.uploadId);
-      if (uploadButton) uploadButton.addEventListener('click',function(){uploadWebsiteImage(slot).catch(function(e){message(e.message,'error');});});
+      if (uploadButton) uploadButton.addEventListener('click', function () { uploadWebsiteImage(slot).catch(function (e) { message(e.message, 'error'); }); });
     });
-    $('user-form').addEventListener('submit',inviteUser);$('user-cancel').addEventListener('click',function(){closeCrmFormCardModal('user-form-card');});
-    $('user-edit-form').addEventListener('submit',saveUser);
-    if($('user-search')) $('user-search').addEventListener('input',function(e){state.userSearch=e.target.value;renderUsers();});
-    if($('user-role-filter')) $('user-role-filter').addEventListener('change',function(e){state.userRoleFilter=e.target.value;renderUsers();});
-    if($('user-status-filter')) $('user-status-filter').addEventListener('change',function(e){state.userStatusFilter=e.target.value;renderUsers();});
-    if($('role-search')) $('role-search').addEventListener('input',function(e){state.roleSearch=e.target.value;renderRoles();});
-    if($('role-type-filter')) $('role-type-filter').addEventListener('change',function(e){state.roleTypeFilter=e.target.value;renderRoles();});$('user-edit-cancel').addEventListener('click',function(){closeCrmFormCardModal('user-edit-card');state.editingUserId=null;});
-    var tempGenerate=$('generate-temporary-password'); if(tempGenerate) tempGenerate.addEventListener('click',generateTemporaryPassword); var tempSet=$('set-temporary-password'); if(tempSet) tempSet.addEventListener('click',setTemporaryPassword);
-    var roleForm=$('role-form'); if(roleForm) roleForm.addEventListener('submit',saveRole); var roleCancel=$('role-cancel'); if(roleCancel) roleCancel.addEventListener('click',function(){closeCrmFormCardModal('role-form-card');state.editingRoleId=null;}); var newRoleTop=$('new-role-top'); if(newRoleTop) newRoleTop.addEventListener('click',startRoleCreate); var rolesTableBody=$('roles-table-body'); if(rolesTableBody) rolesTableBody.addEventListener('click',function(e){var edit=e.target.closest('[data-edit-role]');if(edit)editRole(edit.getAttribute('data-edit-role'));var del=e.target.closest('[data-delete-role]');if(del)deleteRole(del.getAttribute('data-delete-role'));}); var roleSelectAll=$('role-select-all'); if(roleSelectAll) roleSelectAll.addEventListener('change',function(e){document.querySelectorAll('[data-role-permission]').forEach(function(c){c.checked=e.target.checked;});});
-    $('password-setup-form').addEventListener('submit',finishPasswordSetup);
-    $('invite-user-btn').addEventListener('click',function(){openCrmFormCardModal('user-form-card');$('user-name').focus();});
-    $('service-reset').addEventListener('click',closeServiceForm);$('category-reset').addEventListener('click',closeCategoryForm);
-    $('category-image-file').addEventListener('change',function(){
-      var file=this.files&&this.files[0];
-      if(!file){ renderCategoryImagePreview(''); return; }
-      if(!/^image\//i.test(file.type)){ message('Please choose an image file.','error'); this.value=''; renderCategoryImagePreview(''); return; }
-      var previewUrl=URL.createObjectURL(file);
+    $('user-form').addEventListener('submit', inviteUser); $('user-cancel').addEventListener('click', function () { closeCrmFormCardModal('user-form-card'); });
+    $('user-edit-form').addEventListener('submit', saveUser);
+    if ($('user-search')) $('user-search').addEventListener('input', function (e) { state.userSearch = e.target.value; renderUsers(); });
+    if ($('user-role-filter')) $('user-role-filter').addEventListener('change', function (e) { state.userRoleFilter = e.target.value; renderUsers(); });
+    if ($('user-status-filter')) $('user-status-filter').addEventListener('change', function (e) { state.userStatusFilter = e.target.value; renderUsers(); });
+    if ($('role-search')) $('role-search').addEventListener('input', function (e) { state.roleSearch = e.target.value; renderRoles(); });
+    if ($('role-type-filter')) $('role-type-filter').addEventListener('change', function (e) { state.roleTypeFilter = e.target.value; renderRoles(); }); $('user-edit-cancel').addEventListener('click', function () { closeCrmFormCardModal('user-edit-card'); state.editingUserId = null; });
+    var tempGenerate = $('generate-temporary-password'); if (tempGenerate) tempGenerate.addEventListener('click', generateTemporaryPassword); var tempSet = $('set-temporary-password'); if (tempSet) tempSet.addEventListener('click', setTemporaryPassword);
+    var roleForm = $('role-form'); if (roleForm) roleForm.addEventListener('submit', saveRole); var roleCancel = $('role-cancel'); if (roleCancel) roleCancel.addEventListener('click', function () { closeCrmFormCardModal('role-form-card'); state.editingRoleId = null; }); var newRoleTop = $('new-role-top'); if (newRoleTop) newRoleTop.addEventListener('click', startRoleCreate); var rolesTableBody = $('roles-table-body'); if (rolesTableBody) rolesTableBody.addEventListener('click', function (e) { var edit = e.target.closest('[data-edit-role]'); if (edit) editRole(edit.getAttribute('data-edit-role')); var del = e.target.closest('[data-delete-role]'); if (del) deleteRole(del.getAttribute('data-delete-role')); }); var roleSelectAll = $('role-select-all'); if (roleSelectAll) roleSelectAll.addEventListener('change', function (e) { document.querySelectorAll('[data-role-permission]').forEach(function (c) { c.checked = e.target.checked; }); });
+    $('password-setup-form').addEventListener('submit', finishPasswordSetup);
+    $('invite-user-btn').addEventListener('click', function () { openCrmFormCardModal('user-form-card'); $('user-name').focus(); });
+    $('service-reset').addEventListener('click', closeServiceForm); $('category-reset').addEventListener('click', closeCategoryForm);
+    $('category-image-file').addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      if (!file) { renderCategoryImagePreview(''); return; }
+      if (!/^image\//i.test(file.type)) { message('Please choose an image file.', 'error'); this.value = ''; renderCategoryImagePreview(''); return; }
+      var previewUrl = URL.createObjectURL(file);
       renderCategoryImagePreview(previewUrl);
     });
-    $('logout').addEventListener('click',signOut);
-    document.querySelectorAll('.crm-nav-item').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view'));});});
-    if($('category-search')) $('category-search').addEventListener('input',renderCategories);
-    if($('category-status-filter')) $('category-status-filter').addEventListener('change',renderCategories);
-    if($('service-search')) $('service-search').addEventListener('input',renderServices);
-    if($('service-category-filter')) $('service-category-filter').addEventListener('change',renderServices);
-    if($('service-status-filter')) $('service-status-filter').addEventListener('change',renderServices);
-    if($('service-category')) $('service-category').addEventListener('change',generateServiceSku);
-    if($('voucher-search')) $('voucher-search').addEventListener('input',renderVouchers);
-    if($('voucher-status-filter')) $('voucher-status-filter').addEventListener('change',renderVouchers);
+    $('logout').addEventListener('click', signOut);
+    document.querySelectorAll('.crm-nav-item').forEach(function (b) { b.addEventListener('click', function () { showView(b.getAttribute('data-view')); }); });
+    if ($('category-search')) $('category-search').addEventListener('input', renderCategories);
+    if ($('category-status-filter')) $('category-status-filter').addEventListener('change', renderCategories);
+    if ($('service-search')) $('service-search').addEventListener('input', renderServices);
+    if ($('service-category-filter')) $('service-category-filter').addEventListener('change', renderServices);
+    if ($('service-status-filter')) $('service-status-filter').addEventListener('change', renderServices);
+    if ($('service-category')) $('service-category').addEventListener('change', generateServiceSku);
+    if ($('voucher-search')) $('voucher-search').addEventListener('input', renderVouchers);
+    if ($('voucher-status-filter')) $('voucher-status-filter').addEventListener('change', renderVouchers);
 
-    document.querySelectorAll('[data-view-target]').forEach(function(b){b.addEventListener('click',function(){showView(b.getAttribute('data-view-target'));});});
-    document.querySelectorAll('[data-booking-filter]').forEach(function(b){b.addEventListener('click',function(){var filter=b.getAttribute('data-booking-filter')||'all';state.bookingFilter=filter;if($('booking-status-filter'))$('booking-status-filter').value=filter;showView('bookings');renderBookings();});});
-    function setCrmMobileMenu(open){
-      var sidebar=$('crm-sidebar'),backdrop=$('crm-sidebar-backdrop');
-      if(sidebar) sidebar.classList.toggle('open',!!open);
-      if(backdrop) backdrop.classList.toggle('open',!!open);
-      document.body.classList.toggle('crm-menu-open',!!open);
-      if($('mobile-menu')) $('mobile-menu').setAttribute('aria-expanded',open?'true':'false');
+    document.querySelectorAll('[data-view-target]').forEach(function (b) { b.addEventListener('click', function () { showView(b.getAttribute('data-view-target')); }); });
+    document.querySelectorAll('[data-booking-filter]').forEach(function (b) { b.addEventListener('click', function () { var filter = b.getAttribute('data-booking-filter') || 'all'; state.bookingFilter = filter; if ($('booking-status-filter')) $('booking-status-filter').value = filter; showView('bookings'); renderBookings(); }); });
+    function setCrmMobileMenu(open) {
+      var sidebar = $('crm-sidebar'), backdrop = $('crm-sidebar-backdrop');
+      if (sidebar) sidebar.classList.toggle('open', !!open);
+      if (backdrop) backdrop.classList.toggle('open', !!open);
+      document.body.classList.toggle('crm-menu-open', !!open);
+      if ($('mobile-menu')) $('mobile-menu').setAttribute('aria-expanded', open ? 'true' : 'false');
     }
-    function setCrmSidebarCollapsed(collapsed){
-      var sidebar=$('crm-sidebar'), toggle=$('crm-sidebar-toggle');
-      if(!sidebar)return;
-      sidebar.classList.toggle('collapsed',!!collapsed);
-      document.body.classList.toggle('crm-sidebar-collapsed',!!collapsed);
-      if(toggle){toggle.setAttribute('aria-expanded',collapsed?'false':'true');toggle.setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');toggle.title=collapsed?'Expand sidebar':'Collapse sidebar';toggle.innerHTML=collapsed?'<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m10 6 6 6-6 6\"/></svg>':'<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m14 6-6 6 6 6\"/></svg>';}
-      try{localStorage.setItem('jas_crm_sidebar_collapsed',collapsed?'1':'0');}catch(e){}
+    function setCrmSidebarCollapsed(collapsed) {
+      var sidebar = $('crm-sidebar'), toggle = $('crm-sidebar-toggle');
+      if (!sidebar) return;
+      sidebar.classList.toggle('collapsed', !!collapsed);
+      document.body.classList.toggle('crm-sidebar-collapsed', !!collapsed);
+      if (toggle) { toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar'); toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar'; toggle.innerHTML = collapsed ? '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m10 6 6 6-6 6\"/></svg>' : '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m14 6-6 6 6 6\"/></svg>'; }
+      try { localStorage.setItem('jas_crm_sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) { }
     }
-    var sidebarCollapsed=false;try{sidebarCollapsed=localStorage.getItem('jas_crm_sidebar_collapsed')==='1';}catch(e){}
+    var sidebarCollapsed = false; try { sidebarCollapsed = localStorage.getItem('jas_crm_sidebar_collapsed') === '1'; } catch (e) { }
     setCrmSidebarCollapsed(sidebarCollapsed);
-    $('mobile-menu').addEventListener('click',function(){setCrmMobileMenu(!$('crm-sidebar').classList.contains('open'));});
-    if($('crm-sidebar-toggle')) $('crm-sidebar-toggle').addEventListener('click',function(){if(window.innerWidth<=760){setCrmMobileMenu(!$('crm-sidebar').classList.contains('open'));}else{setCrmSidebarCollapsed(!$('crm-sidebar').classList.contains('collapsed'));}});
-    if($('crm-sidebar-backdrop')) $('crm-sidebar-backdrop').addEventListener('click',function(){setCrmMobileMenu(false);});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){setCrmMobileMenu(false);if($('category-form-modal')&&!$('category-form-modal').classList.contains('crm-hidden'))closeCategoryForm();if($('service-form-modal')&&!$('service-form-modal').classList.contains('crm-hidden'))closeServiceForm();document.querySelectorAll('.crm-form-card-modal:not(.crm-hidden)').forEach(function(card){card.classList.add('crm-hidden');card.setAttribute('aria-hidden','true');});document.body.classList.remove('crm-form-modal-open');}});
-    document.querySelectorAll('.crm-nav-item,.crm-nav-link').forEach(function(item){item.addEventListener('click',function(){if(window.innerWidth<=760) setCrmMobileMenu(false);});});
-    $('bookings-refresh').addEventListener('click',function(){loadBookings().catch(function(e){message(e.message,'error');});});
-    if($('chart-account-search')) $('chart-account-search').addEventListener('input',function(e){state.chartAccountSearch=e.target.value;renderChartOfAccounts();});
-    if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});
-    if($('chart-type-filter')) $('chart-type-filter').addEventListener('change',function(e){state.chartTypeFilter=e.target.value;renderChartOfAccounts();});
-    if($('chart-account-add')) $('chart-account-add').addEventListener('click',function(){openChartAccountForm(null);});
-    if($('chart-account-cancel-2')) $('chart-account-cancel-2').addEventListener('click',resetChartAccountForm);
-    if($('chart-account-form')) $('chart-account-form').addEventListener('submit',saveChartAccount);
-    if($('chart-of-accounts-table-body')) $('chart-of-accounts-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-chart-account]'); if(edit){openChartAccountForm(edit.getAttribute('data-edit-chart-account'));return;} var del=e.target.closest('[data-delete-chart-account]'); if(del) deleteChartAccount(del.getAttribute('data-delete-chart-account'));});
-    if($('financial-statement-search')) $('financial-statement-search').addEventListener('input',function(e){state.financialStatementSearch=e.target.value;renderFinancialStatements();});
-    if($('financial-statement-filter')) $('financial-statement-filter').addEventListener('change',function(e){state.financialStatementFilter=e.target.value;renderFinancialStatements();});
-    if($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change',function(e){state.chartStatementFilter=e.target.value;renderChartOfAccounts();});
-    if($('chart-type-filter')) $('chart-type-filter').addEventListener('change',function(e){state.chartTypeFilter=e.target.value;renderChartOfAccounts();});
-    if($('contact-messages-refresh')) $('contact-messages-refresh').addEventListener('click',function(){loadContactMessages().catch(function(e){message(e.message,'error');});});
-    if($('contact-message-search')) $('contact-message-search').addEventListener('input',function(e){state.contactMessageSearch=e.target.value;renderContactMessages();});
-    if($('contact-message-status-filter')) $('contact-message-status-filter').addEventListener('change',function(e){state.contactMessageStatusFilter=e.target.value;renderContactMessages();});
-    if($('contact-messages-table-body')) $('contact-messages-table-body').addEventListener('click',function(e){
-      var button=e.target.closest('[data-contact-status]');
-      if(button) updateContactMessageStatus(button.getAttribute('data-contact-status'), button.getAttribute('data-contact-id'));
-      var del=e.target.closest('[data-delete-contact]');
-      if(del) deleteContactMessage(del.getAttribute('data-delete-contact'));
+    $('mobile-menu').addEventListener('click', function () { setCrmMobileMenu(!$('crm-sidebar').classList.contains('open')); });
+    if ($('crm-sidebar-toggle')) $('crm-sidebar-toggle').addEventListener('click', function () { if (window.innerWidth <= 760) { setCrmMobileMenu(!$('crm-sidebar').classList.contains('open')); } else { setCrmSidebarCollapsed(!$('crm-sidebar').classList.contains('collapsed')); } });
+    if ($('crm-sidebar-backdrop')) $('crm-sidebar-backdrop').addEventListener('click', function () { setCrmMobileMenu(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setCrmMobileMenu(false); if ($('category-form-modal') && !$('category-form-modal').classList.contains('crm-hidden')) closeCategoryForm(); if ($('service-form-modal') && !$('service-form-modal').classList.contains('crm-hidden')) closeServiceForm(); document.querySelectorAll('.crm-form-card-modal:not(.crm-hidden)').forEach(function (card) { card.classList.add('crm-hidden'); card.setAttribute('aria-hidden', 'true'); }); document.body.classList.remove('crm-form-modal-open'); } });
+    document.querySelectorAll('.crm-nav-item,.crm-nav-link').forEach(function (item) { item.addEventListener('click', function () { if (window.innerWidth <= 760) setCrmMobileMenu(false); }); });
+    $('bookings-refresh').addEventListener('click', function () { loadBookings().catch(function (e) { message(e.message, 'error'); }); });
+    if ($('chart-account-search')) $('chart-account-search').addEventListener('input', function (e) { state.chartAccountSearch = e.target.value; renderChartOfAccounts(); });
+    if ($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change', function (e) { state.chartStatementFilter = e.target.value; renderChartOfAccounts(); });
+    if ($('chart-type-filter')) $('chart-type-filter').addEventListener('change', function (e) { state.chartTypeFilter = e.target.value; renderChartOfAccounts(); });
+    if ($('chart-account-add')) $('chart-account-add').addEventListener('click', function () { openChartAccountForm(null); });
+    if ($('chart-account-cancel-2')) $('chart-account-cancel-2').addEventListener('click', resetChartAccountForm);
+    if ($('chart-account-form')) $('chart-account-form').addEventListener('submit', saveChartAccount);
+    if ($('chart-of-accounts-table-body')) $('chart-of-accounts-table-body').addEventListener('click', function (e) { var edit = e.target.closest('[data-edit-chart-account]'); if (edit) { openChartAccountForm(edit.getAttribute('data-edit-chart-account')); return; } var del = e.target.closest('[data-delete-chart-account]'); if (del) deleteChartAccount(del.getAttribute('data-delete-chart-account')); });
+    if ($('financial-statement-search')) $('financial-statement-search').addEventListener('input', function (e) { state.financialStatementSearch = e.target.value; renderFinancialStatements(); });
+    if ($('financial-statement-filter')) $('financial-statement-filter').addEventListener('change', function (e) { state.financialStatementFilter = e.target.value; renderFinancialStatements(); });
+    if ($('chart-statement-filter')) $('chart-statement-filter').addEventListener('change', function (e) { state.chartStatementFilter = e.target.value; renderChartOfAccounts(); });
+    if ($('chart-type-filter')) $('chart-type-filter').addEventListener('change', function (e) { state.chartTypeFilter = e.target.value; renderChartOfAccounts(); });
+    if ($('contact-messages-refresh')) $('contact-messages-refresh').addEventListener('click', function () { loadContactMessages().catch(function (e) { message(e.message, 'error'); }); });
+    if ($('contact-message-search')) $('contact-message-search').addEventListener('input', function (e) { state.contactMessageSearch = e.target.value; renderContactMessages(); });
+    if ($('contact-message-status-filter')) $('contact-message-status-filter').addEventListener('change', function (e) { state.contactMessageStatusFilter = e.target.value; renderContactMessages(); });
+    if ($('contact-messages-table-body')) $('contact-messages-table-body').addEventListener('click', function (e) {
+      var button = e.target.closest('[data-contact-status]');
+      if (button) updateContactMessageStatus(button.getAttribute('data-contact-status'), button.getAttribute('data-contact-id'));
+      var del = e.target.closest('[data-delete-contact]');
+      if (del) deleteContactMessage(del.getAttribute('data-delete-contact'));
     });
-    $('booking-search').addEventListener('input',function(e){state.bookingSearch=e.target.value;renderBookings();});
-    $('booking-date-filter').addEventListener('change',function(e){state.bookingDateFilter=e.target.value;renderBookings();});
-    if($('booking-status-filter')) $('booking-status-filter').addEventListener('change',function(e){state.bookingFilter=e.target.value;renderBookings();});
-    if($('booking-type-filter')) $('booking-type-filter').addEventListener('change',function(e){state.bookingTypeFilter=e.target.value;renderBookings();});
+    $('booking-search').addEventListener('input', function (e) { state.bookingSearch = e.target.value; renderBookings(); });
+    $('booking-date-filter').addEventListener('change', function (e) { state.bookingDateFilter = e.target.value; renderBookings(); });
+    if ($('booking-status-filter')) $('booking-status-filter').addEventListener('change', function (e) { state.bookingFilter = e.target.value; renderBookings(); });
+    if ($('booking-type-filter')) $('booking-type-filter').addEventListener('change', function (e) { state.bookingTypeFilter = e.target.value; renderBookings(); });
 
-    $('bookings-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-view-booking]');if(b)renderBookingDetail(b.getAttribute('data-view-booking'));});
-    document.querySelectorAll('[data-close-booking]').forEach(function(el){el.addEventListener('click',closeBookingDetail);});
-    $('booking-detail-content').addEventListener('click',function(e){
-      var statusButton=e.target.closest('[data-booking-status]');
-      if(statusButton) updateBookingStatus(statusButton.getAttribute('data-booking-id'),statusButton.getAttribute('data-booking-status'));
-      var saveButton=e.target.closest('[data-save-booking-appointment]');
-      if(saveButton) { saveBookingAppointment(saveButton.getAttribute('data-save-booking-appointment')); return; }
-      var pricingButton=e.target.closest('[data-save-booking-pricing]');
-      if(pricingButton) { saveBookingPricing(pricingButton.getAttribute('data-save-booking-pricing')); return; }
-      var voucherOption=e.target.closest('[data-voucher-source-id]');
-      if(voucherOption) {
-        var hidden=$('booking-voucher-select');
-        var label=$('booking-voucher-selection-label');
-        if(hidden) hidden.value=voucherOption.getAttribute('data-voucher-source-id') || '';
-        if(label) label.textContent=voucherOption.getAttribute('data-voucher-display-label') || (voucherOption.querySelector('strong') ? voucherOption.querySelector('strong').textContent : 'Voucher selected');
+    $('bookings-table-body').addEventListener('click', function (e) { var b = e.target.closest('[data-view-booking]'); if (b) renderBookingDetail(b.getAttribute('data-view-booking')); });
+    document.querySelectorAll('[data-close-booking]').forEach(function (el) { el.addEventListener('click', closeBookingDetail); });
+    $('booking-detail-content').addEventListener('click', function (e) {
+      var statusButton = e.target.closest('[data-booking-status]');
+      if (statusButton) updateBookingStatus(statusButton.getAttribute('data-booking-id'), statusButton.getAttribute('data-booking-status'));
+      var saveButton = e.target.closest('[data-save-booking-appointment]');
+      if (saveButton) { saveBookingAppointment(saveButton.getAttribute('data-save-booking-appointment')); return; }
+      var pricingButton = e.target.closest('[data-save-booking-pricing]');
+      if (pricingButton) { saveBookingPricing(pricingButton.getAttribute('data-save-booking-pricing')); return; }
+      var voucherOption = e.target.closest('[data-voucher-source-id]');
+      if (voucherOption) {
+        var hidden = $('booking-voucher-select');
+        var label = $('booking-voucher-selection-label');
+        if (hidden) hidden.value = voucherOption.getAttribute('data-voucher-source-id') || '';
+        if (label) label.textContent = voucherOption.getAttribute('data-voucher-display-label') || (voucherOption.querySelector('strong') ? voucherOption.querySelector('strong').textContent : 'Voucher selected');
         fillBookingDiscountFromVoucher(voucherOption);
-        var dropdown=voucherOption.closest('details');
-        if(dropdown) dropdown.removeAttribute('open');
+        var dropdown = voucherOption.closest('details');
+        if (dropdown) dropdown.removeAttribute('open');
         return;
       }
-      var applyButton=e.target.closest('[data-apply-booking-voucher]');
-      if(applyButton) {
-        var voucherSelect=$('booking-voucher-select');
+      var applyButton = e.target.closest('[data-apply-booking-voucher]');
+      if (applyButton) {
+        var voucherSelect = $('booking-voucher-select');
         applyVoucherToBooking(applyButton.getAttribute('data-apply-booking-voucher'), voucherSelect && voucherSelect.value);
         return;
       }
-      var addServiceButton=e.target.closest('[data-add-booking-service]');
-      if(addServiceButton) { addServiceToBooking(addServiceButton.getAttribute('data-add-booking-service')); return; }
-      var serviceOption=e.target.closest('[data-service-id]');
-      if(serviceOption && serviceOption.closest('#booking-add-service-list, .crm-booking-add-service-list')) {
-        var sid=serviceOption.getAttribute('data-service-id') || '';
-        var hidden=$('booking-add-service-id'); var label=$('booking-add-service-label'); var price=$('booking-add-service-price');
-        if(hidden) hidden.value=sid;
-        if(label) label.textContent=(serviceOption.querySelector('strong') ? serviceOption.querySelector('strong').textContent : 'Service selected');
-        if(price) { price.disabled=false; price.value=Number(serviceOption.getAttribute('data-service-price')||0).toFixed(2); }
-        var dd=serviceOption.closest('details'); if(dd) dd.removeAttribute('open');
-        var addMsg=$('booking-add-service-message'); if(addMsg) addMsg.textContent='';
+      var addServiceButton = e.target.closest('[data-add-booking-service]');
+      if (addServiceButton) { addServiceToBooking(addServiceButton.getAttribute('data-add-booking-service')); return; }
+      var serviceOption = e.target.closest('[data-service-id]');
+      if (serviceOption && serviceOption.closest('#booking-add-service-list, .crm-booking-add-service-list')) {
+        var sid = serviceOption.getAttribute('data-service-id') || '';
+        var hidden = $('booking-add-service-id'); var label = $('booking-add-service-label'); var price = $('booking-add-service-price');
+        if (hidden) hidden.value = sid;
+        if (label) label.textContent = (serviceOption.querySelector('strong') ? serviceOption.querySelector('strong').textContent : 'Service selected');
+        if (price) { price.disabled = false; price.value = Number(serviceOption.getAttribute('data-service-price') || 0).toFixed(2); }
+        var dd = serviceOption.closest('details'); if (dd) dd.removeAttribute('open');
+        var addMsg = $('booking-add-service-message'); if (addMsg) addMsg.textContent = '';
         return;
       }
-      var unapplyButton=e.target.closest('[data-unapply-booking-voucher]');
-      if(unapplyButton) {
+      var unapplyButton = e.target.closest('[data-unapply-booking-voucher]');
+      if (unapplyButton) {
         unapplyVoucherFromBooking(unapplyButton.getAttribute('data-unapply-booking-voucher'), window.__openBookingDetailId);
         return;
       }
     });
-    $('booking-detail-content').addEventListener('input',function(e){
-      if(e.target.id==='booking-add-service-search'){
-        var q=String(e.target.value||'').trim().toLowerCase();
-        var opts=Array.prototype.slice.call(document.querySelectorAll('#booking-add-service-list [data-service-id], .crm-booking-add-service-list [data-service-id]'));
-        var visible=0; opts.forEach(function(o){var hay=o.getAttribute('data-booking-service-option')||'';var match=!q||hay.indexOf(q)!==-1;o.classList.toggle('crm-walkin-service-hidden',!match);if(match)visible++;});
+    $('booking-detail-content').addEventListener('input', function (e) {
+      if (e.target.id === 'booking-add-service-search') {
+        var q = String(e.target.value || '').trim().toLowerCase();
+        var opts = Array.prototype.slice.call(document.querySelectorAll('#booking-add-service-list [data-service-id], .crm-booking-add-service-list [data-service-id]'));
+        var visible = 0; opts.forEach(function (o) { var hay = o.getAttribute('data-booking-service-option') || ''; var match = !q || hay.indexOf(q) !== -1; o.classList.toggle('crm-walkin-service-hidden', !match); if (match) visible++; });
       }
-      if(e.target.id==='booking-voucher-search'){
-        var q=String(e.target.value||'').trim().toLowerCase();
-        var opts=Array.prototype.slice.call(document.querySelectorAll('#booking-voucher-area [data-voucher-option]'));
-        var visible=0;
-        opts.forEach(function(o){var hay=o.getAttribute('data-voucher-option')||'';var match=!q||hay.indexOf(q)!==-1;o.classList.toggle('crm-walkin-service-hidden',!match);if(match)visible++;});
-        var list=document.querySelector('#booking-voucher-area .crm-booking-voucher-list');
-        if(list){var empty=list.querySelector('.crm-booking-voucher-no-results');if(!visible&&q){if(!empty){empty=document.createElement('div');empty.className='crm-small crm-booking-voucher-no-results';list.appendChild(empty);}empty.textContent='No vouchers found for “'+q+'”.';}else if(empty)empty.remove();}
+      if (e.target.id === 'booking-voucher-search') {
+        var q = String(e.target.value || '').trim().toLowerCase();
+        var opts = Array.prototype.slice.call(document.querySelectorAll('#booking-voucher-area [data-voucher-option]'));
+        var visible = 0;
+        opts.forEach(function (o) { var hay = o.getAttribute('data-voucher-option') || ''; var match = !q || hay.indexOf(q) !== -1; o.classList.toggle('crm-walkin-service-hidden', !match); if (match) visible++; });
+        var list = document.querySelector('#booking-voucher-area .crm-booking-voucher-list');
+        if (list) { var empty = list.querySelector('.crm-booking-voucher-no-results'); if (!visible && q) { if (!empty) { empty = document.createElement('div'); empty.className = 'crm-small crm-booking-voucher-no-results'; list.appendChild(empty); } empty.textContent = 'No vouchers found for “' + q + '”.'; } else if (empty) empty.remove(); }
       }
-      if(e.target.matches('[data-booking-item-price],#crm-booking-discount-value')) updateBookingPricingPreview();
+      if (e.target.matches('[data-booking-item-price],#crm-booking-discount-value')) updateBookingPricingPreview();
     });
-    $('booking-detail-content').addEventListener('change',function(e){ if(e.target.matches('#crm-booking-discount-type')) updateBookingPricingPreview(); });
-    document.querySelectorAll('[data-booking-view]').forEach(function(b){b.addEventListener('click',function(){setBookingView(b.getAttribute('data-booking-view'));});});
-    $('schedule-prev').addEventListener('click',function(){state.scheduleDate.setDate(state.scheduleDate.getDate()-7);renderSchedule();});
-    $('schedule-next').addEventListener('click',function(){state.scheduleDate.setDate(state.scheduleDate.getDate()+7);renderSchedule();});
-    $('schedule-today').addEventListener('click',function(){state.scheduleDate=new Date();renderSchedule();});
-    $('booking-schedule-grid').addEventListener('click',function(e){var b=e.target.closest('[data-view-booking]');if(b)renderBookingDetail(b.getAttribute('data-view-booking'));});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeBookingDetail();});
+    $('booking-detail-content').addEventListener('change', function (e) { if (e.target.matches('#crm-booking-discount-type')) updateBookingPricingPreview(); });
+    document.querySelectorAll('[data-booking-view]').forEach(function (b) { b.addEventListener('click', function () { setBookingView(b.getAttribute('data-booking-view')); }); });
+    $('schedule-prev').addEventListener('click', function () { state.scheduleDate.setDate(state.scheduleDate.getDate() - 7); renderSchedule(); });
+    $('schedule-next').addEventListener('click', function () { state.scheduleDate.setDate(state.scheduleDate.getDate() + 7); renderSchedule(); });
+    $('schedule-today').addEventListener('click', function () { state.scheduleDate = new Date(); renderSchedule(); });
+    $('booking-schedule-grid').addEventListener('click', function (e) { var b = e.target.closest('[data-view-booking]'); if (b) renderBookingDetail(b.getAttribute('data-view-booking')); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeBookingDetail(); });
 
-    $('service-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-edit-service]');if(b)editService(b.getAttribute('data-edit-service'));var d=e.target.closest('[data-delete-service]');if(d)deleteService(d.getAttribute('data-delete-service'));});
-    $('category-table-body').addEventListener('click',function(e){var b=e.target.closest('[data-edit-category]');if(b)editCategory(b.getAttribute('data-edit-category'));var d=e.target.closest('[data-delete-category]');if(d)deleteCategory(d.getAttribute('data-delete-category'));}); $('users-table-body').addEventListener('click',function(e){var edit=e.target.closest('[data-edit-user]');if(edit){editUser(edit.getAttribute('data-edit-user'));return;}var toggle=e.target.closest('[data-toggle-user]');if(toggle){toggleUser(toggle.getAttribute('data-toggle-user'));return;}var reset=e.target.closest('[data-reset-password]');if(reset){resetUserPassword(reset.getAttribute('data-reset-password'));return;}var del=e.target.closest('[data-delete-user]');if(del)deleteUser(del.getAttribute('data-delete-user'));});
-    $('voucher-form').addEventListener('submit',saveVoucher);$('voucher-discount-type').addEventListener('change',syncVoucherDiscountFields);$('voucher-price-usd').addEventListener('input',syncVoucherDiscountFields);$('voucher-price-qar').addEventListener('input',syncVoucherDiscountFields);$('app-setting-currency').addEventListener('change',function(){syncVoucherDiscountFields();renderVouchers();});
-    $('voucher-reset').addEventListener('click',resetVoucherForm);
-    $('voucher-cancel').addEventListener('click',function(){closeCrmFormCardModal('voucher-form-card');state.editingVoucherId=null;});
-    $('new-voucher-top').addEventListener('click',function(){resetVoucherForm();openCrmFormCardModal('voucher-form-card');$('voucher-sku').focus();window.scrollTo({top:0,behavior:'smooth'});});
-    $('vouchers-refresh').addEventListener('click',function(){loadVouchers().catch(function(e){message(e.message,'error');});});
-    $('voucher-image-delete').addEventListener('click',deleteVoucherImage);    $('voucher-image-file').addEventListener('change',previewVoucherImageFile);
-    $('voucher-table-body').addEventListener('click',function(e){
-      var edit=e.target.closest('[data-edit-voucher]');
-      if(edit) editVoucher(edit.getAttribute('data-edit-voucher'));
-      var del=e.target.closest('[data-delete-voucher]');
-      if(del) deleteVoucher(del.getAttribute('data-delete-voucher'));
+    $('service-table-body').addEventListener('click', function (e) { var b = e.target.closest('[data-edit-service]'); if (b) editService(b.getAttribute('data-edit-service')); var d = e.target.closest('[data-delete-service]'); if (d) deleteService(d.getAttribute('data-delete-service')); });
+    $('category-table-body').addEventListener('click', function (e) { var b = e.target.closest('[data-edit-category]'); if (b) editCategory(b.getAttribute('data-edit-category')); var d = e.target.closest('[data-delete-category]'); if (d) deleteCategory(d.getAttribute('data-delete-category')); }); $('users-table-body').addEventListener('click', function (e) { var edit = e.target.closest('[data-edit-user]'); if (edit) { editUser(edit.getAttribute('data-edit-user')); return; } var toggle = e.target.closest('[data-toggle-user]'); if (toggle) { toggleUser(toggle.getAttribute('data-toggle-user')); return; } var reset = e.target.closest('[data-reset-password]'); if (reset) { resetUserPassword(reset.getAttribute('data-reset-password')); return; } var del = e.target.closest('[data-delete-user]'); if (del) deleteUser(del.getAttribute('data-delete-user')); });
+    $('voucher-form').addEventListener('submit', saveVoucher); $('voucher-discount-type').addEventListener('change', syncVoucherDiscountFields); $('voucher-price-usd').addEventListener('input', syncVoucherDiscountFields); $('voucher-price-qar').addEventListener('input', syncVoucherDiscountFields);
+    $('voucher-reset').addEventListener('click', resetVoucherForm);
+    $('voucher-cancel').addEventListener('click', function () { closeCrmFormCardModal('voucher-form-card'); state.editingVoucherId = null; });
+    $('new-voucher-top').addEventListener('click', function () { resetVoucherForm(); openCrmFormCardModal('voucher-form-card'); $('voucher-sku').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    $('vouchers-refresh').addEventListener('click', function () { loadVouchers().catch(function (e) { message(e.message, 'error'); }); });
+    $('voucher-image-delete').addEventListener('click', deleteVoucherImage); $('voucher-image-file').addEventListener('change', previewVoucherImageFile);
+    $('voucher-table-body').addEventListener('click', function (e) {
+      var edit = e.target.closest('[data-edit-voucher]');
+      if (edit) editVoucher(edit.getAttribute('data-edit-voucher'));
+      var del = e.target.closest('[data-delete-voucher]');
+      if (del) deleteVoucher(del.getAttribute('data-delete-voucher'));
     });
-    try{
-      var sessionResult=await window.salonSupabase.auth.getSession();
-      var session=sessionResult.data.session;
+    try {
+      var sessionResult = await window.salonSupabase.auth.getSession();
+      var session = sessionResult.data.session;
 
-      if(isPasswordRecovery()){
-        try{ await window.salonSupabase.auth.signOut({scope:'local'}); }catch(_){}
-        var recoveryArtifact=getInviteArtifact();
-        if(recoveryArtifact.code){
-          var recoveryExchange=await window.salonSupabase.auth.exchangeCodeForSession(recoveryArtifact.code);
-          if(recoveryExchange.error) throw recoveryExchange.error;
+      if (isPasswordRecovery()) {
+        try { await window.salonSupabase.auth.signOut({ scope: 'local' }); } catch (_) { }
+        var recoveryArtifact = getInviteArtifact();
+        if (recoveryArtifact.code) {
+          var recoveryExchange = await window.salonSupabase.auth.exchangeCodeForSession(recoveryArtifact.code);
+          if (recoveryExchange.error) throw recoveryExchange.error;
         }
-        var recoverySession=await waitForAuthSession(5000);
-        if(!recoverySession){showLogin();message('This password reset link is missing or has expired. Please request a new reset email.','error');return;}
-        state.currentUserId=recoverySession.user.id;
+        var recoverySession = await waitForAuthSession(5000);
+        if (!recoverySession) { showLogin(); message('This password reset link is missing or has expired. Please request a new reset email.', 'error'); return; }
+        state.currentUserId = recoverySession.user.id;
         showPasswordSetup('recovery');
         return;
       }
 
-      if(isInviteSetup()){
+      if (isInviteSetup()) {
         // Invitation flow has priority over normal CRM authorization.  This is
         // critical when a different CRM user was already logged into this
         // browser: the invite session must be established first.
-        var inviteSession=await establishInviteSession();
-        if(inviteSession){
-          state.currentUserId=inviteSession.user.id;
+        var inviteSession = await establishInviteSession();
+        if (inviteSession) {
+          state.currentUserId = inviteSession.user.id;
           showPasswordSetup('invite');
           return;
         }
@@ -5183,31 +5702,31 @@
         // Never fall through to the normal CRM login with an unrelated old
         // session when an invitation URL is present. That old session would
         // make the invitation appear to work for the wrong account.
-        try{ await window.salonSupabase.auth.signOut({scope:'local'}); }catch(_){}
+        try { await window.salonSupabase.auth.signOut({ scope: 'local' }); } catch (_) { }
         showLogin();
-        message('This invitation link is missing or has expired. Please open the latest invitation email again.','error');
+        message('This invitation link is missing or has expired. Please open the latest invitation email again.', 'error');
         return;
       }
 
-      if(await requireAdmin()){
-        session=(await window.salonSupabase.auth.getSession()).data.session;
-        state.currentUserId=session&&session.user?session.user.id:null;
+      if (await requireAdmin()) {
+        session = (await window.salonSupabase.auth.getSession()).data.session;
+        state.currentUserId = session && session.user ? session.user.id : null;
         await loadAccess();
-        if(state.mustChangePassword){ showPasswordSetup('forced'); return; }
-        $('current-user-email').textContent=session&&session.user?session.user.email:'CRM user';
+        if (state.mustChangePassword) { showPasswordSetup('forced'); return; }
+        $('current-user-email').textContent = session && session.user ? session.user.email : 'CRM user';
         await loadRoles();
         await loadData();
         await loadUsers();
-        if(can('settings','read')) await loadApplicationSettings();
-        if(can('faqs','read')) await loadFaqs();
-        if(can('bookings','read')) await loadBookings();
-    if(can('contact-messages','read')) await loadContactMessages();
+        if (can('settings', 'read')) await loadApplicationSettings();
+        if (can('faqs', 'read')) await loadFaqs();
+        if (can('bookings', 'read')) await loadBookings();
+        if (can('contact-messages', 'read')) await loadContactMessages();
         // Restore the user's last authorized view BEFORE revealing the CRM.
         // This prevents a refresh from briefly showing the dashboard.
         restoreLastView();
         showApp();
       } else showLogin();
-    } catch(e){console.error(e);showLogin();message(e&&e.message?e.message:'Could not initialize CRM authentication.','error');}
+    } catch (e) { console.error(e); showLogin(); message(e && e.message ? e.message : 'Could not initialize CRM authentication.', 'error'); }
     finally {
       document.documentElement.classList.remove('crm-auth-pending');
     }
@@ -5228,57 +5747,57 @@
   // time zone. We never let the browser convert the stored wall-clock value
   // between time zones when putting it back into the datetime-local input.
   function formatBlackoutDateTime(value) {
-    if(!value) return '—';
-    var raw=String(value).trim().replace(' ','T');
-    var match=raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-    if(!match) return String(value);
-    var d=new Date(match[1]+'T'+match[2]+':00');
-    if(Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleString([], {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    if (!value) return '—';
+    var raw = String(value).trim().replace(' ', 'T');
+    var match = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (!match) return String(value);
+    var d = new Date(match[1] + 'T' + match[2] + ':00');
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   function bookingRuleLabel(r) {
-    return formatBlackoutDateTime(r.starts_at)+' → '+formatBlackoutDateTime(r.ends_at);
+    return formatBlackoutDateTime(r.starts_at) + ' → ' + formatBlackoutDateTime(r.ends_at);
   }
 
   function renderBookingRules() {
-    var body=$('booking-rules-body'); if(!body)return;
-    var rows=bookingConfigState.rules.slice().sort(function(a,b){
-      return String(b.starts_at||'').localeCompare(String(a.starts_at||''));
+    var body = $('booking-rules-body'); if (!body) return;
+    var rows = bookingConfigState.rules.slice().sort(function (a, b) {
+      return String(b.starts_at || '').localeCompare(String(a.starts_at || ''));
     });
-    if(!rows.length){
-      body.innerHTML='<tr><td colspan="2" class="crm-empty">No booking blocks configured.</td></tr>';
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="2" class="crm-empty">No booking blocks configured.</td></tr>';
       return;
     }
-    body.innerHTML=rows.map(function(r){
-      return '<tr>'+
-        '<td><strong>'+escapeHtml(bookingRuleLabel(r))+'</strong></td>'+
-        '<td><div class="crm-row-actions"><button type="button" class="crm-btn crm-btn-secondary edit-booking-rule" data-id="'+r.id+'">Edit</button><button type="button" class="crm-btn crm-btn-danger delete-booking-rule" data-id="'+r.id+'">Delete</button></div></td>'+
-      '</tr>';
+    body.innerHTML = rows.map(function (r) {
+      return '<tr>' +
+        '<td><strong>' + escapeHtml(bookingRuleLabel(r)) + '</strong></td>' +
+        '<td><div class="crm-row-actions"><button type="button" class="crm-btn crm-btn-secondary edit-booking-rule" data-id="' + r.id + '">Edit</button><button type="button" class="crm-btn crm-btn-danger delete-booking-rule" data-id="' + r.id + '">Delete</button></div></td>' +
+        '</tr>';
     }).join('');
-    body.querySelectorAll('.edit-booking-rule').forEach(function(b){
-      b.addEventListener('click',function(){openBookingRuleForm(Number(b.dataset.id));});
+    body.querySelectorAll('.edit-booking-rule').forEach(function (b) {
+      b.addEventListener('click', function () { openBookingRuleForm(Number(b.dataset.id)); });
     });
-    body.querySelectorAll('.delete-booking-rule').forEach(function(b){
-      b.addEventListener('click',async function(){
-        if(!await crmConfirm('Delete booking block','Delete this booking block?'))return;
-        try{
+    body.querySelectorAll('.delete-booking-rule').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        if (!await crmConfirm('Delete booking block', 'Delete this booking block?')) return;
+        try {
           await window.salonDatabase.deleteBookingScheduleRule(Number(b.dataset.id));
           await loadBookingConfig();
-          message('Booking block deleted.','success');
-        }catch(e){
+          message('Booking block deleted.', 'success');
+        } catch (e) {
           console.error(e);
-          message(e.message||'Could not delete booking block.','error');
+          message(e.message || 'Could not delete booking block.', 'error');
         }
       });
     });
   }
 
   function toLocalDateTimeInput(value) {
-    if(!value) return '';
-    var raw=String(value).trim().replace(' ','T');
-    var match=raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-    return match ? match[1]+'T'+match[2] : '';
+    if (!value) return '';
+    var raw = String(value).trim().replace(' ', 'T');
+    var match = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    return match ? match[1] + 'T' + match[2] : '';
   }
 
   function localInputToStorage(value) {
@@ -5289,89 +5808,89 @@
   }
 
   function openBookingRuleForm(id) {
-    bookingConfigState.editingRuleId=id||null;
-    var r=id?bookingConfigState.rules.find(function(x){return Number(x.id)===Number(id);}):null;
-    $('booking-rule-form-title').textContent=r?'Edit booking block':'Add booking block';
-    $('booking-rule-start').value=r?toLocalDateTimeInput(r.starts_at):'';
-    $('booking-rule-end').value=r?toLocalDateTimeInput(r.ends_at):'';
+    bookingConfigState.editingRuleId = id || null;
+    var r = id ? bookingConfigState.rules.find(function (x) { return Number(x.id) === Number(id); }) : null;
+    $('booking-rule-form-title').textContent = r ? 'Edit booking block' : 'Add booking block';
+    $('booking-rule-start').value = r ? toLocalDateTimeInput(r.starts_at) : '';
+    $('booking-rule-end').value = r ? toLocalDateTimeInput(r.ends_at) : '';
     openCrmFormCardModal('booking-rule-form-card');
-    $('booking-rule-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+    $('booking-rule-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function loadBookingConfig() {
-    var cfg=await window.salonDatabase.getBookingConfiguration();
-    bookingConfigState.settings=cfg.settings||{};
-    bookingConfigState.rules=cfg.schedule||[];
-    var s=bookingConfigState.settings;
-    var weekdaySlot=$('booking-weekday-slot-minutes'); if(weekdaySlot) weekdaySlot.value=s.weekday_slot_minutes ?? s.slot_minutes ?? 30;
-    var weekdayOpening=$('booking-weekday-opening-time'); if(weekdayOpening) weekdayOpening.value=String(s.weekday_opening_time||s.opening_time||'09:00').slice(0,5);
-    var weekdayClosing=$('booking-weekday-closing-time'); if(weekdayClosing) weekdayClosing.value=String(s.weekday_closing_time||s.closing_time||'18:00').slice(0,5);
-    var weekendSlot=$('booking-weekend-slot-minutes'); if(weekendSlot) weekendSlot.value=s.weekend_slot_minutes ?? 30;
-    var weekendOpening=$('booking-weekend-opening-time'); if(weekendOpening) weekendOpening.value=String(s.weekend_opening_time||'10:00').slice(0,5);
-    var weekendClosing=$('booking-weekend-closing-time'); if(weekendClosing) weekendClosing.value=String(s.weekend_closing_time||'16:00').slice(0,5);
-    var advance=$('booking-advance-months'); if(advance) advance.value=s.advance_months??3;
+    var cfg = await window.salonDatabase.getBookingConfiguration();
+    bookingConfigState.settings = cfg.settings || {};
+    bookingConfigState.rules = cfg.schedule || [];
+    var s = bookingConfigState.settings;
+    var weekdaySlot = $('booking-weekday-slot-minutes'); if (weekdaySlot) weekdaySlot.value = s.weekday_slot_minutes ?? s.slot_minutes ?? 30;
+    var weekdayOpening = $('booking-weekday-opening-time'); if (weekdayOpening) weekdayOpening.value = String(s.weekday_opening_time || s.opening_time || '09:00').slice(0, 5);
+    var weekdayClosing = $('booking-weekday-closing-time'); if (weekdayClosing) weekdayClosing.value = String(s.weekday_closing_time || s.closing_time || '18:00').slice(0, 5);
+    var weekendSlot = $('booking-weekend-slot-minutes'); if (weekendSlot) weekendSlot.value = s.weekend_slot_minutes ?? 30;
+    var weekendOpening = $('booking-weekend-opening-time'); if (weekendOpening) weekendOpening.value = String(s.weekend_opening_time || '10:00').slice(0, 5);
+    var weekendClosing = $('booking-weekend-closing-time'); if (weekendClosing) weekendClosing.value = String(s.weekend_closing_time || '16:00').slice(0, 5);
+    var advance = $('booking-advance-months'); if (advance) advance.value = s.advance_months ?? 3;
     renderBookingRules();
   }
 
   async function saveBookingSettings(e) {
     e.preventDefault();
     try {
-      var weekdaySlot=Number($('booking-weekday-slot-minutes').value);
-      var weekdayOpening=$('booking-weekday-opening-time').value;
-      var weekdayClosing=$('booking-weekday-closing-time').value;
-      var weekendSlot=Number($('booking-weekend-slot-minutes').value);
-      var weekendOpening=$('booking-weekend-opening-time').value;
-      var weekendClosing=$('booking-weekend-closing-time').value;
+      var weekdaySlot = Number($('booking-weekday-slot-minutes').value);
+      var weekdayOpening = $('booking-weekday-opening-time').value;
+      var weekdayClosing = $('booking-weekday-closing-time').value;
+      var weekendSlot = Number($('booking-weekend-slot-minutes').value);
+      var weekendOpening = $('booking-weekend-opening-time').value;
+      var weekendClosing = $('booking-weekend-closing-time').value;
 
-      if(!weekdaySlot || !weekendSlot || !weekdayOpening || !weekdayClosing || !weekendOpening || !weekendClosing){
+      if (!weekdaySlot || !weekendSlot || !weekdayOpening || !weekdayClosing || !weekendOpening || !weekendClosing) {
         throw new Error('Please complete both weekday and weekend schedule settings.');
       }
-      if(weekdayClosing <= weekdayOpening){
+      if (weekdayClosing <= weekdayOpening) {
         throw new Error('Weekday closing time must be after the weekday opening time.');
       }
-      if(weekendClosing <= weekendOpening){
+      if (weekendClosing <= weekendOpening) {
         throw new Error('Weekend closing time must be after the weekend opening time.');
       }
 
       await window.salonDatabase.updateBookingSettings({
         // Keep the legacy fields aligned with Monday-Friday for older integrations.
-        slot_minutes:weekdaySlot,
-        opening_time:weekdayOpening,
-        closing_time:weekdayClosing,
-        weekday_slot_minutes:weekdaySlot,
-        weekday_opening_time:weekdayOpening,
-        weekday_closing_time:weekdayClosing,
-        weekend_slot_minutes:weekendSlot,
-        weekend_opening_time:weekendOpening,
-        weekend_closing_time:weekendClosing,
-        advance_months:Number($('booking-advance-months').value)
+        slot_minutes: weekdaySlot,
+        opening_time: weekdayOpening,
+        closing_time: weekdayClosing,
+        weekday_slot_minutes: weekdaySlot,
+        weekday_opening_time: weekdayOpening,
+        weekday_closing_time: weekdayClosing,
+        weekend_slot_minutes: weekendSlot,
+        weekend_opening_time: weekendOpening,
+        weekend_closing_time: weekendClosing,
+        advance_months: Number($('booking-advance-months').value)
       });
-      await loadBookingConfig(); message('Booking settings saved.','success');
-    } catch(err){ console.error(err); message(err.message||'Could not save booking settings.','error'); }
+      await loadBookingConfig(); message('Booking settings saved.', 'success');
+    } catch (err) { console.error(err); message(err.message || 'Could not save booking settings.', 'error'); }
   }
 
 
   async function saveBookingRule(e) {
     e.preventDefault();
-    var start=$('booking-rule-start').value;
-    var end=$('booking-rule-end').value;
-    if(!start || !end){message('Please choose both a start and end date/time.','error');return;}
+    var start = $('booking-rule-start').value;
+    var end = $('booking-rule-end').value;
+    if (!start || !end) { message('Please choose both a start and end date/time.', 'error'); return; }
     // datetime-local values are local wall-clock values. Compare their
     // components directly, then store the exact same components.
-    if(end <= start){
-      message('The end date/time must be after the start date/time.','error');return;
+    if (end <= start) {
+      message('The end date/time must be after the start date/time.', 'error'); return;
     }
-    var payload={
-      starts_at:localInputToStorage(start),
-      ends_at:localInputToStorage(end)
+    var payload = {
+      starts_at: localInputToStorage(start),
+      ends_at: localInputToStorage(end)
     };
     try {
-      if(bookingConfigState.editingRuleId) await window.salonDatabase.updateBookingScheduleRule(bookingConfigState.editingRuleId,payload);
+      if (bookingConfigState.editingRuleId) await window.salonDatabase.updateBookingScheduleRule(bookingConfigState.editingRuleId, payload);
       else await window.salonDatabase.createBookingScheduleRule(payload);
       closeCrmFormCardModal('booking-rule-form-card');
-      bookingConfigState.editingRuleId=null;
-      await loadBookingConfig(); message('Booking block saved.','success');
-    } catch(err){console.error(err);message(err.message||'Could not save booking block.','error');}
+      bookingConfigState.editingRuleId = null;
+      await loadBookingConfig(); message('Booking block saved.', 'success');
+    } catch (err) { console.error(err); message(err.message || 'Could not save booking block.', 'error'); }
   }
 
 
@@ -5404,7 +5923,7 @@
     var configured = String(settingValue('display_currency', 'USD') || 'USD').toUpperCase();
     if (service.prices && typeof service.prices === 'object') {
       if (service.prices[configured] != null && isFinite(Number(service.prices[configured]))) return configured;
-      var keys = Object.keys(service.prices).filter(function(k){ return service.prices[k] != null && isFinite(Number(service.prices[k])); });
+      var keys = Object.keys(service.prices).filter(function (k) { return service.prices[k] != null && isFinite(Number(service.prices[k])); });
       if (keys.length === 1) return String(keys[0]).toUpperCase();
     }
     if (configured === 'USD' && service.price_usd != null && isFinite(Number(service.price_usd))) return 'USD';
@@ -5429,7 +5948,7 @@
 
   function walkinBookingCurrency(services) {
     var currencies = (services || []).map(walkinServiceCurrency).filter(Boolean);
-    var unique = currencies.filter(function(c,i,a){ return a.indexOf(c) === i; });
+    var unique = currencies.filter(function (c, i, a) { return a.indexOf(c) === i; });
     return unique.length === 1 ? unique[0] : null;
   }
 
@@ -5445,9 +5964,9 @@
     var container = $('walkin-services');
     if (!container) return [];
     var ids = Array.prototype.slice.call(container.querySelectorAll('input[type="checkbox"][data-walkin-service]:checked'))
-      .map(function(input){ return String(input.value); });
-    return ids.map(function(id){
-      return walkinState.services.find(function(s){ return String(s.id) === id; });
+      .map(function (input) { return String(input.value); });
+    return ids.map(function (id) {
+      return walkinState.services.find(function (s) { return String(s.id) === id; });
     }).filter(Boolean);
   }
 
@@ -5458,22 +5977,22 @@
       el.innerHTML = '';
       return;
     }
-    el.innerHTML = '<div class="crm-walkin-results-title">Select customer</div>' + matches.map(function(c){
+    el.innerHTML = '<div class="crm-walkin-results-title">Select customer</div>' + matches.map(function (c) {
       var selected = walkinState.customer && String(walkinState.customer.id) === String(c.id);
       return '<button type="button" class="crm-walkin-result' + (selected ? ' is-selected' : '') + '" data-walkin-customer-id="' + escapeHtml(String(c.id)) + '">' +
         '<span><strong>' + escapeHtml(c.name || 'Customer') + '</strong><small>#' + escapeHtml(String(c.id)) + '</small></span>' +
         '<span class="crm-walkin-result-phone">' + escapeHtml(c.phone || 'No phone') + '</span>' +
-      '</button>';
+        '</button>';
     }).join('');
   }
 
   function selectWalkinCustomer(customerId) {
-    var c = walkinState.customers.find(function(customer){ return String(customer.id) === String(customerId); });
+    var c = walkinState.customers.find(function (customer) { return String(customer.id) === String(customerId); });
     if (!c) return;
     walkinState.customer = c;
     $('walkin-customer-id').value = String(c.id);
     $('walkin-customer-name').value = (c.name || 'Customer') + ' • #' + c.id + (c.phone ? ' • ' + c.phone : '');
-    walkinRenderCustomerResults(walkinState.customers.filter(function(x){
+    walkinRenderCustomerResults(walkinState.customers.filter(function (x) {
       return String(x.id) === String(c.id);
     }));
     walkinSetMessage('Customer selected: ' + (c.name || 'Customer') + ' (#' + c.id + ').', 'success');
@@ -5484,14 +6003,14 @@
     if (!container) return;
     var previousSelected = [];
     var existing = $('walkin-services');
-    if (existing) previousSelected = Array.prototype.slice.call(existing.querySelectorAll('input[data-walkin-service]:checked')).map(function(i){return String(i.value);});
-    var services = (state.services || []).filter(function(s) {
+    if (existing) previousSelected = Array.prototype.slice.call(existing.querySelectorAll('input[data-walkin-service]:checked')).map(function (i) { return String(i.value); });
+    var services = (state.services || []).filter(function (s) {
       return s && (s.is_active === undefined || s.is_active !== false);
-    }).sort(function(a,b) {
+    }).sort(function (a, b) {
       return String(a.name_en || a.name || a.sku || '').localeCompare(String(b.name_en || b.name || b.sku || ''));
     });
     walkinState.services = services;
-    var list = services.length ? services.map(function(s) {
+    var list = services.length ? services.map(function (s) {
       var name = s.name_en || s.name || s.sku || 'Service';
       var duration = walkinServiceDuration(s);
       var price = walkinServicePrice(s);
@@ -5500,15 +6019,15 @@
       return '<label class="crm-walkin-service-option" data-walkin-service-option="' + escapeHtml(String(name).toLowerCase()) + '">' +
         '<input type="checkbox" data-walkin-service value="' + escapeHtml(String(s.id)) + '">' +
         '<span class="crm-walkin-service-copy"><strong>' + escapeHtml(name) + '</strong><small>' + duration + ' min • ' + escapeHtml(priceText) + '</small></span>' +
-      '</label>';
+        '</label>';
     }).join('') : '<div class="crm-small">No active services found.</div>';
     container.innerHTML = '<details class="crm-walkin-service-dropdown">' +
       '<summary><span id="walkin-service-selection-label">Select services</span><span id="walkin-service-count" class="crm-walkin-service-count">' + services.length + ' services</span></summary>' +
       '<div class="crm-walkin-service-menu">' +
-        '<div class="crm-walkin-service-search"><span>⌕</span><input id="walkin-service-search" type="search" placeholder="Search service by name" autocomplete="off"></div>' +
-        '<div class="crm-walkin-service-list">' + list + '</div>' +
+      '<div class="crm-walkin-service-search"><span>⌕</span><input id="walkin-service-search" type="search" placeholder="Search service by name" autocomplete="off"></div>' +
+      '<div class="crm-walkin-service-list">' + list + '</div>' +
       '</div></details>';
-    previousSelected.forEach(function(id){ var cb=container.querySelector('input[data-walkin-service][value="'+CSS.escape(id)+'"]'); if(cb) cb.checked=true; });
+    previousSelected.forEach(function (id) { var cb = container.querySelector('input[data-walkin-service][value="' + CSS.escape(id) + '"]'); if (cb) cb.checked = true; });
     updateWalkinServiceCount();
   }
 
@@ -5530,7 +6049,7 @@
     if (!container) return;
     var options = Array.prototype.slice.call(container.querySelectorAll('[data-walkin-service-option]'));
     var visible = 0;
-    options.forEach(function(option) {
+    options.forEach(function (option) {
       var name = option.getAttribute('data-walkin-service-option') || '';
       var match = !q || name.indexOf(q) !== -1;
       option.classList.toggle('crm-walkin-service-hidden', !match);
@@ -5560,10 +6079,10 @@
     var finalPriceEl = $('walkin-final-price');
     var endEl = $('walkin-end');
     var summary = $('walkin-service-summary');
-    var totalDuration = services.reduce(function(sum,s){ return sum + walkinServiceDuration(s); }, 0);
+    var totalDuration = services.reduce(function (sum, s) { return sum + walkinServiceDuration(s); }, 0);
     var currency = walkinBookingCurrency(services);
-    var originalPrice = services.reduce(function(sum,s){ var p=walkinServicePrice(s); return sum + (p==null?0:p); }, 0);
-    var unavailable = services.filter(function(s){ return walkinServicePrice(s)==null || !walkinServiceCurrency(s); });
+    var originalPrice = services.reduce(function (sum, s) { var p = walkinServicePrice(s); return sum + (p == null ? 0 : p); }, 0);
+    var unavailable = services.filter(function (s) { return walkinServicePrice(s) == null || !walkinServiceCurrency(s); });
     var discountType = discountTypeEl ? discountTypeEl.value : 'percent';
     var discountValue = parseFloat(discountValueEl ? discountValueEl.value : '') || 0;
     var discountAmount = discountType === 'amount' ? discountValue : originalPrice * Math.min(Math.max(discountValue, 0), 100) / 100;
@@ -5571,7 +6090,7 @@
     var finalPrice = Math.max(originalPrice - discountAmount, 0);
     if (priceEl) priceEl.value = services.length ? originalPrice.toFixed(2) : '';
     var currencyLabelEls = document.querySelectorAll('[data-walkin-currency-label]');
-    currencyLabelEls.forEach(function(el){ el.textContent = currency || '—'; });
+    currencyLabelEls.forEach(function (el) { el.textContent = currency || '—'; });
     if (finalPriceEl) finalPriceEl.value = services.length ? finalPrice.toFixed(2) : '';
     if (endEl) endEl.value = services.length && $('walkin-start').value ? walkinAddMinutes($('walkin-start').value, totalDuration) : '';
     if (services.length && !currency) {
@@ -5579,7 +6098,7 @@
       return;
     }
     if (unavailable.length) {
-      if (summary) summary.textContent = 'Price is not configured for ' + currency + ' for: ' + unavailable.map(function(s){return s.name_en||s.name||'Service';}).join(', ') + '.';
+      if (summary) summary.textContent = 'Price is not configured for ' + currency + ' for: ' + unavailable.map(function (s) { return s.name_en || s.name || 'Service'; }).join(', ') + '.';
       return;
     }
     if (!services.length) {
@@ -5612,7 +6131,7 @@
     if (phone) phone.value = '';
     if (email) email.value = '';
     var q = String(rawQuery || '').trim();
-    if (name && q && !/^[+]?\d+$/.test(q.replace(/\s/g,''))) name.value = q;
+    if (name && q && !/^[+]?\d+$/.test(q.replace(/\s/g, ''))) name.value = q;
     if (phone && /^[+]?\d[\d\s-]+$/.test(q)) phone.value = q;
   }
 
@@ -5625,7 +6144,7 @@
 
   // The new-customer name is required only while the new-customer panel is visible.
   // Keeping it non-required while hidden prevents the browser from blocking form submission.
-  (function syncWalkinNewCustomerRequiredState(){
+  (function syncWalkinNewCustomerRequiredState() {
     var panel = $('walkin-new-customer');
     var name = $('walkin-new-customer-name');
     if (name) name.required = !!(panel && !panel.classList.contains('crm-hidden'));
@@ -5641,8 +6160,8 @@
 
     // If the phone already belongs to a loaded customer, use that customer instead of creating a duplicate.
     if (phone) {
-      var normalized = phone.replace(/[^\d+]/g,'');
-      var existing = (state.customers || []).find(function(c){ return String(c.phone || '').replace(/[^\d+]/g,'') === normalized; });
+      var normalized = phone.replace(/[^\d+]/g, '');
+      var existing = (state.customers || []).find(function (c) { return String(c.phone || '').replace(/[^\d+]/g, '') === normalized; });
       if (existing) {
         selectWalkinCustomer(existing.id);
         hideWalkinNewCustomer();
@@ -5652,7 +6171,7 @@
     }
 
     walkinState.creatingCustomer = true;
-    var result = await window.salonSupabase.from('customers').insert({name:name, phone:phone, email:email, notes:null}).select('id,name,phone,email').single();
+    var result = await window.salonSupabase.from('customers').insert({ name: name, phone: phone, email: email, notes: null }).select('id,name,phone,email').single();
     walkinState.creatingCustomer = false;
     if (result.error) throw result.error;
     var c = result.data;
@@ -5709,12 +6228,12 @@
     $('walkin-discount-value').value = '';
     $('walkin-final-price').value = '';
     $('walkin-notes').value = '';
-    card.querySelectorAll('input[data-walkin-service]').forEach(function(input){ input.checked = false; });
+    card.querySelectorAll('input[data-walkin-service]').forEach(function (input) { input.checked = false; });
     updateWalkinServiceDetails();
     card.classList.remove('crm-hidden');
-    card.scrollIntoView({behavior:'smooth', block:'start'});
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (customerId != null) searchWalkinCustomer();
-    else setTimeout(function(){ $('walkin-customer-number').focus(); }, 50);
+    else setTimeout(function () { $('walkin-customer-number').focus(); }, 50);
   }
 
   // Expose for customer-row inline onclick handlers.
@@ -5751,11 +6270,11 @@
 
     // First use exact customer number / exact phone when possible.
     if (/^\d+$/.test(raw)) {
-      var exactId = customers.find(function(c){ return String(c.id) === raw; });
+      var exactId = customers.find(function (c) { return String(c.id) === raw; });
       if (exactId) matches = [exactId];
     }
     if (!matches.length && normalized) {
-      var exactPhone = customers.find(function(c){
+      var exactPhone = customers.find(function (c) {
         return String(c.phone || '').replace(/[^\d+]/g, '') === normalized;
       });
       if (exactPhone) matches = [exactPhone];
@@ -5771,7 +6290,7 @@
           .select('id,name,phone,email,notes,created_at,is_deleted,loyalty_points,loyalty_lifetime_points,loyalty_tier')
           .eq('is_deleted', false)
           .or('name.ilike.*' + safeQ + '*,phone.ilike.*' + safeQ + '*')
-          .order('id', {ascending:false})
+          .order('id', { ascending: false })
           .limit(25);
         if (result.error) {
           console.error('Walk-in customer search failed:', result.error);
@@ -5783,8 +6302,8 @@
     }
 
     // Merge DB matches into the local cache without creating duplicates.
-    matches.forEach(function(c){
-      if (!customers.some(function(x){ return String(x.id) === String(c.id); })) customers.push(c);
+    matches.forEach(function (c) {
+      if (!customers.some(function (x) { return String(x.id) === String(c.id); })) customers.push(c);
     });
 
     walkinState.customers = matches;
@@ -5813,7 +6332,7 @@
   function walkinBlockingOverlap(date, start, end) {
     var startMin = parseTimeMinutes(start), endMin = parseTimeMinutes(end);
     if (startMin == null || endMin == null || endMin <= startMin) return null;
-    return (state.bookings || []).find(function(b) {
+    return (state.bookings || []).find(function (b) {
       if (!b || b.date !== date || bookingStatus(b) !== 'confirmed') return false;
       var bStart = parseTimeMinutes(bookingStart(b));
       var bEnd = parseTimeMinutes(bookingEnd(b));
@@ -5852,11 +6371,11 @@
       walkinSetMessage('Please choose at least one service, date and start time.', 'error'); return;
     }
 
-    var totalDuration = services.reduce(function(sum,s){ return sum + walkinServiceDuration(s); }, 0);
+    var totalDuration = services.reduce(function (sum, s) { return sum + walkinServiceDuration(s); }, 0);
     var currency = walkinBookingCurrency(services);
-    var originalPrice = services.reduce(function(sum,s){ var p=walkinServicePrice(s); return sum + (p==null?0:p); }, 0);
-    var unavailable = services.filter(function(s){ return walkinServicePrice(s)==null || !walkinServiceCurrency(s); });
-    var uniqueCurrencies = services.map(walkinServiceCurrency).filter(Boolean).filter(function(c,i,a){ return a.indexOf(c) === i; });
+    var originalPrice = services.reduce(function (sum, s) { var p = walkinServicePrice(s); return sum + (p == null ? 0 : p); }, 0);
+    var unavailable = services.filter(function (s) { return walkinServicePrice(s) == null || !walkinServiceCurrency(s); });
+    var uniqueCurrencies = services.map(walkinServiceCurrency).filter(Boolean).filter(function (c, i, a) { return a.indexOf(c) === i; });
     if (uniqueCurrencies.length > 1) {
       walkinSetMessage('Cannot mix currencies in one booking. Please select services using the same currency.', 'error');
       return;
@@ -5905,7 +6424,7 @@
 
       var bookingId = bookingResult.data.id;
       var elapsed = 0;
-      var rows = services.map(function(service){
+      var rows = services.map(function (service) {
         var itemStart = walkinAddMinutes(start, elapsed);
         var duration = walkinServiceDuration(service);
         var itemEnd = walkinAddMinutes(itemStart, duration);
@@ -5943,66 +6462,66 @@
   }
 
   // CRM-wide keyboard policy: Enter must never submit/activate a form implicitly.
-document.addEventListener('keydown',function(e){
-  if(e.key!=='Enter' || e.isComposing)return;
-  var t=e.target;
-  if(!t || !t.closest || !t.closest('form'))return;
-  if(t.tagName==='TEXTAREA' || t.isContentEditable)return;
-  e.preventDefault();
-  e.stopPropagation();
-},true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    var t = e.target;
+    if (!t || !t.closest || !t.closest('form')) return;
+    if (t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
 
-document.addEventListener('DOMContentLoaded', function(){
+  document.addEventListener('DOMContentLoaded', function () {
 
     var walkinTopBooking = $('booking-walkin-top');
-    if (walkinTopBooking) walkinTopBooking.addEventListener('click', function(){ openWalkinBooking(null); });
+    if (walkinTopBooking) walkinTopBooking.addEventListener('click', function () { openWalkinBooking(null); });
 
     var walkinCancel = $('walkin-booking-cancel');
     if (walkinCancel) walkinCancel.addEventListener('click', closeWalkinBooking);
 
     var walkinSearch = $('walkin-customer-search');
-    if (walkinSearch) walkinSearch.addEventListener('click', function(){ searchWalkinCustomer().catch(function(err){ console.error(err); walkinSetMessage(err.message || 'Could not search customers.','error'); }); });
+    if (walkinSearch) walkinSearch.addEventListener('click', function () { searchWalkinCustomer().catch(function (err) { console.error(err); walkinSetMessage(err.message || 'Could not search customers.', 'error'); }); });
 
     var walkinCustomerNumber = $('walkin-customer-number');
     if (walkinCustomerNumber) {
-      walkinCustomerNumber.addEventListener('input', function(){
+      walkinCustomerNumber.addEventListener('input', function () {
         // Typing a new query always invalidates the previous customer selection.
         clearWalkinCustomerSelection();
         hideWalkinNewCustomer();
         walkinSetMessage('');
       });
-      walkinCustomerNumber.addEventListener('keydown', function(e){
-        if (e.key === 'Enter') { e.preventDefault(); searchWalkinCustomer().catch(function(err){ console.error(err); walkinSetMessage(err.message || 'Could not search customers.','error'); }); }
+      walkinCustomerNumber.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); searchWalkinCustomer().catch(function (err) { console.error(err); walkinSetMessage(err.message || 'Could not search customers.', 'error'); }); }
       });
     }
 
     var newCustomerPhone = $('walkin-new-customer-phone');
-    if (newCustomerPhone) newCustomerPhone.addEventListener('input', function(){
-      var v=this.value.replace(/[^0-9+]/g,'');
-      if(v.indexOf('+')>0)v='+'+v.replace(/\+/g,'');
-      if(v.charAt(0)!=='+')v=v.replace(/\+/g,'');
-      this.value=v;
+    if (newCustomerPhone) newCustomerPhone.addEventListener('input', function () {
+      var v = this.value.replace(/[^0-9+]/g, '');
+      if (v.indexOf('+') > 0) v = '+' + v.replace(/\+/g, '');
+      if (v.charAt(0) !== '+') v = v.replace(/\+/g, '');
+      this.value = v;
     });
 
     var newCustomerName = $('walkin-new-customer-name');
-    if (newCustomerName) newCustomerName.addEventListener('input', function(){
+    if (newCustomerName) newCustomerName.addEventListener('input', function () {
       if (walkinState.customer) clearWalkinCustomerSelection();
     });
 
     var walkinCustomerResults = $('walkin-customer-results');
-    if (walkinCustomerResults) walkinCustomerResults.addEventListener('click', function(e){
+    if (walkinCustomerResults) walkinCustomerResults.addEventListener('click', function (e) {
       var button = e.target.closest('[data-walkin-customer-id]');
       if (button) selectWalkinCustomer(button.getAttribute('data-walkin-customer-id'));
     });
 
     var walkinServices = $('walkin-services');
     if (walkinServices) {
-      walkinServices.addEventListener('change', function(e){
+      walkinServices.addEventListener('change', function (e) {
         if (!e.target.matches('input[data-walkin-service]')) return;
         // A booking may contain multiple services, but never mixed currencies.
         if (e.target.checked) {
-          var candidate = walkinState.services.find(function(s){ return String(s.id) === String(e.target.value); });
-          var selectedBefore = walkinSelectedServices().filter(function(s){ return String(s.id) !== String(e.target.value); });
+          var candidate = walkinState.services.find(function (s) { return String(s.id) === String(e.target.value); });
+          var selectedBefore = walkinSelectedServices().filter(function (s) { return String(s.id) !== String(e.target.value); });
           var candidateCurrency = walkinServiceCurrency(candidate);
           var existingCurrency = walkinBookingCurrency(selectedBefore);
           if (existingCurrency && candidateCurrency && existingCurrency !== candidateCurrency) {
@@ -6012,7 +6531,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         updateWalkinServiceDetails(); updateWalkinServiceCount();
       });
-      walkinServices.addEventListener('input', function(e){
+      walkinServices.addEventListener('input', function (e) {
         if (e.target.id === 'walkin-service-search') filterWalkinServices();
       });
     }
@@ -6031,151 +6550,151 @@ document.addEventListener('DOMContentLoaded', function(){
     if (walkinForm) walkinForm.addEventListener('submit', saveWalkinBooking);
 
 
-    var save=$('booking-settings-form'); if(save)save.addEventListener('submit',saveBookingSettings);
-    var refresh=$('booking-config-refresh'); if(refresh)refresh.addEventListener('click',function(){loadBookingConfig().catch(function(e){message(e.message||'Could not load booking configuration.','error');});});
-    var add=$('new-booking-rule'); if(add)add.addEventListener('click',function(){openBookingRuleForm(null);});
-    var cancel=$('cancel-booking-rule'); if(cancel)cancel.addEventListener('click',function(){closeCrmFormCardModal('booking-rule-form-card');bookingConfigState.editingRuleId=null;});
-    var form=$('booking-rule-form'); if(form)form.addEventListener('submit',saveBookingRule);
-    var translationForm=$('translation-form'); if(translationForm)translationForm.addEventListener('submit',saveTranslation);
-    var translationAdd=$('translation-add-btn'); if(translationAdd)translationAdd.addEventListener('click',function(){ if(can('translations','create')) openTranslationForm(null); else message('You do not have permission to create translations.','error'); });
-    var translationCancel=$('translation-cancel-btn'); if(translationCancel)translationCancel.addEventListener('click',closeTranslationForm);
-    var translationSearch=$('translation-search'); if(translationSearch)translationSearch.addEventListener('input',renderTranslations);
-    var translationBody=$('translation-table-body'); if(translationBody)translationBody.addEventListener('click',function(e){
-      var button=e.target.closest('[data-edit-translation]');
-      if(button) openTranslationForm(button.getAttribute('data-edit-translation'));
+    var save = $('booking-settings-form'); if (save) save.addEventListener('submit', saveBookingSettings);
+    var refresh = $('booking-config-refresh'); if (refresh) refresh.addEventListener('click', function () { loadBookingConfig().catch(function (e) { message(e.message || 'Could not load booking configuration.', 'error'); }); });
+    var add = $('new-booking-rule'); if (add) add.addEventListener('click', function () { openBookingRuleForm(null); });
+    var cancel = $('cancel-booking-rule'); if (cancel) cancel.addEventListener('click', function () { closeCrmFormCardModal('booking-rule-form-card'); bookingConfigState.editingRuleId = null; });
+    var form = $('booking-rule-form'); if (form) form.addEventListener('submit', saveBookingRule);
+    var translationForm = $('translation-form'); if (translationForm) translationForm.addEventListener('submit', saveTranslation);
+    var translationAdd = $('translation-add-btn'); if (translationAdd) translationAdd.addEventListener('click', function () { if (can('translations', 'create')) openTranslationForm(null); else message('You do not have permission to create translations.', 'error'); });
+    var translationCancel = $('translation-cancel-btn'); if (translationCancel) translationCancel.addEventListener('click', closeTranslationForm);
+    var translationSearch = $('translation-search'); if (translationSearch) translationSearch.addEventListener('input', renderTranslations);
+    var translationBody = $('translation-table-body'); if (translationBody) translationBody.addEventListener('click', function (e) {
+      var button = e.target.closest('[data-edit-translation]');
+      if (button) openTranslationForm(button.getAttribute('data-edit-translation'));
     });
-    var startInput=$('booking-rule-start');
-    var endInput=$('booking-rule-end');
-    if(startInput && endInput){
-      startInput.addEventListener('change',function(){
-        if(startInput.value) endInput.min=startInput.value;
-        if(endInput.value && endInput.value<=startInput.value) endInput.value='';
+    var startInput = $('booking-rule-start');
+    var endInput = $('booking-rule-end');
+    if (startInput && endInput) {
+      startInput.addEventListener('change', function () {
+        if (startInput.value) endInput.min = startInput.value;
+        if (endInput.value && endInput.value <= startInput.value) endInput.value = '';
       });
     }
-    document.querySelectorAll('[data-view="booking-config"]').forEach(function(btn){btn.addEventListener('click',function(){loadBookingConfig().catch(function(e){console.error(e);message(e.message||'Could not load booking configuration.','error');});});});
-    if($('journal-entries-body')) $('journal-entries-body').addEventListener('click',function(e){var v=e.target.closest('[data-view-journal]');if(v)viewJournalEntry(v.getAttribute('data-view-journal'));var edit=e.target.closest('[data-edit-journal]');if(edit)openJournalForm(edit.getAttribute('data-edit-journal'));var del=e.target.closest('[data-delete-journal]');if(del)deleteJournal(del.getAttribute('data-delete-journal'));var post=e.target.closest('[data-post-journal]');if(post)openJournalForm(post.getAttribute('data-post-journal'));});
-    if($('journal-entry-add')) $('journal-entry-add').addEventListener('click',function(){openJournalForm(null);});
-    if($('journal-entry-cancel')) $('journal-entry-cancel').addEventListener('click',resetJournalForm);
-    if($('journal-line-add')) $('journal-line-add').addEventListener('click',function(){addJournalLine({});});
-    if($('journal-entry-form')) $('journal-entry-form').addEventListener('submit',function(e){saveJournalEntry(e,false);});
-    if($('journal-entry-post')) $('journal-entry-post').addEventListener('click',function(e){saveJournalEntry(e,true);});
-    if($('journal-lines-body')) $('journal-lines-body').addEventListener('input',updateJournalBalance);
-    if($('journal-lines-body')) $('journal-lines-body').addEventListener('click',function(e){var b=e.target.closest('[data-remove-journal-line]');if(b){b.closest('[data-journal-line]').remove();updateJournalBalance();}});
-    if($('journal-lines-body')) $('journal-lines-body').addEventListener('input',function(e){
-      var search=e.target.closest('[data-journal-account-search]'); if(!search)return;
+    document.querySelectorAll('[data-view="booking-config"]').forEach(function (btn) { btn.addEventListener('click', function () { loadBookingConfig().catch(function (e) { console.error(e); message(e.message || 'Could not load booking configuration.', 'error'); }); }); });
+    if ($('journal-entries-body')) $('journal-entries-body').addEventListener('click', function (e) { var v = e.target.closest('[data-view-journal]'); if (v) viewJournalEntry(v.getAttribute('data-view-journal')); var edit = e.target.closest('[data-edit-journal]'); if (edit) openJournalForm(edit.getAttribute('data-edit-journal')); var del = e.target.closest('[data-delete-journal]'); if (del) deleteJournal(del.getAttribute('data-delete-journal')); var post = e.target.closest('[data-post-journal]'); if (post) openJournalForm(post.getAttribute('data-post-journal')); });
+    if ($('journal-entry-add')) $('journal-entry-add').addEventListener('click', function () { openJournalForm(null); });
+    if ($('journal-entry-cancel')) $('journal-entry-cancel').addEventListener('click', resetJournalForm);
+    if ($('journal-line-add')) $('journal-line-add').addEventListener('click', function () { addJournalLine({}); });
+    if ($('journal-entry-form')) $('journal-entry-form').addEventListener('submit', function (e) { saveJournalEntry(e, false); });
+    if ($('journal-entry-post')) $('journal-entry-post').addEventListener('click', function (e) { saveJournalEntry(e, true); });
+    if ($('journal-lines-body')) $('journal-lines-body').addEventListener('input', updateJournalBalance);
+    if ($('journal-lines-body')) $('journal-lines-body').addEventListener('click', function (e) { var b = e.target.closest('[data-remove-journal-line]'); if (b) { b.closest('[data-journal-line]').remove(); updateJournalBalance(); } });
+    if ($('journal-lines-body')) $('journal-lines-body').addEventListener('input', function (e) {
+      var search = e.target.closest('[data-journal-account-search]'); if (!search) return;
       filterJournalAccountDropdown(search);
     });
-    if($('journal-lines-body')) $('journal-lines-body').addEventListener('keyup',function(e){
-      var search=e.target.closest('[data-journal-account-search]'); if(!search)return;
+    if ($('journal-lines-body')) $('journal-lines-body').addEventListener('keyup', function (e) {
+      var search = e.target.closest('[data-journal-account-search]'); if (!search) return;
       filterJournalAccountDropdown(search);
     });
-    if($('journal-lines-body')) $('journal-lines-body').addEventListener('change',function(e){
-      var radio=e.target.closest('[data-journal-account-radio]'); if(!radio)return;
-      var row=radio.closest('[data-journal-line]'); if(!row)return;
-      var account=state.chartOfAccounts.find(function(a){return String(a.account_code)===String(radio.value);});
-      var hidden=row.querySelector('[data-line-account]'); if(hidden)hidden.value=radio.value;
-      var label=row.querySelector('[data-journal-account-label]'); if(label)label.textContent=account?financeAccountLabel(account):'Select account';
-      var details=radio.closest('details'); if(details)details.removeAttribute('open');
-      var search=row.querySelector('[data-journal-account-search]'); if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}
+    if ($('journal-lines-body')) $('journal-lines-body').addEventListener('change', function (e) {
+      var radio = e.target.closest('[data-journal-account-radio]'); if (!radio) return;
+      var row = radio.closest('[data-journal-line]'); if (!row) return;
+      var account = state.chartOfAccounts.find(function (a) { return String(a.account_code) === String(radio.value); });
+      var hidden = row.querySelector('[data-line-account]'); if (hidden) hidden.value = radio.value;
+      var label = row.querySelector('[data-journal-account-label]'); if (label) label.textContent = account ? financeAccountLabel(account) : 'Select account';
+      var details = radio.closest('details'); if (details) details.removeAttribute('open');
+      var search = row.querySelector('[data-journal-account-search]'); if (search) { search.value = ''; search.dispatchEvent(new Event('input', { bubbles: true })); }
     });
-    if($('journal-entries-body')) $('journal-entries-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-journal]');if(x)openJournalForm(x.dataset.editJournal);var d=e.target.closest('[data-delete-journal]');if(d)deleteJournal(d.dataset.deleteJournal);var p=e.target.closest('[data-post-journal]');if(p)postJournal(p.dataset.postJournal);});
-    ['journal-search','journal-status-filter','journal-date-from','journal-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadJournalEntries);});
-    ['ledger-search','ledger-account-filter','ledger-date-from','ledger-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',loadGeneralLedger);});
-    ['trial-date-from','trial-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener('change',loadTrialBalance);});
-    if($('trial-refresh')) $('trial-refresh').addEventListener('click',loadTrialBalance);
-    if($('statement-map-add')) $('statement-map-add').addEventListener('click',function(){openMappingForm(null);});
-    if($('statement-map-cancel')) $('statement-map-cancel').addEventListener('click',function(){closeCrmFormCardModal('statement-map-form-card');});
-    if($('statement-map-form')) $('statement-map-form').addEventListener('submit',saveMapping);
-    if($('statement-map-search')) $('statement-map-search').addEventListener('input',renderStatementMappings);
-    if($('statement-map-filter')) $('statement-map-filter').addEventListener('change',renderStatementMappings);
-    if($('statement-map-body')) $('statement-map-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-map]');if(x)openMappingForm(x.dataset.editMap);var d=e.target.closest('[data-delete-map]');if(d)deleteMapping(d.dataset.deleteMap);});
-    if($('report-refresh')) $('report-refresh').addEventListener('click',loadFinancialReport);
-    if($('report-statement-select')) $('report-statement-select').addEventListener('change',loadFinancialReport);
-    if($('report-date-from')) $('report-date-from').addEventListener('change',loadFinancialReport);
-    if($('report-date-to')) $('report-date-to').addEventListener('change',loadFinancialReport);
-    if($('report-export-csv')) $('report-export-csv').addEventListener('click',function(){var st=($('report-statement-select')||{}).value||'Profit & Loss';exportTableCsv('financial-report-body','JASPremium_'+st.replace(/[^A-Za-z0-9]+/g,'_')+'.csv',false,'financial_statements');});
-    if($('report-print-pdf')) $('report-print-pdf').addEventListener('click',function(){var st=($('report-statement-select')||{}).value||'Profit & Loss',summary=($('financial-report-summary')||{}).textContent||'';downloadFinancePdf('financial-report-body',st,summary,false,'financial_statements');});
-    if($('journal-export-csv')) $('journal-export-csv').addEventListener('click',function(){exportTableCsv('journal-entries-body','JASPremium_Journal_Entries.csv',true,'journal_entries');});
-    if($('journal-print-pdf')) $('journal-print-pdf').addEventListener('click',function(){downloadFinancePdf('journal-entries-body','Journal Entries','Posted and draft journal entries currently shown.',true,'journal_entries');});
-    if($('ledger-export-csv')) $('ledger-export-csv').addEventListener('click',function(){exportTableCsv('general-ledger-body','JASPremium_General_Ledger.csv',false,'general_ledger');});
-    if($('ledger-print-pdf')) $('ledger-print-pdf').addEventListener('click',function(){downloadFinancePdf('general-ledger-body','General Ledger','General Ledger activity currently shown.',false,'general_ledger');});
-    if($('trial-export-csv')) $('trial-export-csv').addEventListener('click',function(){exportTableCsv('trial-balance-body','JASPremium_Trial_Balance.csv',false,'trial_balance');});
-    if($('trial-print-pdf')) $('trial-print-pdf').addEventListener('click',function(){var summary=($('trial-balance-status')||{}).textContent||'';downloadFinancePdf('trial-balance-body','Trial Balance',summary,false,'trial_balance');});
-    ['audit-search','audit-action-filter','audit-date-from','audit-date-to'].forEach(function(id){var el=$(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',renderAuditTrail);});
-    if($('audit-export-csv')) $('audit-export-csv').addEventListener('click',function(){exportTableCsv('audit-trail-body','JASPremium_Audit_Trail.csv',false,'finance_audit_trail');});
-    if($('audit-print-pdf')) $('audit-print-pdf').addEventListener('click',function(){downloadFinancePdf('audit-trail-body','Audit Trail','Finance audit history currently shown.',false,'finance_audit_trail');});
-    if($('url-qr-add')) $('url-qr-add').addEventListener('click',function(){openUrlQrForm(null);});
-    if($('url-qr-cancel')) $('url-qr-cancel').addEventListener('click',function(){closeCrmFormCardModal('url-qr-form-card');state.editingUrlQrId=null;});
-    if($('url-qr-form')) $('url-qr-form').addEventListener('submit',saveUrlQr);
-    if($('url-qr-search')) $('url-qr-search').addEventListener('input',renderUrlQrCodes);
-    if($('url-qr-body')) $('url-qr-body').addEventListener('click',function(e){var ed=e.target.closest('[data-url-qr-edit]');if(ed)openUrlQrForm(ed.dataset.urlQrEdit);var dl=e.target.closest('[data-url-qr-download]');if(dl)downloadUrlQr(dl.dataset.urlQrDownload);});
-    if($('period-add')) $('period-add').addEventListener('click',function(){openPeriodForm(null);});
-    if($('period-cancel')) $('period-cancel').addEventListener('click',function(){closeCrmFormCardModal('period-form-card');});
-    if($('period-form')) $('period-form').addEventListener('submit',savePeriod);
-    if($('periods-body')) $('periods-body').addEventListener('click',function(e){var x=e.target.closest('[data-edit-period]');if(x)openPeriodForm(x.dataset.editPeriod);var d=e.target.closest('[data-delete-period]');if(d)deletePeriod(d.dataset.deletePeriod);});
+    if ($('journal-entries-body')) $('journal-entries-body').addEventListener('click', function (e) { var x = e.target.closest('[data-edit-journal]'); if (x) openJournalForm(x.dataset.editJournal); var d = e.target.closest('[data-delete-journal]'); if (d) deleteJournal(d.dataset.deleteJournal); var p = e.target.closest('[data-post-journal]'); if (p) postJournal(p.dataset.postJournal); });
+    ['journal-search', 'journal-status-filter', 'journal-date-from', 'journal-date-to'].forEach(function (id) { var el = $(id); if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', loadJournalEntries); });
+    ['ledger-search', 'ledger-account-filter', 'ledger-date-from', 'ledger-date-to'].forEach(function (id) { var el = $(id); if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', loadGeneralLedger); });
+    ['trial-date-from', 'trial-date-to'].forEach(function (id) { var el = $(id); if (el) el.addEventListener('change', loadTrialBalance); });
+    if ($('trial-refresh')) $('trial-refresh').addEventListener('click', loadTrialBalance);
+    if ($('statement-map-add')) $('statement-map-add').addEventListener('click', function () { openMappingForm(null); });
+    if ($('statement-map-cancel')) $('statement-map-cancel').addEventListener('click', function () { closeCrmFormCardModal('statement-map-form-card'); });
+    if ($('statement-map-form')) $('statement-map-form').addEventListener('submit', saveMapping);
+    if ($('statement-map-search')) $('statement-map-search').addEventListener('input', renderStatementMappings);
+    if ($('statement-map-filter')) $('statement-map-filter').addEventListener('change', renderStatementMappings);
+    if ($('statement-map-body')) $('statement-map-body').addEventListener('click', function (e) { var x = e.target.closest('[data-edit-map]'); if (x) openMappingForm(x.dataset.editMap); var d = e.target.closest('[data-delete-map]'); if (d) deleteMapping(d.dataset.deleteMap); });
+    if ($('report-refresh')) $('report-refresh').addEventListener('click', loadFinancialReport);
+    if ($('report-statement-select')) $('report-statement-select').addEventListener('change', loadFinancialReport);
+    if ($('report-date-from')) $('report-date-from').addEventListener('change', loadFinancialReport);
+    if ($('report-date-to')) $('report-date-to').addEventListener('change', loadFinancialReport);
+    if ($('report-export-csv')) $('report-export-csv').addEventListener('click', function () { var st = ($('report-statement-select') || {}).value || 'Profit & Loss'; exportTableCsv('financial-report-body', 'JASPremium_' + st.replace(/[^A-Za-z0-9]+/g, '_') + '.csv', false, 'financial_statements'); });
+    if ($('report-print-pdf')) $('report-print-pdf').addEventListener('click', function () { var st = ($('report-statement-select') || {}).value || 'Profit & Loss', summary = ($('financial-report-summary') || {}).textContent || ''; downloadFinancePdf('financial-report-body', st, summary, false, 'financial_statements'); });
+    if ($('journal-export-csv')) $('journal-export-csv').addEventListener('click', function () { exportTableCsv('journal-entries-body', 'JASPremium_Journal_Entries.csv', true, 'journal_entries'); });
+    if ($('journal-print-pdf')) $('journal-print-pdf').addEventListener('click', function () { downloadFinancePdf('journal-entries-body', 'Journal Entries', 'Posted and draft journal entries currently shown.', true, 'journal_entries'); });
+    if ($('ledger-export-csv')) $('ledger-export-csv').addEventListener('click', function () { exportTableCsv('general-ledger-body', 'JASPremium_General_Ledger.csv', false, 'general_ledger'); });
+    if ($('ledger-print-pdf')) $('ledger-print-pdf').addEventListener('click', function () { downloadFinancePdf('general-ledger-body', 'General Ledger', 'General Ledger activity currently shown.', false, 'general_ledger'); });
+    if ($('trial-export-csv')) $('trial-export-csv').addEventListener('click', function () { exportTableCsv('trial-balance-body', 'JASPremium_Trial_Balance.csv', false, 'trial_balance'); });
+    if ($('trial-print-pdf')) $('trial-print-pdf').addEventListener('click', function () { var summary = ($('trial-balance-status') || {}).textContent || ''; downloadFinancePdf('trial-balance-body', 'Trial Balance', summary, false, 'trial_balance'); });
+    ['audit-search', 'audit-action-filter', 'audit-date-from', 'audit-date-to'].forEach(function (id) { var el = $(id); if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', renderAuditTrail); });
+    if ($('audit-export-csv')) $('audit-export-csv').addEventListener('click', function () { exportTableCsv('audit-trail-body', 'JASPremium_Audit_Trail.csv', false, 'finance_audit_trail'); });
+    if ($('audit-print-pdf')) $('audit-print-pdf').addEventListener('click', function () { downloadFinancePdf('audit-trail-body', 'Audit Trail', 'Finance audit history currently shown.', false, 'finance_audit_trail'); });
+    if ($('url-qr-add')) $('url-qr-add').addEventListener('click', function () { openUrlQrForm(null); });
+    if ($('url-qr-cancel')) $('url-qr-cancel').addEventListener('click', function () { closeCrmFormCardModal('url-qr-form-card'); state.editingUrlQrId = null; });
+    if ($('url-qr-form')) $('url-qr-form').addEventListener('submit', saveUrlQr);
+    if ($('url-qr-search')) $('url-qr-search').addEventListener('input', renderUrlQrCodes);
+    if ($('url-qr-body')) $('url-qr-body').addEventListener('click', function (e) { var ed = e.target.closest('[data-url-qr-edit]'); if (ed) openUrlQrForm(ed.dataset.urlQrEdit); var dl = e.target.closest('[data-url-qr-download]'); if (dl) downloadUrlQr(dl.dataset.urlQrDownload); });
+    if ($('period-add')) $('period-add').addEventListener('click', function () { openPeriodForm(null); });
+    if ($('period-cancel')) $('period-cancel').addEventListener('click', function () { closeCrmFormCardModal('period-form-card'); });
+    if ($('period-form')) $('period-form').addEventListener('submit', savePeriod);
+    if ($('periods-body')) $('periods-body').addEventListener('click', function (e) { var x = e.target.closest('[data-edit-period]'); if (x) openPeriodForm(x.dataset.editPeriod); var d = e.target.closest('[data-delete-period]'); if (d) deletePeriod(d.dataset.deletePeriod); });
 
   });
 
 
   /* --- Global table pagination: 10 rows per page --- */
-  function crmInitTablePagination(root){
+  function crmInitTablePagination(root) {
     root = root || document;
     var tables = root.querySelectorAll ? root.querySelectorAll('.crm-table') : [];
-    tables.forEach(function(table){
+    tables.forEach(function (table) {
       var tbody = table.tBodies && table.tBodies[0];
-      if(!tbody) return;
+      if (!tbody) return;
       var wrap = table.closest('.crm-table-wrap') || table.parentElement;
-      if(!wrap) return;
+      if (!wrap) return;
       var pager = wrap.parentElement && wrap.parentElement.querySelector(':scope > .crm-pagination');
-      if(!pager || pager.__crmPagerFor !== tbody){
+      if (!pager || pager.__crmPagerFor !== tbody) {
         pager = document.createElement('div');
         pager.className = 'crm-pagination';
         pager.__crmPagerFor = tbody;
         wrap.insertAdjacentElement('afterend', pager);
       }
-      if(tbody.__crmPaginationBound) return;
+      if (tbody.__crmPaginationBound) return;
       tbody.__crmPaginationBound = true;
       tbody.__crmPage = 1;
 
-      function render(){
+      function render() {
         var allRows = Array.prototype.slice.call(tbody.querySelectorAll(':scope > tr'));
-        allRows.forEach(function(row){ row.classList.remove('crm-pagination-hidden'); });
-        var dataRows = allRows.filter(function(row){
-          if(row.classList.contains('crm-empty') || row.hasAttribute('data-pagination-ignore')) return false;
+        allRows.forEach(function (row) { row.classList.remove('crm-pagination-hidden'); });
+        var dataRows = allRows.filter(function (row) {
+          if (row.classList.contains('crm-empty') || row.hasAttribute('data-pagination-ignore')) return false;
           var cell = row.querySelector(':scope > td');
-          if(!cell) return false;
-          if(row.classList.contains('crm-hidden')) return false;
-          if(window.getComputedStyle && getComputedStyle(row).display === 'none') return false;
+          if (!cell) return false;
+          if (row.classList.contains('crm-hidden')) return false;
+          if (window.getComputedStyle && getComputedStyle(row).display === 'none') return false;
           return true;
         });
 
         var total = dataRows.length;
         var pageSize = 10;
         var pages = Math.max(1, Math.ceil(total / pageSize));
-        tbody.__crmPage = Math.min(Math.max(1, Number(tbody.__crmPage)||1), pages);
+        tbody.__crmPage = Math.min(Math.max(1, Number(tbody.__crmPage) || 1), pages);
         var start = (tbody.__crmPage - 1) * pageSize;
         var end = Math.min(start + pageSize, total);
 
-        dataRows.forEach(function(row, i){
-          if(i < start || i >= end) row.classList.add('crm-pagination-hidden');
+        dataRows.forEach(function (row, i) {
+          if (i < start || i >= end) row.classList.add('crm-pagination-hidden');
         });
 
-        if(total === 0){
+        if (total === 0) {
           pager.classList.add('crm-hidden');
           pager.innerHTML = '';
           return;
         }
         pager.classList.remove('crm-hidden');
         pager.innerHTML =
-          '<div class="crm-pagination-info">Showing <strong>'+ (start+1) +'-'+end +'</strong> of <strong>'+total+'</strong></div>'+
-          '<div class="crm-pagination-controls">'+
-            '<button type="button" class="crm-pagination-btn" data-crm-page="prev" aria-label="Previous page"'+(tbody.__crmPage<=1?' disabled':'')+'>&lsaquo;</button>'+
-            '<span class="crm-pagination-page">Page '+tbody.__crmPage+' of '+pages+'</span>'+
-            '<button type="button" class="crm-pagination-btn" data-crm-page="next" aria-label="Next page"'+(tbody.__crmPage>=pages?' disabled':'')+'>&rsaquo;</button>'+
+          '<div class="crm-pagination-info">Showing <strong>' + (start + 1) + '-' + end + '</strong> of <strong>' + total + '</strong></div>' +
+          '<div class="crm-pagination-controls">' +
+          '<button type="button" class="crm-pagination-btn" data-crm-page="prev" aria-label="Previous page"' + (tbody.__crmPage <= 1 ? ' disabled' : '') + '>&lsaquo;</button>' +
+          '<span class="crm-pagination-page">Page ' + tbody.__crmPage + ' of ' + pages + '</span>' +
+          '<button type="button" class="crm-pagination-btn" data-crm-page="next" aria-label="Next page"' + (tbody.__crmPage >= pages ? ' disabled' : '') + '>&rsaquo;</button>' +
           '</div>';
-        pager.querySelectorAll('[data-crm-page]').forEach(function(btn){
-          btn.addEventListener('click',function(){
-            if(btn.disabled) return;
+        pager.querySelectorAll('[data-crm-page]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            if (btn.disabled) return;
             tbody.__crmPage += btn.getAttribute('data-crm-page') === 'next' ? 1 : -1;
             render();
           });
@@ -6186,37 +6705,37 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
-  document.addEventListener('DOMContentLoaded', function(){
+  document.addEventListener('DOMContentLoaded', function () {
     crmInitTablePagination(document);
-    if(window.MutationObserver){
+    if (window.MutationObserver) {
       var paginationRefreshQueued = false;
-      var paginationObserver = new MutationObserver(function(mutations){
+      var paginationObserver = new MutationObserver(function (mutations) {
         var needsRefresh = false;
-        mutations.forEach(function(m){
-          if(m.type !== 'childList' || (!m.addedNodes.length && !m.removedNodes.length)) return;
+        mutations.forEach(function (m) {
+          if (m.type !== 'childList' || (!m.addedNodes.length && !m.removedNodes.length)) return;
           var target = m.target && m.target.nodeType === 1 ? m.target : null;
-          if(target && target.closest && target.closest('.crm-pagination')) return;
+          if (target && target.closest && target.closest('.crm-pagination')) return;
           var changedPaginationOnly = true;
-          Array.prototype.forEach.call(m.addedNodes, function(n){
-            if(n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
+          Array.prototype.forEach.call(m.addedNodes, function (n) {
+            if (n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
           });
-          Array.prototype.forEach.call(m.removedNodes, function(n){
-            if(n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
+          Array.prototype.forEach.call(m.removedNodes, function (n) {
+            if (n.nodeType === 1 && !(n.matches && n.matches('.crm-pagination')) && !(n.closest && n.closest('.crm-pagination'))) changedPaginationOnly = false;
           });
-          if(!changedPaginationOnly) needsRefresh = true;
+          if (!changedPaginationOnly) needsRefresh = true;
         });
-        if(!needsRefresh || paginationRefreshQueued) return;
+        if (!needsRefresh || paginationRefreshQueued) return;
         paginationRefreshQueued = true;
-        window.requestAnimationFrame(function(){
+        window.requestAnimationFrame(function () {
           paginationRefreshQueued = false;
           crmInitTablePagination(document);
-          document.querySelectorAll('.crm-table tbody').forEach(function(tbody){
-            if(tbody.__crmRenderPagination) tbody.__crmRenderPagination();
+          document.querySelectorAll('.crm-table tbody').forEach(function (tbody) {
+            if (tbody.__crmRenderPagination) tbody.__crmRenderPagination();
           });
         });
       });
       var app = document.getElementById('crm-app') || document.body;
-      paginationObserver.observe(app,{subtree:true,childList:true});
+      paginationObserver.observe(app, { subtree: true, childList: true });
     }
   });
 

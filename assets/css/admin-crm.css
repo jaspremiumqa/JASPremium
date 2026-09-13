@@ -248,7 +248,7 @@ body.crm-page{margin:0;background:linear-gradient(135deg,#faf8f6 0%,#f4eee9 100%
 .crm-settings-card .crm-form-grid{margin-top:0}
 .crm-settings-card .crm-field small{font-size:11px;color:var(--crm-muted);line-height:1.4}
 .crm-currency-list{display:flex;flex-direction:column;gap:10px}
-.crm-currency-row{display:grid;grid-template-columns:120px minmax(0,1fr) minmax(0,1fr) 34px;gap:10px;align-items:end;padding:12px;background:#fbf9f7;border:1px solid var(--crm-line);border-radius:14px}
+.crm-currency-row{display:grid;grid-template-columns:120px minmax(0,1fr) minmax(0,1fr) 150px 34px;gap:10px;align-items:end;padding:12px;background:#fbf9f7;border:1px solid var(--crm-line);border-radius:14px}
 .crm-currency-code{display:flex;align-items:center;gap:9px;min-width:0;padding-bottom:2px}
 .crm-currency-symbol{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#efe6df;color:var(--crm-accent-dark);font-weight:800;font-size:13px}
 .crm-currency-code strong{display:block;font-size:13px;letter-spacing:.04em}
@@ -256,12 +256,15 @@ body.crm-page{margin:0;background:linear-gradient(135deg,#faf8f6 0%,#f4eee9 100%
 .crm-currency-code-edit{display:block}
 .crm-currency-code-edit input{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 9px;background:#fff;color:var(--crm-ink);font:700 13px inherit;text-transform:uppercase;outline:none}
 .crm-currency-code-edit small{display:block;margin-top:4px;color:var(--crm-muted);font-size:10px}
-.crm-currency-row .crm-field{gap:5px}
+.crm-currency-row .crm-field{gap:5px}.crm-currency-display{align-items:flex-start;justify-content:flex-end;min-width:130px;display:flex;flex-direction:column}.crm-currency-display .crm-toggle{margin-top:2px}.crm-currency-display small{font-size:10px;color:var(--crm-muted)}
+.crm-currency-row>.crm-icon-btn{align-self:end}
 .crm-currency-row .crm-field label{font-size:10px}
 .crm-currency-row .crm-field input{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 11px;background:#fff;color:var(--crm-ink);font:inherit;outline:none}
 .crm-currency-row .crm-field input:focus,.crm-currency-code-edit input:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
 .crm-icon-btn{width:34px;height:34px;border:0;border-radius:9px;background:#f2ece8;color:#7e6d64;font-size:20px;cursor:pointer;display:grid;place-items:center;transition:.15s}
 .crm-icon-btn:hover{background:#f8e9e6;color:var(--crm-danger)}
+.crm-icon-btn-danger{color:var(--crm-danger)}
+.crm-icon-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
 .crm-settings-help{margin-top:11px;color:var(--crm-muted);font-size:11px;line-height:1.5}
 .crm-settings-empty{padding:18px;border:1px dashed #d8cec7;border-radius:12px;text-align:center;color:var(--crm-muted);font-size:12px;background:#fcfaf8}
 .crm-settings-actions{
@@ -284,7 +287,7 @@ body.crm-page{margin:0;background:linear-gradient(135deg,#faf8f6 0%,#f4eee9 100%
 @media(max-width:620px){
   .crm-settings-intro{align-items:flex-start;flex-direction:column}
   .crm-settings-card-head{flex-direction:column}
-  .crm-currency-row{grid-template-columns:1fr 1fr 34px}
+  .crm-currency-row{grid-template-columns:1fr 1fr 1fr 34px}.crm-currency-display{grid-column:1}.crm-currency-row .crm-remove-currency{grid-column:4;grid-row:2}
   .crm-currency-code{grid-column:1/-1}
   .crm-currency-row .crm-field:nth-child(2){grid-column:1}
   .crm-currency-row .crm-field:nth-child(3){grid-column:2}
@@ -307,21 +310,23 @@ body.crm-page{margin:0;background:linear-gradient(135deg,#faf8f6 0%,#f4eee9 100%
 
 /* Social settings */
 .crm-social-settings-card{grid-column:1 / -1}
-.crm-social-list{display:flex;flex-direction:column;gap:12px}
-.crm-social-row{display:grid;grid-template-columns:42px minmax(130px,160px) minmax(280px,1fr) minmax(220px,250px);gap:14px;align-items:end;padding:13px;background:#fbf9f7;border:1px solid var(--crm-line);border-radius:14px}
-.crm-social-icon-preview{width:42px;height:42px;border-radius:11px;background:#efe6df;display:grid;place-items:center;overflow:hidden;color:var(--crm-accent-dark)}
+.crm-social-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--crm-line);border-radius:14px;background:#fff}
+.crm-social-table-head,.crm-social-row{min-width:820px;display:grid;grid-template-columns:minmax(190px,1.05fr) minmax(280px,1.65fr) minmax(105px,.55fr) 85px 40px;gap:10px;align-items:end}
+.crm-social-table-head{padding:11px 12px;background:#faf8f6;border-bottom:1px solid var(--crm-line);font-size:10px;font-weight:800;color:var(--crm-muted);text-transform:uppercase;letter-spacing:.06em}
+.crm-social-list{display:flex;flex-direction:column}
+.crm-social-row{padding:12px;border-bottom:1px solid var(--crm-line);background:#fff}
+.crm-social-row:last-child{border-bottom:0}
+.crm-social-row:hover{background:#fdfbf9}
+.crm-social-channel{display:flex;align-items:center;gap:10px;min-width:0}
+.crm-social-icon-preview{width:42px;height:42px;flex:0 0 42px;border-radius:11px;background:#efe6df;display:grid;place-items:center;overflow:hidden;color:var(--crm-accent-dark)}
 .crm-social-icon-preview img{width:25px;height:25px;object-fit:contain;display:block}
 .crm-social-icon-preview span{font-size:16px;font-weight:800}
-.crm-social-name{min-width:0}.crm-social-name strong{display:block;font-size:13px;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
-.crm-social-name small{display:block;margin-top:3px;color:var(--crm-muted);font-size:10px}
-.crm-social-field label{display:block;font-size:10px;margin-bottom:5px}
-.crm-social-field input[type=text],.crm-social-field input[type=url]{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 11px;background:#fff;color:var(--crm-ink);font:inherit;outline:none}
-.crm-social-field input:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
-.crm-social-status{display:flex;align-items:center;gap:8px;justify-content:flex-start}
-.crm-social-status label{display:inline-flex;align-items:flex-start;gap:7px;font-size:12px;font-weight:700;line-height:1.35;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
-.crm-social-status input{width:17px;height:17px;accent-color:var(--crm-accent)}
-@media(max-width:900px){.crm-social-row{grid-template-columns:42px 1fr}.crm-social-field-url,.crm-social-status{grid-column:2}.crm-website-images-grid{grid-template-columns:1fr}}
-@media(max-width:620px){.crm-social-row{grid-template-columns:42px 1fr}.crm-social-field-url,.crm-social-status{grid-column:1/-1}.crm-site-image-card{grid-template-columns:90px minmax(0,1fr)}.crm-site-image-preview{width:90px;height:120px}.crm-site-image-preview-wide{height:90px}}
+.crm-social-name{min-width:0}.crm-social-name strong{display:block;font-size:13px;line-height:1.25;white-space:normal;overflow-wrap:anywhere}.crm-social-name small{display:block;margin-top:3px;color:var(--crm-muted);font-size:10px}
+.crm-social-name input{display:block;width:100%;border:1px solid #ded5ce;border-radius:8px;padding:7px 8px;background:#fff;color:var(--crm-ink);font:inherit;font-size:12px;outline:none;margin:2px 0}.crm-social-name input:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
+.crm-social-field{margin:0}.crm-social-field label,.crm-social-row .crm-field label{display:block;font-size:10px;margin-bottom:5px}.crm-social-field input[type=url],.crm-social-row .crm-field input[type=number]{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 11px;background:#fff;color:var(--crm-ink);font:inherit;outline:none}.crm-social-field input:focus,.crm-social-row .crm-field input:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
+.crm-social-status{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;min-height:55px}.crm-social-status>label:first-child{display:block;font-size:10px;margin-bottom:5px}.crm-social-status .crm-toggle{display:inline-flex;align-items:center}
+@media(max-width:900px){.crm-social-table-head,.crm-social-row{min-width:760px;grid-template-columns:minmax(170px,1fr) minmax(240px,1.4fr) 100px 75px 40px}.crm-website-images-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.crm-social-table-head,.crm-social-row{min-width:700px}.crm-site-image-card{grid-template-columns:90px minmax(0,1fr)}.crm-site-image-preview{width:90px;height:120px}.crm-site-image-preview-wide{height:90px}}
 
 /* Voucher editor */
 .crm-voucher-editor{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.8fr);gap:24px;align-items:start;margin-top:18px}
@@ -1646,3 +1651,45 @@ body.crm-form-modal-open{overflow:hidden;}
 .crm-booking-add-service-actions{margin-top:12px;padding-top:12px;border-top:1px solid rgba(43,35,33,.10);align-items:center}
 .crm-booking-add-service-actions .crm-small{margin-left:4px}
 @media(max-width:900px){.crm-booking-add-service-price-row{display:grid;grid-template-columns:1fr}.crm-booking-add-service-price-row label{min-width:0}}
+
+
+.crm-loyalty-tier-settings-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.crm-loyalty-tier-setting-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(190px,1fr) minmax(110px,.65fr) 90px 40px;gap:10px;align-items:end;padding:12px;border:1px solid var(--crm-line);border-radius:12px;background:#faf8f6}
+.crm-loyalty-tier-setting-row .crm-field{margin:0}
+.crm-loyalty-tier-setting-row .crm-icon-btn{margin-bottom:0}
+@media (max-width:900px){.crm-loyalty-tier-setting-row{grid-template-columns:1fr 1fr}.crm-loyalty-tier-active{min-width:90px}}
+@media (max-width:700px){.crm-loyalty-tier-setting-row{grid-template-columns:1fr}.crm-loyalty-tier-setting-row .crm-icon-btn{justify-self:start}}
+
+/* Language + settings toggles */
+.crm-toggle{position:relative;display:inline-flex;width:42px;height:24px;align-items:center;cursor:pointer;flex:0 0 auto}
+.crm-toggle input{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;pointer-events:none}
+.crm-toggle span{display:block;width:42px;height:24px;border-radius:999px;background:#d9d1cb;position:relative;transition:.18s ease;box-shadow:inset 0 0 0 1px rgba(80,60,50,.08)}
+.crm-toggle span:after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(30,20,15,.18);transition:.18s ease}
+.crm-toggle input:checked + span{background:var(--crm-accent)}
+.crm-toggle input:checked + span:after{transform:translateX(18px)}
+.crm-toggle input:focus-visible + span{box-shadow:0 0 0 3px rgba(164,111,90,.18)}
+.crm-language-settings-card{grid-column:1 / -1}
+.crm-language-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--crm-line);border-radius:14px;background:#fff}
+.crm-language-table-head,.crm-language-row{min-width:980px;display:grid;grid-template-columns:145px minmax(160px,1fr) minmax(160px,1fr) 85px 120px 86px;gap:10px;align-items:end}
+.crm-language-table-head{padding:11px 12px;background:#faf8f6;border-bottom:1px solid var(--crm-line);font-size:10px;font-weight:800;color:var(--crm-muted);text-transform:uppercase;letter-spacing:.06em}
+.crm-language-list{display:flex;flex-direction:column}
+.crm-language-row{padding:12px;border-bottom:1px solid var(--crm-line);background:#fff}
+.crm-language-row:last-child{border-bottom:0}
+.crm-language-row:hover{background:#fdfbf9}
+.crm-language-code{display:flex;align-items:center;gap:9px;min-width:0;padding-bottom:2px}
+.crm-language-symbol{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#efe6df;color:var(--crm-accent-dark);font-weight:800;font-size:12px}
+.crm-language-code strong{display:block;font-size:13px;letter-spacing:.04em}.crm-language-code small{display:block;margin-top:2px;color:var(--crm-muted);font-size:10px}
+.crm-language-code-edit{display:block}.crm-language-code-edit input{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 9px;background:#fff;color:var(--crm-ink);font:700 13px inherit;text-transform:lowercase;outline:none}
+.crm-language-code-edit small{display:block;margin-top:4px;color:var(--crm-muted);font-size:10px}
+.crm-language-row .crm-field{margin:0;gap:5px}.crm-language-row .crm-field label,.crm-language-status>label:first-child,.crm-language-default>label:first-child{font-size:10px;margin-bottom:5px}
+.crm-language-row .crm-field input{width:100%;border:1px solid #ded5ce;border-radius:10px;padding:10px 11px;background:#fff;color:var(--crm-ink);font:inherit;outline:none}
+.crm-language-row .crm-field input:disabled{background:#f7f3f0;color:#7e7169;cursor:default}
+.crm-language-row .crm-field input:focus,.crm-language-code-edit input:focus{border-color:var(--crm-accent);box-shadow:0 0 0 3px rgba(164,111,90,.11)}
+.crm-language-status,.crm-language-default{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;min-height:55px}
+.crm-language-actions{display:flex;align-items:flex-end;justify-content:flex-end;gap:6px;min-height:55px}
+.crm-language-actions .crm-icon-btn{width:34px;height:34px}
+.crm-language-actions svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.crm-language-actions .is-active{background:#efe6df;color:var(--crm-accent-dark)}
+@media(max-width:900px){.crm-language-table-head,.crm-language-row{min-width:900px;grid-template-columns:130px 150px 150px 80px 110px 82px}}
+
+.crm-loyalty-booking-table-wrap{margin-top:16px;border:1px solid var(--crm-line);border-radius:12px;overflow:hidden;background:#fff}.crm-loyalty-booking-table-head,.crm-loyalty-booking-rate-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center}.crm-loyalty-booking-table-head{padding:12px 14px;background:#faf8f6;border-bottom:1px solid var(--crm-line);font-size:12px;font-weight:700;color:var(--crm-muted,#777);text-transform:none}.crm-loyalty-booking-rates-list{display:block}.crm-loyalty-booking-rate-row{padding:10px 14px;border-bottom:1px solid var(--crm-line);min-height:58px}.crm-loyalty-booking-rate-row:last-child{border-bottom:0}.crm-loyalty-booking-rate-row strong{font-size:14px;color:var(--crm-text,#333)}.crm-loyalty-booking-rate-row .crm-field{margin:0;max-width:220px}.crm-loyalty-booking-rate-row input{width:100%}@media(max-width:700px){.crm-loyalty-booking-table-head,.crm-loyalty-booking-rate-row{grid-template-columns:1fr 130px}.crm-loyalty-booking-rate-row .crm-field{max-width:none}}

@@ -740,28 +740,10 @@
           <div class="crm-settings-card-head">
             <div>
               <div class="crm-settings-kicker">Website defaults</div>
-              <h3>Language &amp; currency</h3>
-              <p>These are used for visitors who do not already have a saved preference.</p>
             </div>
           </div>
 
           <div class="crm-form-grid">
-            <div class="crm-field">
-              <label for="app-setting-currency">Display currency</label>
-              <select id="app-setting-currency">
-                <option value="USD">USD — $</option>
-                <option value="QAR">QAR — ريال</option>
-              </select>
-              <small>Currency shown for service prices and booking totals.</small>
-            </div>
-            <div class="crm-field">
-              <label for="app-setting-language">Default language</label>
-              <select id="app-setting-language">
-                <option value="en">English</option>
-                <option value="ar">العربية</option>
-              </select>
-              <small>Used only when the visitor has no saved language preference.</small>
-            </div>
             <div class="crm-field">
               <label for="app-setting-website-name">Website name</label>
               <input id="app-setting-website-name" type="text" placeholder="Your website name" autocomplete="organization" maxlength="120">
@@ -775,18 +757,49 @@
           </div>
         </div>
 
+        <div class="crm-card crm-settings-card crm-language-settings-card" data-settings-panel="language-currency">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Languages</div>
+              <h3>Website languages</h3>
+              <p>Add the languages visitors can use, edit their labels, activate or deactivate them, and select exactly one as the <strong>Default language</strong>.</p>
+            </div>
+            <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="add-language-option">Add language</button>
+          </div>
+          <div class="crm-language-table-wrap">
+            <div class="crm-language-table-head" aria-hidden="true"><span>Language</span><span>English label</span><span>Native label</span><span>Active</span><span>Default language</span><span>Actions</span></div>
+            <div id="language-options-list" class="crm-language-list"></div>
+          </div>
+          <div class="crm-settings-help">At least one language must remain configured. The default language must be active.</div>
+        </div>
+
         <div class="crm-card crm-settings-card" data-settings-panel="language-currency">
           <div class="crm-settings-card-head">
             <div>
               <div class="crm-settings-kicker">Currency</div>
               <h3>What visitors see</h3>
-              <p>Set the label used for each currency in English and Arabic. No JSON editing needed.</p>
+              <p>Manage currencies directly in the database. Select exactly one active currency as the website display currency.</p>
             </div>
             <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="add-currency-option" >Add currency</button>
           </div>
 
           <div id="currency-options-list" class="crm-currency-list"></div>
           <div class="crm-settings-help">Tip: keep the currency code short, such as <strong>USD</strong> or <strong>QAR</strong>.</div>
+        </div>
+
+        <div class="crm-card crm-settings-card crm-loyalty-settings-card" data-settings-panel="rewards">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Customer loyalty</div>
+              <h3>Booking loyalty points</h3>
+              <p>Set the points earned for each currency. Points are awarded only for completed bookings.</p>
+            </div>
+          </div>
+          <div class="crm-loyalty-booking-table-wrap">
+            <div class="crm-loyalty-booking-table-head" aria-hidden="true"><span>Currency</span><span>Points per 1 currency unit</span></div>
+            <div id="loyalty-booking-points-rates-list" class="crm-loyalty-booking-rates-list"></div>
+          </div>
+          <div class="crm-settings-help">Use <strong>0</strong> to disable points for a currency. Only bookings with status <strong>Completed</strong> can earn points.</div>
         </div>
 
         <div class="crm-card crm-settings-card crm-loyalty-settings-card" data-settings-panel="rewards">
@@ -802,15 +815,32 @@
           <div class="crm-settings-help">Example: <strong>100</strong> points → <strong>$10 reward</strong>. Changes take effect for all customer profiles after you save settings.</div>
         </div>
 
+        <div class="crm-card crm-settings-card crm-loyalty-settings-card" data-settings-panel="rewards">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Customer loyalty</div>
+              <h3>Loyalty tiers</h3>
+              <p>Manage customer loyalty tiers directly in the database. Set the tier name, minimum lifetime points, sort order and whether the tier is active. The highest active matching threshold determines the customer tier.</p>
+            </div>
+            <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="add-loyalty-tier">Add tier</button>
+          </div>
+          <div id="loyalty-tier-settings-list" class="crm-loyalty-tier-settings-list"></div>
+          <div class="crm-settings-help">Use <strong>0</strong> for the starting tier. Example: Member 0, Silver 100, Gold 300, Platinum 600. Save Settings writes these tiers to the <strong>loyalty_tiers</strong> database table and synchronizes existing customers.</div>
+        </div>
+
         <div class="crm-card crm-settings-card crm-social-settings-card" data-settings-panel="social">
           <div class="crm-settings-card-head">
             <div>
               <div class="crm-settings-kicker">Social &amp; messaging</div>
               <h3>Website social links</h3>
-              <p>Active channels are shown in the website navigation and footer. Inactive channels are hidden automatically.</p>
+              <p>Manage your social channels directly from the CRM. Set the public URL, display order and whether each channel is active.</p>
             </div>
+            <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="add-social-media">Add social media</button>
           </div>
-          <div id="social-settings-list" class="crm-social-list"></div>
+          <div class="crm-social-table-wrap">
+            <div class="crm-social-table-head" aria-hidden="true"><span>Channel</span><span>Public URL</span><span>Sort order</span><span>Active</span><span></span></div>
+            <div id="social-settings-list" class="crm-social-list"></div>
+          </div>
           <div class="crm-settings-help">The website already contains the social icons. The CRM only controls their links and visibility.</div>
         </div>
 
@@ -852,6 +882,36 @@
 
         <div class="crm-settings-actions">
           <button type="submit" class="crm-btn crm-btn-primary" id="save-application-settings">Save Settings</button>
+        </div>
+
+        <div class="crm-card crm-settings-card crm-branding-card" data-settings-panel="media">
+          <div class="crm-settings-card-head">
+            <div>
+              <div class="crm-settings-kicker">Application branding</div>
+              <h3>Logo</h3>
+              <p>Upload the main application logo used by the CRM. This logo is independent from the website navigation logos.</p>
+            </div>
+          </div>
+          <div class="crm-branding-editor">
+            <div class="crm-branding-preview" id="application-logo-image-preview-wrap">
+              <img id="application-logo-image-preview" alt="Application logo preview">
+            </div>
+            <div class="crm-branding-controls">
+              <div class="crm-field">
+                <label for="application-logo-image-file">Upload image</label>
+                <input id="application-logo-image-file" type="file" accept="image/*">
+                <small>JPG, PNG, WEBP or GIF. Maximum 5 MB.</small>
+              </div>
+              <div class="crm-form-grid crm-branding-size-grid">
+                <div class="crm-field"><label for="application-logo-image-width">Width</label><input id="application-logo-image-width" type="text" placeholder="125px"></div>
+                <div class="crm-field"><label for="application-logo-image-height">Height</label><input id="application-logo-image-height" type="text" placeholder="auto"></div>
+              </div>
+              <div class="crm-branding-actions">
+                <button type="button" class="crm-btn crm-btn-primary crm-btn-small" id="upload-application-logo-image">Upload / Replace</button>
+                <button type="button" class="crm-btn crm-btn-secondary crm-btn-small" id="delete-application-logo-image">Delete image</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="crm-card crm-settings-card crm-branding-card" data-settings-panel="media">
@@ -1235,10 +1295,6 @@
       </div>
       <select id="customer-loyalty-filter" class="crm-filter-select" aria-label="Filter customers by loyalty tier">
         <option value="all">All loyalty tiers</option>
-        <option value="Member">Member</option>
-        <option value="Silver">Silver</option>
-        <option value="Gold">Gold</option>
-        <option value="Platinum">Platinum</option>
       </select>
     </div>
     <div class="crm-table-wrap">
@@ -1261,7 +1317,7 @@
     <p id="customer-detail-notes" class="crm-small"></p>
     <div class="crm-stats-grid">
       <div class="crm-stat"><span>Bookings</span><strong id="customer-booking-count">0</strong></div>
-      <div class="crm-stat"><span>Total spent</span><strong>$<span id="customer-total-spent">0.00</span></strong></div>
+      <div class="crm-stat"><span>Total spent</span><strong id="customer-total-spent">0.00</strong></div>
       <div class="crm-stat crm-loyalty-stat"><span>Loyalty points</span><strong id="customer-loyalty-points">0</strong><small id="customer-loyalty-tier">Member</small></div>
     </div>
     <div class="crm-detail-section crm-loyalty-panel">
@@ -1299,7 +1355,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
-  <script src="assets/js/crm/admin-crm.js?v=crm-v52-booking-voucher"></script>
+  <script src="assets/js/crm/admin-crm.js?v=crm-v57-language-currency-ui"></script>
 
 <div id="crm-confirm-modal" class="crm-confirm-modal crm-hidden" role="dialog" aria-modal="true" aria-labelledby="crm-confirm-title">
   <div class="crm-confirm-card">

@@ -4,6 +4,7 @@
     return document.querySelectorAll('.lang-switcher .lang-label');
   }
   var currentLang = localStorage.getItem('siteLang') || 'en';
+  var supportedLanguages = [];
 
   Promise.all([
     window.getApplicationSettings ? window.getApplicationSettings() : Promise.resolve(null),
@@ -23,6 +24,8 @@
     var appSettings = results[0];
     var bookingConfiguration = results[1];
     var translationRows = results[2] || [];
+    supportedLanguages = (appSettings && appSettings.__languages || []).filter(function(row){ return row && row.active !== false; });
+    if (!supportedLanguages.length) supportedLanguages = [{code:'en',native_label:'English',en_label:'English',active:true,is_default:true}];
     var serviceCategories = results[3] || [];
     var activeServices = results[4] || [];
     var translations = {};
@@ -35,10 +38,12 @@
       };
     });
 
-    if (!localStorage.getItem('siteLang') && appSettings && appSettings.default_language) {
-      currentLang = String(appSettings.default_language).toLowerCase();
-      if (currentLang !== 'ar' && currentLang !== 'en') currentLang = 'en';
-    }
+    var defaultLanguage = appSettings && appSettings.default_language
+      ? String(appSettings.default_language).toLowerCase()
+      : String((supportedLanguages.find(function(row){ return row.is_default === true; }) || supportedLanguages[0]).code || 'en').toLowerCase();
+    var savedLanguage = localStorage.getItem('siteLang');
+    if (!savedLanguage || !supportedLanguages.some(function(row){ return String(row.code).toLowerCase() === String(savedLanguage).toLowerCase(); })) currentLang = defaultLanguage;
+    else currentLang = String(savedLanguage).toLowerCase();
 
     if (appSettings && appSettings.contact_phone) {
       var contactPhone = String(appSettings.contact_phone).trim();
@@ -151,11 +156,10 @@
           else el.textContent = text;
         });
 
-        if (translations['nav.langSwitcherLabel']) {
-          getLangLabels().forEach(function (el) {
-            el.textContent = translations['nav.langSwitcherLabel'][lang] || '';
-          });
-        }
+        var currentIndex = supportedLanguages.findIndex(function(row){ return String(row.code).toLowerCase() === String(lang).toLowerCase(); });
+        var nextRow = supportedLanguages.length > 1 ? supportedLanguages[(currentIndex + 1 + supportedLanguages.length) % supportedLanguages.length] : supportedLanguages[0];
+        var nextLabel = nextRow ? String(nextRow.native_label || nextRow.en_label || nextRow.code || '').trim() : '';
+        getLangLabels().forEach(function (el) { el.textContent = nextLabel; });
 
         localStorage.setItem('siteLang', lang);
         currentLang = lang;
@@ -190,8 +194,11 @@
       var anchor = e.target.closest('.lang-switcher');
       if (!anchor) return;
       e.preventDefault();
-      var newLang = currentLang === 'en' ? 'ar' : 'en';
-      localStorage.setItem('siteLang', newLang);
+      if (supportedLanguages.length < 2) return;
+      var currentIndex = supportedLanguages.findIndex(function(row){ return String(row.code).toLowerCase() === String(currentLang).toLowerCase(); });
+      var nextRow = supportedLanguages[(currentIndex + 1 + supportedLanguages.length) % supportedLanguages.length];
+      if (!nextRow) return;
+      localStorage.setItem('siteLang', String(nextRow.code).toLowerCase());
       location.reload();
     });
   }).catch(function (err) {
