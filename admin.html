@@ -20,20 +20,20 @@
 <body class="crm-page">
   <div id="crm-toast" class="crm-toast" aria-live="polite" aria-atomic="true"></div>
   <div id="crm-login" class="crm-login crm-card">
-    <div class="crm-login-mark">S</div>
+    <div class="crm-login-mark crm-login-logo-mark"><img id="crm-login-logo" alt="CRM logo" hidden><span id="crm-login-logo-fallback">S</span></div>
     <div class="crm-section-label">Salon management</div>
     <h1 class="crm-title">Welcome back</h1>
     <p class="crm-subtitle">Sign in to manage your salon.</p>
     <div id="login-message" class="crm-message"></div>
     <form id="login-form">
-      <div class="crm-field"><label for="login-email">Email</label><input id="login-email" type="email" required autocomplete="username"></div>
+      <div class="crm-field"><label for="login-email">Username or email</label><input id="login-email" type="text" required autocomplete="username"></div>
       <div class="crm-field"><label for="login-password">Password</label><input id="login-password" type="password" required autocomplete="current-password"></div>
       <button class="crm-btn crm-btn-primary crm-btn-wide" type="submit">Sign in <span>→</span></button>
     </form>
   </div>
 
   <section id="crm-password-setup" class="crm-card crm-login crm-hidden" aria-labelledby="password-setup-title">
-    <div class="crm-login-mark">✓</div>
+    <div class="crm-login-mark crm-login-logo-mark"><img id="crm-password-setup-logo" alt="CRM logo" hidden><span id="crm-password-setup-logo-fallback">✓</span></div>
     <div class="crm-section-label">Welcome to the salon CRM</div>
     <h1 id="password-setup-title" class="crm-title">Create your password</h1>
     <p id="password-setup-subtitle" class="crm-subtitle">Your invitation is confirmed. Choose a password to finish setting up your CRM account.</p>
@@ -116,7 +116,7 @@
             <div class="crm-card"><div class="crm-card-head"><div><div class="crm-section-label">Quick access</div><h2>Manage your salon</h2></div></div>
               <div class="crm-quick-grid crm-quick-grid-full">
                 <button class="crm-quick" data-view-target="services"><b>Services</b><span>Edit categories, prices, durations and visibility →</span></button>
-                <button class="crm-quick" data-view-target="users"><b>Users & Access</b><span>Invite staff and control CRM roles →</span></button>
+                <button class="crm-quick" data-view-target="users"><b>Users & Access</b><span>Create staff accounts and control CRM roles →</span></button>
                 <button class="crm-quick" data-view-target="vouchers"><b>Vouchers</b><span>Manage customer offers and promotions →</span></button>
                 <button class="crm-quick" data-view-target="bookings"><b>Bookings</b><span>Review and manage customer appointments →</span></button>
               </div>
@@ -199,46 +199,59 @@
           </div>
         </section>
         <section id="view-users" class="crm-view crm-hidden" data-admin-only>
-          <div class="crm-page-heading"><div><div class="crm-section-label">Access control</div><h2>Users & access</h2><p>Invite people who need access to the salon CRM.</p></div><button id="invite-user-btn" class="crm-btn crm-btn-primary" >Invite user</button></div>
-          <div class="crm-card"><div class="crm-info-banner"><b>Secure invitations</b><span>New users receive a secure email invitation. Passwords are never stored in your salon profile records.</span></div></div>
+          <div class="crm-page-heading"><div><div class="crm-section-label">Access control</div><h2>Users & access</h2><p>Create and manage CRM access directly.</p></div><button id="invite-user-btn" class="crm-btn crm-btn-primary" >Create user</button></div>
+          <div class="crm-card"><div class="crm-info-banner"><b>Direct account setup</b><span>Administrators create users and set their passwords directly. No invitation or password-reset emails are sent.</span></div></div>
           <div class="crm-card">
             <div class="crm-list-filters crm-users-filters">
-              <div class="crm-search-box"><span>⌕</span><input id="user-search" type="search" placeholder="Search name or email" aria-label="Search users"></div>
+              <div class="crm-search-box"><span>⌕</span><input id="user-search" type="search" placeholder="Search name, username or email" aria-label="Search users"></div>
               <select id="user-role-filter" class="crm-filter-select" aria-label="Filter users by role"><option value="all">All roles</option></select>
               <select id="user-status-filter" class="crm-filter-select" aria-label="Filter users by status"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
             </div>
-            <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status & sign-in</th><th>Created</th><th>Actions</th></tr></thead><tbody id="users-table-body"></tbody></table></div>
+            <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>User</th><th>Username</th><th>Email</th><th>Role</th><th>Status & sign-in</th><th>Created</th><th>Actions</th></tr></thead><tbody id="users-table-body"></tbody></table></div>
           </div>
           <div id="user-form-card" class="crm-card crm-hidden">
-            <div class="crm-section-label">New CRM user</div><h2>Invite a team member</h2><p class="crm-small">They will receive an email to finish setting up their account.</p>
+            <div class="crm-section-label">New CRM user</div><h2>Create team member</h2><p class="crm-small">Create the account immediately and set the password yourself. No invitation email is sent.</p>
             <form id="user-form"><div class="crm-form-grid">
-              <div class="crm-field"><label>Full name</label><input id="user-name" required></div><div class="crm-field"><label>Email</label><input id="user-email" type="email" required></div>
-              <div class="crm-field"><label>Role</label><select id="user-role"><option value="manager">Manager</option><option value="staff">Staff</option><option value="admin">Administrator</option></select></div>
-            </div><div class="crm-form-actions"><button id="user-cancel" type="button" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" class="crm-btn crm-btn-primary">Send invitation</button></div></form>
+              <div class="crm-field"><label for="user-name">Full name</label><input id="user-name" required></div>
+              <div class="crm-field"><label for="user-username">Username</label><input id="user-username" type="text" minlength="3" maxlength="40" pattern="[A-Za-z0-9._-]+" autocomplete="username" required><small>Used to sign in. Letters, numbers, dot, underscore and hyphen only.</small></div>
+              <div class="crm-field"><label for="user-email">Email <span class="crm-small">(optional)</span></label><input id="user-email" type="email" autocomplete="email"></div>
+              <div class="crm-field"><label for="user-password">Password</label><input id="user-password" type="password" minlength="8" autocomplete="new-password" required></div>
+              <div class="crm-field"><label for="user-password-confirm">Confirm password</label><input id="user-password-confirm" type="password" minlength="8" autocomplete="new-password" required></div>
+              <div class="crm-field"><label for="user-role">Role</label><select id="user-role"><option value="manager">Manager</option><option value="staff">Staff</option><option value="admin">Administrator</option></select></div>
+            </div><div class="crm-form-actions"><button id="user-cancel" type="button" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" class="crm-btn crm-btn-primary">Create user</button></div></form>
           </div>
           <div id="user-edit-card" class="crm-card crm-hidden">
             <div class="crm-section-label">Manage access</div><h2>Edit CRM user</h2><p class="crm-small" id="user-edit-email"></p>
             <form id="user-edit-form"><div class="crm-form-grid">
               <div class="crm-field"><label for="edit-user-name">Display name</label><input id="edit-user-name" required></div>
+              <div class="crm-field"><label for="edit-user-username">Username</label><input id="edit-user-username" minlength="3" maxlength="40" pattern="[A-Za-z0-9._-]+" required></div>
               <div class="crm-field"><label for="edit-user-role">Role</label><select id="edit-user-role"></select></div>
               <label class="crm-field crm-check"><input id="edit-user-active" type="checkbox"> <span>Account active</span></label>
             </div><div class="crm-form-actions"><button id="user-edit-cancel" type="button" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" class="crm-btn crm-btn-primary">Save changes</button></div></form>
             <div id="temporary-password-card" class="crm-subcard crm-hidden" style="margin-top:24px">
               <div class="crm-section-label">Security</div>
-              <h3>Set temporary password</h3>
-              <p class="crm-small">Administrator only. The user will be required to choose a new password before entering the CRM.</p>
+              <h3>Change password</h3>
+              <p class="crm-small">Administrator only. Set a new password directly; no reset email is sent.</p>
               <div class="crm-form-grid">
-                <div class="crm-field"><label for="temporary-password">Temporary password</label><input id="temporary-password" type="password" minlength="8" autocomplete="new-password"></div>
-                <div class="crm-field"><label for="temporary-password-confirm">Confirm temporary password</label><input id="temporary-password-confirm" type="password" minlength="8" autocomplete="new-password"></div>
+                <div class="crm-field"><label for="temporary-password">New password</label><input id="temporary-password" type="password" minlength="8" autocomplete="new-password"></div>
+                <div class="crm-field"><label for="temporary-password-confirm">Confirm new password</label><input id="temporary-password-confirm" type="password" minlength="8" autocomplete="new-password"></div>
               </div>
               <div class="crm-form-actions">
                 <button id="generate-temporary-password" type="button" class="crm-btn crm-btn-secondary">Generate password</button>
-                <button id="set-temporary-password" type="button" class="crm-btn crm-btn-primary">Set temporary password</button>
+                <button id="set-temporary-password" type="button" class="crm-btn crm-btn-primary">Change password</button>
               </div>
               <div id="temporary-password-message" class="crm-message"></div>
             </div>
           </div>
-        </section>
+          <div id="reset-user-password-card" class="crm-card crm-hidden">
+            <div class="crm-section-label">Security</div><h2>Reset user password</h2><p class="crm-small" id="reset-user-password-email"></p>
+            <form id="reset-user-password-form"><div class="crm-form-grid">
+              <div class="crm-field"><label for="reset-user-password">New password</label><input id="reset-user-password" type="password" minlength="8" autocomplete="new-password" required></div>
+              <div class="crm-field"><label for="reset-user-password-confirm">Confirm new password</label><input id="reset-user-password-confirm" type="password" minlength="8" autocomplete="new-password" required></div>
+            </div><div class="crm-form-actions"><button id="reset-user-password-cancel" type="button" class="crm-btn crm-btn-secondary">Cancel</button><button type="submit" class="crm-btn crm-btn-primary">Reset password</button></div>
+            <div id="reset-user-password-message" class="crm-message"></div></form>
+          </div>
+</section>
 
         <section id="view-vouchers" class="crm-view crm-hidden">
   <div class="crm-page-heading">

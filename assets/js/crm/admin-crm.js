@@ -1134,6 +1134,93 @@
     if (bootstrap) bootstrap.remove();
   }
 
+  // Load only the public CRM logo before authentication so the login screen is branded too.
+  // This endpoint exposes no account, role, or application-setting data beyond the public logo.
+  async function loadLoginBranding() {
+    try {
+      var result = await window.salonSupabase.rpc('crm_get_public_branding');
+      if (result.error) throw result.error;
+      var payload = result.data || {};
+      var logo = payload.logo_image;
+      if (logo && typeof logo === 'string') {
+        try { logo = JSON.parse(logo); } catch (_) { logo = null; }
+      }
+      var logoUrl = logo && logo.url ? logo.url : '';
+      ['crm-login-logo', 'crm-password-setup-logo'].forEach(function (id) {
+        var img = $(id);
+        if (!img) return;
+        if (logoUrl) {
+          img.src = logoUrl;
+          img.hidden = false;
+          img.style.objectFit = 'contain';
+          img.onerror = function () { img.removeAttribute('src'); img.hidden = true; };
+        } else {
+          img.removeAttribute('src');
+          img.hidden = true;
+        }
+      });
+      ['crm-login-logo-fallback', 'crm-password-setup-logo-fallback'].forEach(function (id) {
+        var fallback = $(id);
+        if (fallback) fallback.hidden = !!logoUrl;
+      });
+    } catch (err) {
+      console.warn('CRM login branding could not be loaded:', err);
+    }
+  }
+
+  // Load only the CRM shell branding for every authenticated CRM user.
+  // Staff may not have the Settings permission, so they cannot use the full
+  // application_settings query. The security-definer RPC exposes only the
+  // non-sensitive branding values required to render the sidebar.
+  async function loadCrmShellBranding() {
+    try {
+      var result = await window.salonSupabase.rpc('crm_get_branding');
+      if (result.error) throw result.error;
+      var payload = result.data || {};
+      var websiteName = payload.website_name;
+      if (websiteName && typeof websiteName === 'object' && websiteName.value !== undefined) websiteName = websiteName.value;
+      applyCrmWebsiteName(String(websiteName || 'JASPremium'));
+
+      var logo = payload.logo_image;
+      if (logo && typeof logo === 'string') {
+        try { logo = JSON.parse(logo); } catch (_) { logo = null; }
+      }
+      var sidebarLogo = $('crm-sidebar-logo');
+      if (sidebarLogo) {
+        if (logo && logo.url) {
+          sidebarLogo.src = logo.url;
+          sidebarLogo.hidden = false;
+          sidebarLogo.style.width = logo.width || '125px';
+          sidebarLogo.style.height = logo.height || 'auto';
+          sidebarLogo.style.objectFit = 'contain';
+        } else {
+          sidebarLogo.removeAttribute('src');
+          sidebarLogo.hidden = true;
+        }
+        sidebarLogo.onerror = function () { sidebarLogo.removeAttribute('src'); sidebarLogo.hidden = true; };
+      }
+
+      // Keep the favicon working for staff as well, without exposing the
+      // complete Application Settings catalogue.
+      var favicon = payload.favicon_image;
+      if (favicon && typeof favicon === 'string') {
+        try { favicon = JSON.parse(favicon); } catch (_) { favicon = null; }
+      }
+      if (favicon && favicon.url) {
+        var old = document.querySelector('link[data-crm-favicon]');
+        if (old) old.remove();
+        var link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = favicon.url + (favicon.url.indexOf('?') === -1 ? '?crm-favicon=' + Date.now() : '&crm-favicon=' + Date.now());
+        link.dataset.crmFavicon = 'true';
+        document.head.appendChild(link);
+      }
+    } catch (err) {
+      // Branding must never prevent a staff member from entering the CRM.
+      console.warn('CRM shell branding could not be loaded:', err);
+    }
+  }
+
   async function loadApplicationSettings(ensureSocial) {
     var results = await Promise.all([
       window.salonSupabase.from('application_settings').select('id,setting_key,setting_value,description,active,created_at,updated_at').order('setting_key', { ascending: false }),
@@ -2565,7 +2652,7 @@
     var statusFilter = String(($('user-status-filter') && $('user-status-filter').value) || state.userStatusFilter || 'all');
     var rows = state.users.filter(function (u) {
       var roleName = roleNameById(u.role_id, u.role);
-      var matchesQuery = !q || [u.full_name, u.email, roleName].join(' ').toLowerCase().indexOf(q) !== -1;
+      var matchesQuery = !q || [u.full_name, u.username, u.email, roleName].join(' ').toLowerCase().indexOf(q) !== -1;
       var matchesRole = role === 'all' || String(u.role_id) === role;
       var active = u.active !== false;
       var matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? active : !active);
@@ -2580,7 +2667,7 @@
       var loggedIn = !!auth.last_sign_in_at;
       var verificationHtml = verified ? '<span class="crm-badge active">Verified</span>' : '<span class="crm-badge inactive">Not verified</span>';
       var loginHtml = loggedIn ? '<span class="crm-small">Last login: ' + escapeHtml(new Date(auth.last_sign_in_at).toLocaleString()) + '</span>' : '<span class="crm-small">Never logged in</span>';
-      return '<tr><td><strong>' + escapeHtml(u.full_name || 'CRM user') + '</strong><br><span class="crm-small">' + (isSelf ? 'You' : 'CRM team member') + '</span></td><td>' + escapeHtml(u.email || '—') + '</td>' +
+      return '<tr><td><strong>' + escapeHtml(u.full_name || 'CRM user') + '</strong><br><span class="crm-small">' + (isSelf ? 'You' : 'CRM team member') + '</span></td><td><strong>@' + escapeHtml(u.username || '—') + '</strong></td><td>' + escapeHtml(u.email || '—') + '</td>' +
         '<td><span class="crm-role-badge">' + escapeHtml(roleName) + '</span></td>' +
         '<td>' + (status ? '<span class="crm-badge active">Active</span>' : '<span class="crm-badge inactive">Inactive</span>') + '<br>' + verificationHtml + '<br>' + loginHtml + '</td>' +
         '<td>' + escapeHtml(u.created_at ? new Date(u.created_at).toLocaleDateString() : '—') + '</td><td><div class="crm-actions-inline"><button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-edit-user="' + escapeHtml(u.user_id) + '">Edit</button>' +
@@ -2588,7 +2675,7 @@
         (!isSelf && can('users', 'update') ? '<button type="button" class="crm-btn crm-btn-secondary crm-btn-small" data-reset-password="' + escapeHtml(u.user_id) + '">Reset password</button>' : '') +
         (can('users', 'delete') && !isSelf ? '<button type="button" class="crm-btn crm-btn-danger crm-btn-small" data-delete-user="' + escapeHtml(u.user_id) + '">Delete</button>' : '') +
         '</div></td></tr>';
-    }).join('') || '<tr><td colspan="6" class="crm-empty">No CRM users found.</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="crm-empty">No CRM users found.</td></tr>';
   }
   async function updateDashboard() {
     var active = state.services.filter(function (s) { return s.active !== false; }).length;
@@ -4956,20 +5043,31 @@
 
   async function inviteUser(e) {
     e.preventDefault(); clearMessage();
-    if (!can('users', 'create')) { message('You do not have permission to invite CRM users.', 'error'); return; }
-    var payload = { email: $('user-email').value.trim(), full_name: $('user-name').value.trim(), role_id: Number($('user-role').value), redirect_to: CRM_INVITE_REDIRECT };
-    if (!payload.email || !payload.full_name) { message('Please enter a name and email.', 'error'); return; }
+    if (!can('users', 'create')) { message('You do not have permission to create CRM users.', 'error'); return; }
+    var payload = {
+      username: $('user-username').value.trim().toLowerCase(),
+      email: $('user-email').value.trim().toLowerCase(),
+      full_name: $('user-name').value.trim(),
+      role_id: Number($('user-role').value),
+      password: $('user-password').value,
+      password_confirm: $('user-password-confirm').value
+    };
+    if (!payload.username || !payload.full_name) { message('Please enter a username and name.', 'error'); return; }
+    if (payload.password.length < 8) { message('Password must be at least 8 characters.', 'error'); return; }
+    if (payload.password !== payload.password_confirm) { message('The passwords do not match.', 'error'); return; }
     var button = e.submitter || $('user-form').querySelector('button[type="submit"]');
-    if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+    if (button) { button.disabled = true; button.textContent = 'Creating…'; }
     try {
-      var result = await window.salonSupabase.functions.invoke('invite-crm-user', { body: payload });
+      var result = await window.salonSupabase.functions.invoke('create-crm-user', { body: payload });
       if (result.error) {
-        var detail = (result.data && result.data.error) || result.error.message || 'Could not send invitation.';
+        var detail = (result.data && result.data.error) || result.error.message || 'Could not create user.';
         message(detail, 'error'); return;
       }
-      message('Invitation sent to ' + payload.email + '.', 'success'); $('user-form').reset(); closeCrmFormCardModal('user-form-card'); await loadUsers();
+      if (!result.data || result.data.ok !== true) throw new Error((result.data && result.data.error) || 'Could not create user.');
+      message('User created successfully. No invitation email was sent.', 'success');
+      $('user-form').reset(); closeCrmFormCardModal('user-form-card'); await loadUsers();
     } finally {
-      if (button) { button.disabled = false; button.textContent = 'Send invitation'; }
+      if (button) { button.disabled = false; button.textContent = 'Create user'; }
     }
   }
   function editUser(id) {
@@ -4977,9 +5075,10 @@
     var u = state.users.find(function (x) { return String(x.user_id) === String(id); }); if (!u) return;
     state.editingUserId = u.user_id; applyRoleVisibility();
     $('edit-user-name').value = u.full_name || '';
+    $('edit-user-username').value = u.username || '';
     $('edit-user-role').value = String(u.role_id || (state.roles.find(function (r) { return String(r.name).toLowerCase() === String(u.role || 'staff').toLowerCase(); }) || {}).id || '');
     $('edit-user-active').checked = u.active !== false;
-    $('user-edit-email').textContent = u.email || '';
+    $('user-edit-email').textContent = u.username ? ('@' + u.username + (u.email ? ' · ' + u.email : '')) : (u.email || '');
     openCrmFormCardModal('user-edit-card');
     closeCrmFormCardModal('user-form-card');
     var tempCard = $('temporary-password-card');
@@ -5002,25 +5101,26 @@
     setTimeout(function () { if ($('temporary-password')) $('temporary-password').type = 'password'; }, 3000);
   }
   async function setTemporaryPassword() {
-    if (state.currentRole !== 'admin') { message('Only administrators can set temporary passwords.', 'error'); return; }
-    if (!state.editingUserId || String(state.editingUserId) === String(state.currentUserId)) { message('You cannot set a temporary password for your own account.', 'error'); return; }
+    if (state.currentRole !== 'admin') { message('Only administrators can change another user’s password.', 'error'); return; }
+    if (!state.editingUserId || String(state.editingUserId) === String(state.currentUserId)) { message('You cannot change your own password from this screen.', 'error'); return; }
     var password = $('temporary-password').value;
     var confirm = $('temporary-password-confirm').value;
     var msg = $('temporary-password-message');
-    if (password.length < 8) { if (msg) { msg.textContent = 'Temporary password must be at least 8 characters.'; msg.className = 'crm-message show error'; } return; }
+    if (password.length < 8) { if (msg) { msg.textContent = 'Password must be at least 8 characters.'; msg.className = 'crm-message show error'; } return; }
     if (password !== confirm) { if (msg) { msg.textContent = 'The passwords do not match.'; msg.className = 'crm-message show error'; } return; }
     var button = $('set-temporary-password');
-    if (button) { button.disabled = true; button.textContent = 'Setting password…'; }
+    if (button) { button.disabled = true; button.textContent = 'Changing password…'; }
     try {
-      var result = await window.salonSupabase.functions.invoke('set-crm-temp-password', { body: { user_id: state.editingUserId, password: password } });
-      if (result.error) { throw new Error((result.data && result.data.error) || result.error.message || 'Could not set temporary password.'); }
-      if (msg) { msg.textContent = 'Temporary password set. The user must change it before entering the CRM.'; msg.className = 'crm-message show success'; }
+      var result = await window.salonSupabase.functions.invoke('set-crm-password', { body: { user_id: state.editingUserId, password: password } });
+      if (result.error) throw new Error((result.data && result.data.error) || result.error.message || 'Could not change password.');
+      if (!result.data || result.data.ok !== true) throw new Error((result.data && result.data.error) || 'Could not change password.');
+      if (msg) { msg.textContent = 'Password changed successfully. No email was sent.'; msg.className = 'crm-message show success'; }
       $('temporary-password').value = ''; $('temporary-password-confirm').value = '';
       await loadUsers();
     } catch (err) {
-      if (msg) { msg.textContent = err.message || 'Could not set temporary password.'; msg.className = 'crm-message show error'; }
+      if (msg) { msg.textContent = err.message || 'Could not change password.'; msg.className = 'crm-message show error'; }
     } finally {
-      if (button) { button.disabled = false; button.textContent = 'Set temporary password'; }
+      if (button) { button.disabled = false; button.textContent = 'Change password'; }
     }
   }
   async function saveUser(e) {
@@ -5029,10 +5129,20 @@
     if (String(state.editingUserId) === String(state.currentUserId) && !$('edit-user-active').checked) {
       message('You cannot deactivate your own administrator account.', 'error'); return;
     }
-    var payload = { full_name: $('edit-user-name').value.trim(), role_id: Number($('edit-user-role').value), active: $('edit-user-active').checked };
+    var payload = { full_name: $('edit-user-name').value.trim(), username: $('edit-user-username').value.trim().toLowerCase(), role_id: Number($('edit-user-role').value), active: $('edit-user-active').checked };
     if (!payload.full_name) { message('Please enter a display name.', 'error'); return; }
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(payload.username)) { message('Username must be 3–40 characters and use only letters, numbers, dot, underscore or hyphen.', 'error'); return; }
     var result = await window.salonSupabase.from('admin_users').update(payload).eq('user_id', state.editingUserId);
     if (result.error) { message(result.error.message, 'error'); return; }
+    // Keep username-only accounts aligned with their private Auth email.
+    var currentUser = state.users.find(function (x) { return String(x.user_id) === String(state.editingUserId); });
+    if (currentUser && !currentUser.email && currentUser.username !== payload.username) {
+      var renameResult = await window.salonSupabase.functions.invoke('update-crm-username', { body: { user_id: state.editingUserId, username: payload.username } });
+      if (renameResult.error || !renameResult.data || renameResult.data.ok !== true) {
+        message((renameResult.data && renameResult.data.error) || (renameResult.error && renameResult.error.message) || 'Username was saved, but the login identifier could not be updated.', 'error');
+        return;
+      }
+    }
     message('User updated.', 'success'); state.editingUserId = null; closeCrmFormCardModal('user-edit-card'); await loadUsers();
   }
   async function toggleUser(id) {
@@ -5045,19 +5155,44 @@
     message(next ? 'User activated.' : 'User deactivated.', 'success'); await loadUsers();
   }
 
-  async function resetUserPassword(id) {
+  function resetUserPassword(id) {
     if (!can('users', 'update')) { message('You do not have permission to reset CRM user passwords.', 'error'); return; }
-    if (String(id) === String(state.currentUserId)) { message('Use the normal forgot-password flow to reset your own password.', 'error'); return; }
+    if (String(id) === String(state.currentUserId)) { message('Use your account security settings to change your own password.', 'error'); return; }
     var u = state.users.find(function (x) { return String(x.user_id) === String(id); }); if (!u) return;
-    if (u.active === false) { message('Activate the CRM user before sending a password reset.', 'error'); return; }
-    if (!window.confirm('Send a password reset email to ' + (u.email || 'this user') + '?')) return;
+    if (u.active === false) { message('Activate the CRM user before resetting the password.', 'error'); return; }
+    state.resettingUserId = u.user_id;
+    $('reset-user-password-email').textContent = u.email || '';
+    $('reset-user-password').value = '';
+    $('reset-user-password-confirm').value = '';
+    if ($('reset-user-password-message')) { $('reset-user-password-message').textContent = ''; $('reset-user-password-message').className = 'crm-message'; }
+    openCrmFormCardModal('reset-user-password-card');
+    $('reset-user-password').focus();
+  }
+
+  async function submitResetUserPassword(e) {
+    e.preventDefault(); clearMessage();
+    if (state.currentRole !== 'admin' || !state.resettingUserId) { message('Only administrators can reset another user’s password.', 'error'); return; }
+    var password = $('reset-user-password').value;
+    var confirm = $('reset-user-password-confirm').value;
+    var msg = $('reset-user-password-message');
+    if (password.length < 8) { msg.textContent = 'Password must be at least 8 characters.'; msg.className = 'crm-message show error'; return; }
+    if (password !== confirm) { msg.textContent = 'The passwords do not match.'; msg.className = 'crm-message show error'; return; }
+    var button = e.submitter || $('reset-user-password-form').querySelector('button[type="submit"]');
+    if (button) { button.disabled = true; button.textContent = 'Resetting…'; }
     try {
-      var redirectTo = window.location.origin + window.location.pathname;
-      var result = await window.salonSupabase.functions.invoke('reset-crm-user-password', { body: { user_id: id, redirect_to: redirectTo } });
-      if (result.error) throw new Error((result.data && result.data.error) || result.error.message || 'Could not send password reset email.');
-      if (!result.data || result.data.ok !== true) throw new Error((result.data && result.data.error) || 'Could not send password reset email.');
-      message('Password reset email sent to ' + (u.email || 'the user') + '.', 'success');
-    } catch (err) { console.error('Could not send CRM password reset:', err); message(err.message || 'Could not send password reset email.', 'error'); }
+      var result = await window.salonSupabase.functions.invoke('set-crm-password', { body: { user_id: state.resettingUserId, password: password } });
+      if (result.error) throw new Error((result.data && result.data.error) || result.error.message || 'Could not reset password.');
+      if (!result.data || result.data.ok !== true) throw new Error((result.data && result.data.error) || 'Could not reset password.');
+      msg.textContent = 'Password reset successfully. No reset email was sent.';
+      msg.className = 'crm-message show success';
+      $('reset-user-password').value = ''; $('reset-user-password-confirm').value = '';
+      await loadUsers();
+    } catch (err) {
+      msg.textContent = err.message || 'Could not reset password.';
+      msg.className = 'crm-message show error';
+    } finally {
+      if (button) { button.disabled = false; button.textContent = 'Reset password'; }
+    }
   }
   async function deleteUser(id) {
     if (!can('users', 'delete')) {
@@ -5306,11 +5441,12 @@
       var sessionNow = await window.salonSupabase.auth.getSession();
       state.currentUserId = sessionNow.data.session && sessionNow.data.session.user ? sessionNow.data.session.user.id : state.currentUserId;
       showApp();
-      $('current-user-email').textContent = (sessionNow.data.session && sessionNow.data.session.user && sessionNow.data.session.user.email) || 'CRM user';
       await loadAccess();
+      await loadCrmShellBranding();
       await loadRoles();
       await loadData();
       await loadUsers();
+      await loadCurrentUserIdentity();
       if (can('settings', 'read')) await loadApplicationSettings();
       if (can('faqs', 'read')) await loadFaqs();
       if (can('bookings', 'read')) await loadBookings();
@@ -5333,11 +5469,40 @@
     if (oldUserId) sessionStorage.removeItem(viewStorageKey(oldUserId));
     try { await window.salonSupabase.auth.signOut({ scope: 'global' }); } finally { window.location.replace(window.location.pathname); }
   }
+  async function loadCurrentUserIdentity() {
+    if (!state.currentUserId) return;
+    try {
+      var result = await window.salonSupabase.from('admin_users').select('username,full_name,role_id').eq('user_id', state.currentUserId).maybeSingle();
+      if (result.error) throw result.error;
+      var user = result.data || {};
+      var username = String(user.username || '').trim();
+      var role = String(state.currentRole || '').trim();
+      var label = username ? '@' + username : (user.full_name || 'CRM user');
+      if (role) label += ' · ' + role.charAt(0).toUpperCase() + role.slice(1);
+      var current = $('current-user-email');
+      if (current) current.textContent = label;
+    } catch (err) {
+      console.warn('Could not load current CRM user identity:', err);
+      var fallback = $('current-user-email');
+      if (fallback) fallback.textContent = state.currentRole ? ('CRM · ' + state.currentRole) : 'CRM user';
+    }
+  }
+
   async function login(e) {
     e.preventDefault(); clearMessage();
     clearInviteMarker();
-    var result = await window.salonSupabase.auth.signInWithPassword({ email: $('login-email').value.trim(), password: $('login-password').value });
-    if (result.error) { message(result.error.message, 'error'); return; }
+    var identifier = $('login-email').value.trim();
+    var password = $('login-password').value;
+    if (!identifier) { message('Enter your username or email.', 'error'); return; }
+    var loginEmail = identifier;
+    if (!identifier.includes('@')) {
+      var lookup = await window.salonSupabase.rpc('crm_resolve_login_identifier', { p_identifier: identifier.toLowerCase() });
+      if (lookup.error) { message('Could not verify the username. Please try again.', 'error'); return; }
+      if (!lookup.data) { message('Invalid username/email or password.', 'error'); return; }
+      loginEmail = lookup.data;
+    }
+    var result = await window.salonSupabase.auth.signInWithPassword({ email: loginEmail, password: password });
+    if (result.error) { message('Invalid username/email or password.', 'error'); return; }
 
     // Authentication succeeded. Now load the authorization record through the
     // security-definer access RPC. This also gives us must_change_password.
@@ -5346,6 +5511,7 @@
     state.currentUserId = result.data.user.id;
     try {
       await loadAccess();
+      await loadCrmShellBranding();
     } catch (err) {
       console.error('CRM access load failed after login:', err);
       message('You signed in, but the CRM could not load your access permissions. Please try again.', 'error');
@@ -5359,10 +5525,10 @@
     }
 
     if (state.mustChangePassword) { showPasswordSetup('forced'); return; }
-    $('current-user-email').textContent = result.data.user.email || 'CRM user';
     await loadRoles();
     await loadData();
     await loadUsers();
+    await loadCurrentUserIdentity();
     if (can('settings', 'read')) await loadApplicationSettings();
     if (can('faqs', 'read')) await loadFaqs();
     if (can('bookings', 'read')) await loadBookings();
@@ -5473,6 +5639,7 @@
 
   document.addEventListener('DOMContentLoaded', async function () {
     convertCrmFormCardsToModals();
+    loadLoginBranding();
 
     $('login-form').addEventListener('submit', login); $('faq-form').addEventListener('submit', saveFaq); $('faq-cancel').addEventListener('click', resetFaqForm); $('new-faq-top').addEventListener('click', startFaqCreate); $('faqs-refresh').addEventListener('click', function () { loadFaqs().catch(function (e) { message(e.message, 'error'); }); }); $('faq-table-body').addEventListener('click', function (e) { var edit = e.target.closest('[data-edit-faq]'); if (edit) editFaq(edit.getAttribute('data-edit-faq')); var del = e.target.closest('[data-delete-faq]'); if (del) deleteFaq(del.getAttribute('data-delete-faq')); }); $('service-form').addEventListener('submit', saveService); $('category-form').addEventListener('submit', saveCategory); if ($('new-category-top')) $('new-category-top').addEventListener('click', function () { openCategoryForm(); }); if ($('new-service-top')) $('new-service-top').addEventListener('click', function () { openServiceForm(); }); document.querySelectorAll('[data-services-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setServicesTab(btn.getAttribute('data-services-tab')); }); }); document.querySelectorAll('[data-booking-config-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setBookingConfigTab(btn.getAttribute('data-booking-config-tab')); }); }); document.querySelectorAll('[data-settings-tab]').forEach(function (btn) { btn.addEventListener('click', function () { setSettingsTab(btn.getAttribute('data-settings-tab')); }); }); setBookingConfigTab('settings'); setSettingsTab('language-currency'); document.querySelectorAll('[data-close-category-form]').forEach(function (el) { el.addEventListener('click', closeCategoryForm); }); document.querySelectorAll('[data-close-service-form]').forEach(function (el) { el.addEventListener('click', closeServiceForm); }); $('customer-form').addEventListener('submit', saveCustomer); $('customer-search').addEventListener('input', renderCustomers); if ($('customer-loyalty-filter')) $('customer-loyalty-filter').addEventListener('change', function (e) { state.customerLoyaltyFilter = e.target.value; renderCustomers(); }); $('customer-phone').addEventListener('input', function () { var v = this.value.replace(/[^0-9+]/g, ''); if (v.indexOf('+') > 0) v = '+' + v.replace(/\+/g, ''); if (v.charAt(0) !== '+') v = v.replace(/\+/g, ''); this.value = v; }); $('customer-cancel').addEventListener('click', cancelCustomerEdit); document.querySelectorAll('[data-close-customer-detail]').forEach(function (el) { el.addEventListener('click', closeCustomerDetails); }); $('customer-loyalty-rewards').addEventListener('click', function (e) { var btn = e.target.closest('.crm-reward-btn'); if (!btn || btn.disabled) return; var cost = Number(btn.getAttribute('data-reward-points')); var label = btn.getAttribute('data-reward-label') || 'Reward'; if (!window.confirm('Redeem ' + cost + ' points for ' + label + '?')) return; changeCustomerLoyalty(-cost, 'Redeemed ' + label, 'reward_redeemed'); }); $('add-loyalty-reward').addEventListener('click', function () { var container = $('loyalty-reward-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-loyalty-reward-setting-row'; row.setAttribute('data-loyalty-reward-row', ''); row.innerHTML = '<div class="crm-field"><label>Points to redeem</label><input type="number" min="1" step="1" data-loyalty-reward-points placeholder="100"></div><div class="crm-field"><label>Reward</label><input type="text" maxlength="120" data-loyalty-reward-label placeholder="$10 reward or Free haircut"></div><button type="button" class="crm-btn crm-btn-secondary crm-btn-small crm-loyalty-remove-reward" data-remove-loyalty-reward>Remove</button>'; container.appendChild(row); row.querySelector('[data-loyalty-reward-points]').focus(); }); $('loyalty-reward-settings-list').addEventListener('click', async function (e) { var btn = e.target.closest('[data-remove-loyalty-reward]'); if (!btn) return; var row = btn.closest('[data-loyalty-reward-row]'); if (!row) return; var label = row.querySelector('[data-loyalty-reward-label]'); var name = label ? label.value.trim() : 'this reward'; var ok = await crmConfirm('Delete reward', 'Are you sure you want to delete ' + (name || 'this reward') + '?'); if (ok) row.remove(); }); $('add-loyalty-tier').addEventListener('click', function () { var container = $('loyalty-tier-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-loyalty-tier-setting-row'; row.setAttribute('data-loyalty-tier-row', ''); row.innerHTML = '<div class="crm-field"><label>Tier name</label><input type="text" maxlength="80" data-loyalty-tier-name placeholder="New tier"></div><div class="crm-field"><label>Minimum lifetime points</label><input type="number" min="0" step="1" data-loyalty-tier-min placeholder="0"></div><div class="crm-field"><label>Sort order</label><input type="number" min="0" step="1" data-loyalty-tier-sort value="0" placeholder="1"></div><div class="crm-field crm-loyalty-tier-active"><label>Active</label><label class="crm-toggle"><input type="checkbox" data-loyalty-tier-active checked><span></span></label></div><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-loyalty-tier aria-label="Delete tier" title="Delete tier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>'; container.appendChild(row); row.querySelector('[data-loyalty-tier-name]').focus(); }); $('loyalty-tier-settings-list').addEventListener('click', async function (e) { var btn = e.target.closest('[data-remove-loyalty-tier]'); if (!btn) return; var row = btn.closest('[data-loyalty-tier-row]'); if (!row) return; var name = row.querySelector('[data-loyalty-tier-name]'); var tierName = name ? name.value.trim() : 'this loyalty tier'; var ok = await crmConfirm('Delete loyalty tier', 'Are you sure you want to delete ' + (tierName || 'this loyalty tier') + '?'); if (ok) row.remove(); }); $('customer-loyalty-adjust-form').addEventListener('submit', function (e) { e.preventDefault(); var pts = Number($('customer-loyalty-adjust-points').value); var note = $('customer-loyalty-adjust-note').value.trim(); if (!Number.isInteger(pts) || pts === 0) { message('Enter a non-zero whole number of points.', 'error'); return; } if (!note) { message('Enter a reason for the adjustment.', 'error'); return; } changeCustomerLoyalty(pts, note, 'manual_adjustment').then(function () { $('customer-loyalty-adjust-form').reset(); }); }); $('application-settings-form').addEventListener('submit', saveApplicationSettings); if ($('add-language-option')) $('add-language-option').addEventListener('click', addLanguageOption); $('add-currency-option').addEventListener('click', addCurrencyOption); if ($('add-social-media')) $('add-social-media').addEventListener('click', function () { var container = $('social-settings-list'); if (!container) return; var row = document.createElement('div'); row.className = 'crm-social-row'; row.setAttribute('data-social-row-id', ''); row.innerHTML = '<div class="crm-social-channel"><div class="crm-social-icon-preview" aria-hidden="true"><span>+</span></div><div class="crm-social-name"><input type="text" data-social-platform-new maxlength="60" placeholder="Platform name"><input type="text" data-social-slug-new maxlength="60" placeholder="slug"></div></div><div class="crm-field crm-social-field-url"><input type="url" data-social-url-id="" placeholder="https://..."></div><div class="crm-field"><input type="number" min="0" step="1" data-social-sort-id="" value="0" placeholder="1"></div><div class="crm-social-status"><label class="crm-toggle"><input type="checkbox" data-social-active-id="" checked><span></span></label></div><button type="button" class="crm-icon-btn crm-icon-btn-danger" data-remove-social-id="" aria-label="Delete social media" title="Delete social media"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>'; container.appendChild(row); bindSocialRowEvents(); row.querySelector('[data-social-url-id]').focus(); }); $('upload-application-logo-image').addEventListener('click', function () { uploadBrandingImage('logo_image', 'application-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-application-logo-image').addEventListener('click', function () { deleteBrandingImage('logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-main-page-nav-logo-image').addEventListener('click', function () { uploadBrandingImage('main_page_nav_logo_image', 'main-page-nav-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-main-page-nav-logo-image').addEventListener('click', function () { deleteBrandingImage('main_page_nav_logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-other-pages-nav-logo-image').addEventListener('click', function () { uploadBrandingImage('other_pages_nav_logo_image', 'other-pages-nav-logo-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-other-pages-nav-logo-image').addEventListener('click', function () { deleteBrandingImage('other_pages_nav_logo_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-banner-image').addEventListener('click', function () { uploadBrandingImage('banner_image', 'banner-image-file').catch(function (e) { message(e.message, 'error'); }); }); $('delete-banner-image').addEventListener('click', function () { deleteBrandingImage('banner_image').catch(function (e) { message(e.message, 'error'); }); }); $('upload-favicon-image').addEventListener('click', function () { uploadBrandingImage('favicon_image', 'favicon-image-file', 2).catch(function (e) { message(e.message, 'error'); }); }); $('delete-favicon-image').addEventListener('click', function () { deleteBrandingImage('favicon_image').catch(function (e) { message(e.message, 'error'); }); });
     function updateFooterLogoDimensionsPreview() {
@@ -5507,7 +5674,7 @@
       var uploadButton = $(slot.uploadId);
       if (uploadButton) uploadButton.addEventListener('click', function () { uploadWebsiteImage(slot).catch(function (e) { message(e.message, 'error'); }); });
     });
-    $('user-form').addEventListener('submit', inviteUser); $('user-cancel').addEventListener('click', function () { closeCrmFormCardModal('user-form-card'); });
+    $('user-form').addEventListener('submit', inviteUser); $('reset-user-password-form').addEventListener('submit', submitResetUserPassword); $('reset-user-password-cancel').addEventListener('click', function () { closeCrmFormCardModal('reset-user-password-card'); state.resettingUserId = null; }); $('user-cancel').addEventListener('click', function () { closeCrmFormCardModal('user-form-card'); });
     $('user-edit-form').addEventListener('submit', saveUser);
     if ($('user-search')) $('user-search').addEventListener('input', function (e) { state.userSearch = e.target.value; renderUsers(); });
     if ($('user-role-filter')) $('user-role-filter').addEventListener('change', function (e) { state.userRoleFilter = e.target.value; renderUsers(); });
@@ -5712,11 +5879,12 @@
         session = (await window.salonSupabase.auth.getSession()).data.session;
         state.currentUserId = session && session.user ? session.user.id : null;
         await loadAccess();
+        await loadCrmShellBranding();
         if (state.mustChangePassword) { showPasswordSetup('forced'); return; }
-        $('current-user-email').textContent = session && session.user ? session.user.email : 'CRM user';
         await loadRoles();
         await loadData();
         await loadUsers();
+        await loadCurrentUserIdentity();
         if (can('settings', 'read')) await loadApplicationSettings();
         if (can('faqs', 'read')) await loadFaqs();
         if (can('bookings', 'read')) await loadBookings();
